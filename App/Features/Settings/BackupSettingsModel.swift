@@ -19,7 +19,7 @@ final class BackupSettingsModel {
     private(set) var file: ArchiveFile?
     private(set) var suggestedName = ""
 
-    @ObservationIgnored private let host: ContainerHost
+    @ObservationIgnored let host: ContainerHost
     @ObservationIgnored let passphrases: PassphraseStore
     @ObservationIgnored private var scratch: URL?
     @ObservationIgnored private var pendingNote: String?

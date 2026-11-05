@@ -39,6 +39,13 @@ struct ExportImportView: View {
                     if let note = statusNote { Text(note).foregroundStyle(Color("ink")) }
                 }
             }
+            Section {
+                NavigationLink(Copy.ReadableExport.row) { ReadableExportView(host: backup.host) }
+                    .accessibilityHint(Copy.ReadableExport.rowHint)
+                    .frame(minHeight: 44, alignment: .leading)
+            } footer: {
+                Text(Copy.ReadableExport.notEncrypted)
+            }
         }
         .scrollContentBackground(.hidden)
         .background(Color("paper"))
