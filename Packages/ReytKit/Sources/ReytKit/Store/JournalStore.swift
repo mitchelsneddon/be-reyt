@@ -90,6 +90,9 @@ public actor JournalStore {
     private var clock: @Sendable () -> Date = { Date.now }
     private var timeZone: TimeZone = .current
     private var readOnly = false
+    /// Increments on every successful save. The archive writer compares it before and after copying attachments
+    /// to detect a write that raced the snapshot.
+    private(set) var writeCounter: UInt64 = 0
 
     public init(
         modelContainer: ModelContainer, clock: @escaping @Sendable () -> Date = { Date.now },
@@ -109,6 +112,9 @@ public actor JournalStore {
     private func requireWritable() throws {
         if readOnly { throw JournalStoreError.readOnly }
     }
+
+    /// Monotonic count of successful saves since this store was created (snapshot-consistency check).
+    public func generationCounter() -> UInt64 { writeCounter }
 
     // MARK: Reads
 
@@ -526,7 +532,14 @@ public actor JournalStore {
         guard !readOnly else { return false }
         purge(review, reason: "input changed")
         try modelContext.save()
+        writeCounter &+= 1
         return false
+    }
+
+    /// Read-only check that `stored` is the fingerprint of the current model input for the week. Never purges.
+    func fingerprintMatches(weekStart: DateKey, stored: String?) throws -> Bool {
+        guard let stored else { return false }
+        return stored == (try ReviewFingerprint.compute(try reflectionInput(weekStart: weekStart)))
     }
 
     private func purge(_ review: WeeklyReview, reason: String) {
@@ -549,6 +562,7 @@ public actor JournalStore {
                 if try bumpWeekRevision(for: week) { effect.revisionBumpedWeeks.insert(week) }
             }
             try modelContext.save()
+            writeCounter &+= 1
             let after = try contentFlags(candidateDays)
             effect.contentChangedDays = Set(candidateDays.filter { before[$0] != after[$0] })
             return effect

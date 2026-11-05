@@ -45,17 +45,21 @@ public struct Paths: Sendable {
         return Paths.isValidGenerationID(id) ? id : nil
     }
 
+    /// Lexical check: refuses empty, absolute, `~`, `.`/`..`/empty components, backslashes and NUL.
+    public static func isSafeRelativePath(_ relativePath: String) -> Bool {
+        guard !relativePath.isEmpty, !relativePath.hasPrefix("/"), !relativePath.contains("\\"),
+            !relativePath.contains("\0"), !relativePath.hasPrefix("~")
+        else { return false }
+        return relativePath.split(separator: "/", omittingEmptySubsequences: false)
+            .allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
+    }
+
     /// Resolves an attachment's relative path inside `generation`'s attachments directory, or throws.
     /// Refuses empty, absolute, `.`/`..`/empty components, backslashes, NUL, and anything whose real path
     /// (following existing symlinks) leaves the attachments directory.
     public func resolveAttachment(relativePath: String, in generation: URL) throws -> URL {
-        guard !relativePath.isEmpty, !relativePath.hasPrefix("/"), !relativePath.contains("\\"),
-            !relativePath.contains("\0"), !relativePath.hasPrefix("~")
-        else { throw PathError.unsafeRelativePath }
+        guard Paths.isSafeRelativePath(relativePath) else { throw PathError.unsafeRelativePath }
         let parts = relativePath.split(separator: "/", omittingEmptySubsequences: false)
-        guard parts.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." }) else {
-            throw PathError.unsafeRelativePath
-        }
         let root = attachments(in: generation)
         let resolved = parts.reduce(root) { $0.appending(path: String($1), directoryHint: .notDirectory) }
 
