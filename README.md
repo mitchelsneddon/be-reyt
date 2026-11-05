@@ -38,6 +38,10 @@ swift format lint --strict --recursive App Packages
 scripts/privacy-check.sh
 ```
 
+## Dev notes
+
+- Debug builds accept `-skipLock`, which bypasses the app lock (the simulator has no Face ID enrolled by default). Release builds ignore it.
+
 ## Device checklist
 
 ### Install and launch

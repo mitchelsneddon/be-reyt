@@ -57,6 +57,15 @@ enum Copy {
             "be reyt couldn't open your journal. your entries are still on this phone, try closing and opening the app again."
     }
 
+    enum Lock {
+        static let appName = "be reyt"
+        static let tagline = "a little space for your day."
+        static let unlock = "unlock"
+        static let unlockHint = "opens your journal with face id or your passcode"
+        static let reason = "unlock your journal."
+        static let noPasscode = "set a device passcode to lock be reyt."
+    }
+
     enum Day {
         static let editorPlaceholder = "a little space for your day."
         static let editorLabel = "journal entry"

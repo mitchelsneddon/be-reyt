@@ -6,15 +6,21 @@ import SwiftUI
 struct BeReytApp: App {
     @State private var host = ContainerHost()
     @State private var events = JournalEvents()
+    @State private var lock = AppLock()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             content
+                .overlay { if scenePhase != .active { PrivacyCover() } }
                 .onChange(of: scenePhase) { _, phase in
                     switch phase {
-                    case .active: host.openIfPossible()
-                    case .background: host.protect()
+                    case .active:
+                        host.openIfPossible()
+                        lock.didBecomeActive()
+                    case .background:
+                        lock.didEnterBackground()
+                        host.protect()
                     default: break
                     }
                 }
@@ -25,12 +31,28 @@ struct BeReytApp: App {
         if let store = host.store, let attachments = host.attachments, let container = host.container,
             let generation = host.generationID
         {
-            RootView(store: store, events: events, attachments: attachments)
-                .modelContainer(container)
-                .id(generation)
+            switch lock.state {
+            case .unlocked:
+                root(store: store, attachments: attachments, container: container, generation: generation)
+            case .unavailable:
+                root(store: store, attachments: attachments, container: container, generation: generation)
+                    .safeAreaInset(edge: .top, spacing: 0) { NoPasscodeBanner() }
+            case .locked, .authenticating:
+                LockScreenView(lock: lock)
+            }
         } else {
             WaitingView(failed: host.openFailed)
         }
+    }
+}
+
+extension BeReytApp {
+    fileprivate func root(
+        store: JournalStore, attachments: AttachmentStore, container: ModelContainer, generation: String
+    ) -> some View {
+        RootView(store: store, events: events, attachments: attachments)
+            .modelContainer(container)
+            .id(generation)
     }
 }
 

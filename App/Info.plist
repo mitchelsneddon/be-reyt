@@ -20,6 +20,8 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>be reyt uses face id to keep your journal private. nothing leaves your phone.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>be reyt reads your workouts from apple health so they can sit quietly beside your day. nothing leaves your phone.</string>
 	<key>UIApplicationSceneManifest</key>
