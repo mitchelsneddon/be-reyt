@@ -26,6 +26,7 @@
                     _ = try? await store.updateEntry(today, .tags([tag.id]))
                 }
             }
+            if args.contains("-seedHistory") { await seedHistory(store, attachments: attachments) }
             if args.contains("-seedSundayPlan") {
                 // Plan for the week after Sunday 2026-11-08, so the Sunday, Monday and follow-up flows can be seen.
                 if let sunday = DateKey("2026-11-08") {
@@ -56,6 +57,93 @@
                 Task {
                     try? await Task.sleep(for: .seconds(4))
                     _ = try? await store.createTag(name: "late tag")
+                }
+            }
+        }
+
+        /// `-seedHistory`: about twenty days across Oct and Nov 2026 with varied fields, a few tags, a Sunday plan with
+        /// a follow-up, two photo days, and one day (2026-10-14) with only a prompt assignment (no dot, no row).
+        /// Run with `-pretendToday 2026-11-05`. Safe to repeat: every write is a no-op the second time.
+        private static func seedHistory(_ store: JournalStore, attachments: AttachmentStore) async {
+            func key(_ s: String) -> DateKey { DateKey(s) ?? AppClock.today() }
+            let walk = try? await store.createTag(name: "walk").id
+            let reading = try? await store.createTag(name: "reading").id
+            let friends = try? await store.createTag(name: "friends").id
+
+            struct Seed {
+                var day: String
+                var text = ""
+                var smile: String?
+                var rotating: String?
+                var score: DayScore?
+                var moods: [String] = []
+                var tags: [UUID?] = []
+            }
+            let seeds: [Seed] = [
+                Seed(
+                    day: "2026-10-03", text: "slow saturday.\nbread in the oven, rain on the window.", tags: [reading]),
+                Seed(day: "2026-10-05", smile: "the neighbour waved from her garden.", score: .okay),
+                Seed(
+                    day: "2026-10-07", text: "a long meeting day, but the walk home helped.", moods: ["tired"],
+                    tags: [walk]),
+                Seed(day: "2026-10-09", rotating: "i finally cleared the desk.", score: .good),
+                Seed(day: "2026-10-11", text: "sunday. tidied up and made soup.", moods: ["calm"]),
+                Seed(
+                    day: "2026-10-12", text: "Coffee with Priya at the Café on the corner.", score: .excellent,
+                    moods: ["happy", "calm"], tags: [friends]),
+                Seed(day: "2026-10-16", smile: "a stranger held the door and we both laughed."),
+                Seed(day: "2026-10-18", text: "sunday reset, long walk by the river.", score: .good, tags: [walk]),
+                Seed(
+                    day: "2026-10-21", text: "couldn't settle. early night.", score: .difficult,
+                    moods: ["anxious", "tired"]),
+                Seed(
+                    day: "2026-10-24", text: "market, then the cinema.\nthe film was slower than i hoped.",
+                    tags: [friends]),
+                Seed(day: "2026-10-27", rotating: "a good chapter and a quiet cup of tea.", tags: [reading]),
+                Seed(
+                    day: "2026-10-29", text: "windy. kept the doors shut and read all afternoon.", moods: ["calm"],
+                    tags: [reading]),
+                Seed(
+                    day: "2026-10-31", text: "pumpkins on the step, a few kids came by.", score: .good, moods: ["happy"]
+                ),
+                Seed(day: "2026-11-01", text: "sunday. planned the week over breakfast."),
+                Seed(day: "2026-11-02", smile: "found the old cafe still does the good scones.", tags: [friends]),
+                Seed(day: "2026-11-03", text: "busy. barely looked up until four.", score: .okay, moods: ["tired"]),
+                Seed(
+                    day: "2026-11-04",
+                    text: "a slow morning, coffee on the step.\nlong walk after lunch, the light was lovely.",
+                    smile: "the dog fell asleep on my feet.", score: .good, moods: ["happy", "tired"], tags: [walk]),
+            ]
+            for seed in seeds {
+                let day = key(seed.day)
+                if !seed.text.isEmpty { _ = try? await store.updateEntry(day, .text(seed.text)) }
+                if let s = seed.smile { _ = try? await store.updateEntry(day, .smileAnswer(s)) }
+                if let r = seed.rotating { _ = try? await store.updateEntry(day, .rotatingAnswer(r)) }
+                if let s = seed.score { _ = try? await store.updateEntry(day, .score(s)) }
+                if !seed.moods.isEmpty { _ = try? await store.updateEntry(day, .moods(seed.moods)) }
+                let ids = seed.tags.compactMap { $0 }
+                if !ids.isEmpty { _ = try? await store.updateEntry(day, .tags(ids)) }
+            }
+            // A Sunday plan with a follow-up the next Sunday: both are content on their own days.
+            _ = try? await store.saveIntention(
+                sunday: key("2026-10-25"), text: "call mum and book the dentist", category: "need-to-do")
+            _ = try? await store.saveFollowUp(
+                sourceSunday: key("2026-10-25"), writtenOn: key("2026-11-01"),
+                note: "called mum, dentist is booked for the 12th.", skipped: false)
+            // A prompt assigned but never answered: must not get a dot or a row.
+            _ = try? await store.assignPromptIfNeeded(key("2026-10-14")) { _, _ in
+                PromptChoice(id: "debug-seed", text: "what felt easy today?")
+            }
+            // Photos on two days, only when they have none yet (importing again would add copies).
+            for (name, colour) in [("2026-10-12", UIColor.systemTeal), ("2026-10-31", UIColor.systemOrange)] {
+                let day = key(name)
+                guard let content = try? await store.dayContent(day), content.attachmentCount == 0 else { continue }
+                let image = UIGraphicsImageRenderer(size: CGSize(width: 300, height: 400)).image { ctx in
+                    colour.setFill()
+                    ctx.fill(CGRect(x: 0, y: 0, width: 300, height: 400))
+                }
+                if let data = image.jpegData(compressionQuality: 0.8) {
+                    _ = await attachments.importData(data, for: day)
                 }
             }
         }

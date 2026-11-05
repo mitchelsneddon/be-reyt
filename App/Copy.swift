@@ -11,9 +11,44 @@ enum Copy {
     }
 
     enum Placeholder {
-        static let historyBody = "your past days will gather here."
         static let reviewsBody = "weekly reflections will gather here."
         static let settingsBody = "settings will live here."
+    }
+
+    enum History {
+        static let modeLabel = "history view"
+        static let calendar = "calendar"
+        static let list = "list"
+        static let emptyJournal = "nothing here yet. today is a good place to start."
+        static let noMatches = "nothing matches that."
+        static let searchPrompt = "search your days"
+        static let tagFilterLabel = "filter by tag"
+        static let calendarLabel = "calendar of your days"
+        static let loadFailed = "couldn't open your history. tap to try again."
+        static let hasEntry = "has an entry"
+        static let photosUnit = "photos"
+        static let moodsUnit = "moods"
+
+        /// "november 2026", lowercase.
+        static func monthHeader(year: Int, month: Int, calendar: Calendar = .current) -> String {
+            guard let key = DateKey(year: year, month: month, day: 1) else { return "" }
+            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).month(.wide).year()
+            return key.date(in: calendar).formatted(style).lowercased()
+        }
+
+        /// "wed 4 nov", lowercase.
+        static func rowDate(_ key: DateKey, calendar: Calendar = .current) -> String {
+            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone)
+                .weekday(.abbreviated).day().month(.abbreviated)
+            return key.date(in: calendar).formatted(style).lowercased()
+        }
+
+        static func photosLabel(_ n: Int) -> String { n == 1 ? "1 photo" : "\(n) photos" }
+        static func moodsLabel(_ n: Int) -> String { n == 1 ? "1 mood" : "\(n) moods" }
+        static func scoreLabel(_ score: DayScore) -> String { "day score, \(score.label)" }
+        static func rowLabel(date: String, preview: String) -> String {
+            preview.isEmpty ? date : "\(date), \(preview)"
+        }
     }
 
     enum Host {

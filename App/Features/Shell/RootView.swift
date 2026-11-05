@@ -1,24 +1,36 @@
 import ReytKit
 import SwiftUI
 
-/// Four tabs; Today is the root. History, reviews and settings are placeholders until their sections land.
+/// Four tabs; Today is the root. Reviews and settings are placeholders until their sections land.
 struct RootView: View {
     let store: JournalStore
     let events: JournalEvents
     let attachments: AttachmentStore
 
+    private enum Destination: Hashable { case today, history, reviews, settings }
+
+    @State private var selection: Destination = Self.initialSelection
+
+    private static var initialSelection: Destination {
+        #if DEBUG
+            // Simulator-only: `-openHistory ...` starts on the history tab.
+            if CommandLine.arguments.contains("-openHistory") { return .history }
+        #endif
+        return .today
+    }
+
     var body: some View {
-        TabView {
-            Tab(Copy.Tab.today, systemImage: "sun.horizon") {
+        TabView(selection: $selection) {
+            Tab(Copy.Tab.today, systemImage: "sun.horizon", value: Destination.today) {
                 TodayView(store: store, events: events, attachments: attachments)
             }
-            Tab(Copy.Tab.history, systemImage: "calendar") {
-                PlaceholderScreen(title: Copy.Tab.history, message: Copy.Placeholder.historyBody)
+            Tab(Copy.Tab.history, systemImage: "calendar", value: Destination.history) {
+                HistoryView(store: store, events: events, attachments: attachments)
             }
-            Tab(Copy.Tab.reviews, systemImage: "text.book.closed") {
+            Tab(Copy.Tab.reviews, systemImage: "text.book.closed", value: Destination.reviews) {
                 PlaceholderScreen(title: Copy.Tab.reviews, message: Copy.Placeholder.reviewsBody)
             }
-            Tab(Copy.Tab.settings, systemImage: "gearshape") {
+            Tab(Copy.Tab.settings, systemImage: "gearshape", value: Destination.settings) {
                 PlaceholderScreen(title: Copy.Tab.settings, message: Copy.Placeholder.settingsBody)
             }
         }
