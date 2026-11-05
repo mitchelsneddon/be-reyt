@@ -8,7 +8,7 @@
         static func runIfRequested(_ store: JournalStore) async {
             let args = CommandLine.arguments
             if args.contains("-seedDemoDay") {
-                let today = DateKey(date: .now, calendar: .current)
+                let today = AppClock.today()
                 _ = try? await store.updateEntry(
                     today, .text("a slow morning, coffee on the step.\nlong walk after lunch, the light was lovely."))
                 _ = try? await store.updateEntry(today, .smileAnswer("the dog fell asleep on my feet."))
@@ -18,11 +18,17 @@
                 let extras = ["reading", "cooking", "friends", "garden", "rain", "run", "music", "family", "quiet"]
                 for (offset, name) in extras.enumerated() {
                     guard let tag = try? await store.createTag(name: name) else { continue }
-                    let day = DateKey(date: .now, calendar: .current).adding(days: -(offset + 1))
+                    let day = AppClock.today().adding(days: -(offset + 1))
                     _ = try? await store.updateEntry(day, .tags([tag.id]))
                 }
                 if let tag = try? await store.createTag(name: "walk") {
                     _ = try? await store.updateEntry(today, .tags([tag.id]))
+                }
+            }
+            if args.contains("-seedSundayPlan") {
+                // Plan for the week after Sunday 2026-11-08, so the Sunday, Monday and follow-up flows can be seen.
+                if let sunday = DateKey("2026-11-08") {
+                    _ = try? await store.saveIntention(sunday: sunday, text: "book the dentist", category: "need-to-do")
                 }
             }
             if args.contains("-seedLateTag") {

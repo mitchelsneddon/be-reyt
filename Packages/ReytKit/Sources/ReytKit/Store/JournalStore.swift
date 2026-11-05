@@ -323,6 +323,19 @@ public actor JournalStore {
 
     // MARK: Intentions
 
+    /// Every stored plan (a handful per year), as values the app can query with `IntentionQueries`.
+    public func intentionPlans() throws -> [IntentionPlan] {
+        try modelContext.fetch(FetchDescriptor<WeeklyIntention>()).compactMap { row in
+            guard let sunday = DateKey(row.sourceSundayKey), let start = DateKey(row.targetStartKey),
+                let end = DateKey(row.targetEndKey)
+            else { return nil }
+            return IntentionPlan(
+                sourceSunday: sunday, targetStart: start, targetEnd: end, text: row.text, category: row.category,
+                followUpNote: row.followUpNote, followUpWrittenOn: row.followUpWrittenOnKey.flatMap(DateKey.init),
+                followUpSkipped: row.followUpSkipped)
+        }
+    }
+
     /// Blank text and no category removes the intention (kept as an empty row if it carries a follow-up).
     public func saveIntention(sunday: DateKey, text: String, category: String?) throws -> StoreEffect {
         try requireWritable()

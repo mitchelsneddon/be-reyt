@@ -8,6 +8,7 @@ struct ReflectionCard<Action: View>: View {
     var answerLabel: String
     @Binding var answer: String
     var isEnabled = true
+    var lineLimits: ClosedRange<Int> = 2...6
     @ViewBuilder var action: () -> Action
 
     var body: some View {
@@ -22,7 +23,7 @@ struct ReflectionCard<Action: View>: View {
             TextField(Copy.Reflection.answerPlaceholder, text: $answer, axis: .vertical)
                 .font(.body)
                 .foregroundStyle(Color("ink"))
-                .lineLimit(2...6)
+                .lineLimit(lineLimits)
                 .disabled(!isEnabled)
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -36,10 +37,12 @@ struct ReflectionCard<Action: View>: View {
 
 extension ReflectionCard where Action == EmptyView {
     init(
-        question: String, helper: String? = nil, answerLabel: String, answer: Binding<String>, isEnabled: Bool = true
+        question: String, helper: String? = nil, answerLabel: String, answer: Binding<String>, isEnabled: Bool = true,
+        lineLimits: ClosedRange<Int> = 2...6
     ) {
         self.init(
-            question: question, helper: helper, answerLabel: answerLabel, answer: answer, isEnabled: isEnabled
+            question: question, helper: helper, answerLabel: answerLabel, answer: answer, isEnabled: isEnabled,
+            lineLimits: lineLimits
         ) { EmptyView() }
     }
 }

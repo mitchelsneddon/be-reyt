@@ -8,7 +8,7 @@ import ReytKit
 final class DayPageModel {
     enum SaveState: Equatable { case idle, saving, saved, failed }
     enum AddTagResult { case added, blank, failed }
-    private enum Field: Hashable { case text, smile, rotating, score, moods, tags }
+    private enum Field: Hashable { case text, smile, rotating, score, moods, tags, intention, followUp }
 
     let dateKey: DateKey
 
@@ -24,9 +24,23 @@ final class DayPageModel {
     private(set) var loadFailed = false
     var isEditorFocused = false
 
+    // Sunday plan lifecycle.
+    private(set) var intentionText = ""
+    private(set) var intentionCategory: String?
+    /// The plan whose target week contains this day (shown as "your plan for this week").
+    private(set) var coveringPlan: IntentionPlan?
+    /// The plan whose follow-up belongs on this day (this day is the Sunday ending its target week).
+    private(set) var followUpPlan: IntentionPlan?
+    private(set) var followUpNote = ""
+    private(set) var followUpSkipped = false
+    /// True while the follow-up card is open for writing; a saved note or skip shows collapsed otherwise.
+    private(set) var isEditingFollowUp = false
+
     private var savedText = ""
     private var savedSmile = ""
     private var savedRotating = ""
+    private var savedIntention = ""
+    private var savedFollowUpNote = ""
     private var inFlight = 0
     private var failedFields: Set<Field> = []
     private var didSave = false
@@ -50,6 +64,14 @@ final class DayPageModel {
     private var textIsDirty: Bool { text != savedText }
     private var hasUnsavedDrafts: Bool {
         text != savedText || smileAnswer != savedSmile || rotatingAnswer != savedRotating
+            || intentionText != savedIntention || followUpNote != savedFollowUpNote
+    }
+
+    var isSunday: Bool { dateKey.weekday == 0 }
+
+    /// A saved note or skip shows collapsed with an "edit" affordance.
+    var followUpIsCollapsed: Bool {
+        !isEditingFollowUp && (followUpSkipped || !followUpNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 
     /// "another prompt" shows only while the rotating answer is blank and a prompt is assigned.
@@ -79,6 +101,18 @@ final class DayPageModel {
             savedSmile = smileAnswer
             rotatingAnswer = content.rotatingAnswer ?? ""
             savedRotating = rotatingAnswer
+            let plans = try await store.intentionPlans()
+            let own = IntentionQueries.plan(sourcedOn: dateKey, in: plans)
+            intentionText = own?.text ?? ""
+            savedIntention = intentionText
+            intentionCategory = own?.category
+            let followUp = IntentionQueries.followUpDue(on: dateKey, in: plans)
+            followUpPlan = followUp
+            followUpNote = followUp?.followUpNote ?? ""
+            savedFollowUpNote = followUpNote
+            followUpSkipped = followUp?.followUpSkipped ?? false
+            // On the follow-up Sunday itself the follow-up card quotes the plan, so the banner card is not repeated.
+            coveringPlan = followUp == nil ? IntentionQueries.planCovering(day: dateKey, in: plans) : nil
             loadFailed = false
             isLoaded = true
         } catch {
@@ -137,6 +171,43 @@ final class DayPageModel {
         scheduleWrite(.rotating)
     }
 
+    func setIntentionText(_ newValue: String) {
+        guard isLoaded, isSunday, newValue != intentionText else { return }
+        intentionText = newValue
+        scheduleWrite(.intention)
+    }
+
+    /// Single-select; tapping the selected category again clears it.
+    func toggleIntentionCategory(_ category: String) {
+        guard isLoaded, isSunday else { return }
+        intentionCategory = intentionCategory == category ? nil : category
+        write(.intention)
+    }
+
+    func setFollowUpNote(_ newValue: String) {
+        guard isLoaded, followUpPlan != nil, newValue != followUpNote else { return }
+        followUpNote = newValue
+        if !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { followUpSkipped = false }
+        scheduleWrite(.followUp)
+    }
+
+    func skipFollowUp() {
+        guard isLoaded, followUpPlan != nil else { return }
+        debounceTasks[.followUp]?.cancel()
+        followUpNote = ""
+        savedFollowUpNote = ""
+        followUpSkipped = true
+        isEditingFollowUp = false
+        write(.followUp)
+    }
+
+    func editFollowUp() { isEditingFollowUp = true }
+
+    func finishEditingFollowUp() {
+        flush()
+        isEditingFollowUp = false
+    }
+
     private func scheduleWrite(_ field: Field) {
         debounceTasks[field]?.cancel()
         debounceTasks[field] = Task { [weak self, debounce] in
@@ -189,6 +260,8 @@ final class DayPageModel {
         if textIsDirty { write(.text) }
         if smileAnswer != savedSmile { write(.smile) }
         if rotatingAnswer != savedRotating { write(.rotating) }
+        if intentionText != savedIntention { write(.intention) }
+        if followUpNote != savedFollowUpNote { write(.followUp) }
     }
 
     func retry() {
@@ -225,12 +298,32 @@ final class DayPageModel {
         case .score: change = .score(score)
         case .moods: change = .moods(moodIDs)
         case .tags: change = .tags(tagIDs)
+        case .intention:
+            let sent = intentionText
+            do {
+                let effect = try await store.saveIntention(sunday: dateKey, text: sent, category: intentionCategory)
+                finishWrite(field, effect)
+                savedIntention = sent
+            } catch {
+                failedFields.insert(field)
+            }
+            return
+        case .followUp:
+            guard let plan = followUpPlan else { return }
+            let sent = followUpNote
+            do {
+                let effect = try await store.saveFollowUp(
+                    sourceSunday: plan.sourceSunday, writtenOn: dateKey, note: sent, skipped: followUpSkipped)
+                finishWrite(field, effect)
+                savedFollowUpNote = sent
+            } catch {
+                failedFields.insert(field)
+            }
+            return
         }
         do {
             let effect = try await store.updateEntry(dateKey, change)
-            events.receive(effect)
-            failedFields.remove(field)
-            didSave = true
+            finishWrite(field, effect)
             if let sentText { savedText = sentText }
             if let sentSmile { savedSmile = sentSmile }
             if let sentRotating { savedRotating = sentRotating }
@@ -238,5 +331,11 @@ final class DayPageModel {
             // The draft stays in memory; the indicator offers a retry.
             failedFields.insert(field)
         }
+    }
+
+    private func finishWrite(_ field: Field, _ effect: StoreEffect) {
+        events.receive(effect)
+        failedFields.remove(field)
+        didSave = true
     }
 }

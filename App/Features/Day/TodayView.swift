@@ -41,7 +41,7 @@ struct TodayView: View {
         .onChange(of: model.isIdle) { _, _ in rollIfIdle() }
     }
 
-    private static func currentDay() -> DateKey { DateKey(date: .now, calendar: .current) }
+    private static func currentDay() -> DateKey { AppClock.today() }
 
     private func show(_ key: DateKey) {
         guard key <= today else { return }

@@ -79,7 +79,7 @@ final class ContainerHost {
         generationURL = generation
         protect()
 
-        let store = JournalStore(modelContainer: container)
+        let store = JournalStore(modelContainer: container, clock: AppClock.now)
         #if DEBUG
             Task {
                 await DebugSeed.runIfRequested(store)

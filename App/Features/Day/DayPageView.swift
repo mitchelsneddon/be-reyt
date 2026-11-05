@@ -9,6 +9,7 @@ struct DayPageView: View {
     let onNavigate: (DateKey) -> Void
 
     static let reflectionsAnchor = "reflections"
+    static let planAnchor = "plan"
 
     @Environment(\.scenePhase) private var scenePhase
     @FocusState private var editorFocused: Bool
@@ -23,9 +24,13 @@ struct DayPageView: View {
     private func scrollToReflectionsIfRequested(_ proxy: ScrollViewProxy) async {
         #if DEBUG
             // Simulator-only: `-scrollToReflections` brings the reflection cards into view for screenshots.
-            guard CommandLine.arguments.contains("-scrollToReflections"), model.prompt != nil else { return }
+            // `-scrollToPlan` brings the follow-up and Sunday plan cards into view instead.
+            let args = CommandLine.arguments
+            guard args.contains("-scrollToReflections") || args.contains("-scrollToPlan"), model.prompt != nil
+            else { return }
             try? await Task.sleep(for: .milliseconds(400))
-            proxy.scrollTo(Self.reflectionsAnchor, anchor: .top)
+            let anchor = args.contains("-scrollToPlan") ? Self.planAnchor : Self.reflectionsAnchor
+            proxy.scrollTo(anchor, anchor: .top)
         #endif
     }
 
@@ -43,12 +48,15 @@ struct DayPageView: View {
                         .foregroundStyle(Color("accent"))
                         .frame(minHeight: 44)
                 } else {
+                    if let plan = model.coveringPlan {
+                        PlanThisWeekCard(plan: plan, today: today, onOpenSunday: go)
+                    }
                     DayScoreControl(score: model.score, onChange: model.setScore)
                     moods
                     TagEditor()
                     editor
                     reflections
-                    // INSERT S5b: sunday plan question goes here.
+                    planLifecycle
                     // INSERT S6: photo strip goes here.
                     // INSERT S9: workout cards go here.
                 }
@@ -84,6 +92,14 @@ struct DayPageView: View {
                 SavedIndicator(state: model.saveState, retry: model.retry)
             }
         }
+    }
+
+    @ViewBuilder private var planLifecycle: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            if let plan = model.followUpPlan { FollowUpCard(plan: plan) }
+            if model.isSunday { SundayPlanSection() }
+        }
+        .id(DayPageView.planAnchor)
     }
 
     private func go(_ key: DateKey) {

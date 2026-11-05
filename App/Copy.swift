@@ -56,6 +56,39 @@ enum Copy {
         static func promptAnswerLabel(_ question: String) -> String { "answer to \(question)" }
     }
 
+    enum Plan {
+        static let question = "what’s one thing you want or need to do next week?"
+        static let helper =
+            "something you’re looking forward to, a goal, a task, or something you’d like to achieve."
+        static let answerLabel = "answer to what's one thing you want or need to do next week"
+        /// Stable stored IDs (persisted in WeeklyIntention.category) paired with display labels.
+        static let categories: [(id: String, label: String)] = [
+            ("looking-forward-to", "looking forward to"),
+            ("goal", "goal"),
+            ("need-to-do", "need to do"),
+            ("want-to-do", "want to do"),
+        ]
+        /// Display label for a stored category ID; unknown IDs (e.g. from a newer version) show as stored.
+        static func categoryLabel(for id: String) -> String {
+            categories.first { $0.id == id }?.label ?? id
+        }
+        static let categoriesLabel = "kind of thing, optional"
+        static let thisWeekTitle = "your plan for this week"
+        static func rangeTitle(_ range: String) -> String { "your plan for \(range)" }
+        static let editPlan = "edit your plan"
+        static let editPlanHint = "opens the sunday you wrote it"
+
+        static let followUpTitle = "how did that go?"
+        static func followUpQuote(_ plan: String) -> String { "you planned: “\(plan)”" }
+        static let followUpPlaceholder = "a note, if you like."
+        static let followUpNoteLabel = "note on how that went"
+        static let skip = "skip"
+        static let skipHint = "leaves this one without a note"
+        static let edit = "edit"
+        static let done = "done"
+        static let skipped = "skipped"
+    }
+
     enum Tags {
         static let recentTitle = "recent"
         static let addPlaceholder = "add a tag"
