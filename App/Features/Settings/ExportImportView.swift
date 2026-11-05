@@ -20,6 +20,7 @@ struct ExportImportView: View {
         List {
             ReminderSection()
             HealthSection()
+            OnDeviceAISection()
             Section {
                 passphraseRow
                 exportRow

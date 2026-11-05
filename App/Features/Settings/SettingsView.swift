@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The settings tab. Only backup and restore live here so far.
+/// The settings tab.
 struct SettingsView: View {
     let backup: BackupSettingsModel
     let restore: RestoreCoordinator

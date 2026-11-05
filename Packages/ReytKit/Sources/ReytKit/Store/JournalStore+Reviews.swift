@@ -105,3 +105,59 @@ public struct MoreOfThis: Sendable, Equatable {
     public let targetStart: DateKey?
     public let targetEnd: DateKey?
 }
+
+/// The persisted narrative row as the reader sees it. `content` is nil when there is none or it cannot be decoded.
+public struct StoredNarrative: Sendable, Equatable {
+    public let content: WeeklyReflectionContent?
+    public let promptVersion: Int?
+    public let generatedAt: Date?
+    /// Set when a narrative was purged (and none has been written since).
+    public let purgeReason: String?
+}
+
+extension JournalStore {
+    /// Stores a generated narrative, but only if `fingerprint` still matches the week's model input right now
+    /// (checked inside the actor, so an edit that landed during generation can never be overwritten by stale
+    /// words). Does not bump `sourceRevision`: the narrative is output, not input.
+    public func saveNarrative(
+        weekStart: DateKey, content: WeeklyReflectionContent, fingerprint: String, promptVersion: Int,
+        osBuild: String
+    ) throws -> StoreEffect {
+        try requireWritable()
+        let week = WeekCalendar.reviewWeekStart(containing: weekStart)
+        guard try ReviewFingerprint.compute(try reflectionInput(weekStart: week)) == fingerprint else {
+            throw JournalStoreError.fingerprintMismatch
+        }
+        let json = try content.encodedJSON()
+        let s = week.string
+        var d = FetchDescriptor<WeeklyReview>(predicate: #Predicate { $0.weekStartKey == s })
+        d.fetchLimit = 1
+        let row: WeeklyReview
+        if let existing = try modelContext.fetch(d).first {
+            row = existing
+        } else {
+            row = WeeklyReview(
+                weekStartKey: s, weekEndKey: week.adding(days: 6).string, timeZoneID: timeZone.identifier,
+                unlockedAt: clock())
+            modelContext.insert(row)
+        }
+        row.narrativeJSON = json
+        row.inputFingerprint = fingerprint
+        row.generatedAt = clock()
+        row.promptVersion = promptVersion
+        row.osBuild = osBuild
+        row.purgeReason = nil
+        return try commit(candidateDays: [], before: [:], bumpDays: [])
+    }
+
+    /// The narrative exactly as persisted. Callers validate it first with `validateNarrative`.
+    public func storedNarrative(weekStart: DateKey) throws -> StoredNarrative? {
+        let s = WeekCalendar.reviewWeekStart(containing: weekStart).string
+        var d = FetchDescriptor<WeeklyReview>(predicate: #Predicate { $0.weekStartKey == s })
+        d.fetchLimit = 1
+        guard let row = try modelContext.fetch(d).first else { return nil }
+        return StoredNarrative(
+            content: row.narrativeJSON.flatMap(WeeklyReflectionContent.decode(json:)),
+            promptVersion: row.promptVersion, generatedAt: row.generatedAt, purgeReason: row.purgeReason)
+    }
+}

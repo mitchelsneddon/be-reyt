@@ -1,20 +1,25 @@
 import ReytKit
 import SwiftUI
 
-/// One week's review. Sections in order: reflection slot, coverage and score, moods, comparison, highest and
+/// One week's review. Sections in order: written reflection, coverage and score, moods, comparison, highest and
 /// lowest days, workouts, "more of this". Everything is computed from the records, so it is always current.
 struct ReviewView: View {
     let store: JournalStore
     let events: JournalEvents
 
     @State private var model: ReviewModel
+    @State private var reflection: ReflectionModel
     @State private var today = AppClock.today()
+    @State private var didAutoGenerate = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(weekStart: DateKey, store: JournalStore, events: JournalEvents) {
         self.store = store
         self.events = events
         _model = State(initialValue: ReviewModel(weekStart: weekStart, store: store, events: events))
+        _reflection = State(
+            initialValue: ReflectionModel(
+                weekStart: WeekCalendar.reviewWeekStart(containing: weekStart), store: store, events: events))
     }
 
     private static let endAnchor = "end"
@@ -44,7 +49,11 @@ struct ReviewView: View {
         }
         .background(Color("paper"))
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: events.contentRevision) { await model.refresh() }
+        .task(id: events.contentRevision) {
+            await model.refresh()
+            await reflection.load()
+            await autoGenerateIfRequested()
+        }
         .onDisappear { model.flush() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { today = AppClock.today() } else { model.flush() }
@@ -54,6 +63,17 @@ struct ReviewView: View {
     private var range: String {
         DateRangeFormat.string(
             from: model.weekStart, to: model.weekStart.adding(days: 6), today: today)
+    }
+
+    private func autoGenerateIfRequested() async {
+        #if DEBUG
+            // Simulator-only: `-autoGenerateReflection` taps "write my reflection" once, for screenshots.
+            guard CommandLine.arguments.contains("-autoGenerateReflection"), !didAutoGenerate,
+                reflection.state == .notGenerated
+            else { return }
+            didAutoGenerate = true
+            await reflection.generate()
+        #endif
     }
 
     private func scrollToEndIfRequested(_ proxy: ScrollViewProxy) async {
@@ -69,13 +89,7 @@ struct ReviewView: View {
         if stats.recordedDays == 0 {
             Text(Copy.Reviews.emptyWeek).font(.body).foregroundStyle(Color("inkSecondary"))
         } else {
-            // S13 replaces this slot with the generated reflection.
-            Text(Copy.Reviews.reflectionPlaceholder)
-                .font(.body).foregroundStyle(Color("inkSecondary"))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
-                .background(RoundedRectangle(cornerRadius: 14).fill(Color("card")))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color("hairline"), lineWidth: 1))
+            ReflectionSection(model: reflection)
             scoreSection(stats)
             moodSection(stats)
             comparisonSection(stats)

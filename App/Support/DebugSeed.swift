@@ -143,6 +143,12 @@
                 Seed(
                     day: "2026-10-24", text: "market, then the cinema.\nthe film was slower than i hoped.",
                     tags: [friends]),
+                // A genuinely hard day in the week of 2026-10-25, to check the difficult section is used for it.
+                Seed(
+                    day: "2026-10-26",
+                    text:
+                        "had a hard conversation with my manager about the project. i came away shaken and could not eat lunch.",
+                    score: .difficult, moods: ["stressed"]),
                 Seed(
                     day: "2026-10-27", rotating: "a good chapter and a quiet cup of tea.", score: .okay,
                     moods: ["tired"], tags: [reading]),

@@ -8,6 +8,8 @@ public enum JournalStoreError: Error, Equatable, Sendable {
     case tagNameTaken
     case notASunday
     case intentionNotFound
+    /// The week changed between reading it for generation and saving the narrative.
+    case fingerprintMismatch
 }
 
 /// One change to a day's entry. Intent-level, so the store can detect no-ops and decide what to bump.

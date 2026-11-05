@@ -103,7 +103,6 @@ enum Copy {
             return "your first review opens on \(key.date(in: calendar).formatted(style).lowercased())."
         }
 
-        static let reflectionPlaceholder = "a written reflection will appear here."
         static let emptyWeek = "nothing was written this week."
 
         static let scoresTitle = "day scores"
@@ -311,8 +310,68 @@ enum Copy {
         }
     }
 
+    enum WeekReflection {
+        static let title = "reflection"
+        static let write = "write my reflection"
+        static let writeHint = "writes a short reflection on this phone with apple's on-device model"
+        static let generating = "writing your reflection on this phone…"
+        static let regenerate = "regenerate"
+        static let regenerateHint = "writes the reflection again with the newer wording"
+        static let tryAgain = "try again"
+        static let footnote = "written on this phone by apple's on-device model. it can get things wrong."
+        static let purged = "this week changed, so the reflection was cleared."
+        static let highlights = "highlights"
+        static let difficult = "what felt difficult"
+        static let themes = "recurring themes"
+        static let questions = "to sit with"
+        static let intro = "a short reflection, written only on this phone. nothing is sent anywhere."
+        static func datesLabel(_ dates: [String]) -> String { "days: " + dates.joined(separator: ", ") }
+
+        static func failure(_ failure: ReflectionFailure) -> String {
+            switch failure {
+            case .deviceNotEligible:
+                "this iphone can't run apple's on-device model, so there's no written reflection. your numbers are below."
+            case .appleIntelligenceNotEnabled:
+                "turn on apple intelligence in settings to write a reflection. your numbers are below."
+            case .modelNotReady:
+                "the on-device model is still downloading. try again in a little while. your numbers are below."
+            case .unsupportedLanguage:
+                "the on-device model doesn't support this language yet, so there's no written reflection. your numbers are below."
+            case .guardrail:
+                "the on-device model couldn't write a reflection for this week. your numbers are below."
+            case .refused:
+                "the on-device model chose not to write about this week. your numbers are below."
+            case .tooLong:
+                "this week has more writing than the on-device model can read at once, so there's no reflection. your numbers are below."
+            case .timedOut:
+                "that took too long, so it was stopped. try again."
+            case .rateLimited, .busy:
+                "the on-device model is busy. try again in a moment."
+            case .unreadableAnswer, .invalidAnswer, .modelError:
+                "couldn't write a reflection this time. try again."
+            case .cancelled:
+                "couldn't finish that one. try again."
+            case .changedWhileWriting:
+                "this week changed while writing, try again."
+            case .couldNotSave:
+                "couldn't save the reflection. try again."
+            case .noEntries:
+                "nothing was written this week, so there's nothing to reflect on."
+            }
+        }
+    }
+
     enum Settings {
         static let title = "settings"
+        static let aiSection = "on-device ai"
+        static let aiRow = "apple's on-device model"
+        static let aiAvailable = "available"
+        static let aiTurnOn = "turn on apple intelligence in settings"
+        static let aiDownloading = "the model is still downloading"
+        static let aiNotSupported = "not supported on this iphone"
+        static let aiLanguage = "not available in this language"
+        static let aiFooter =
+            "reflections are written by apple's on-device model, on this phone. your journal is never sent anywhere."
         static let backupSection = "backup"
         static let passphraseRow = "backup passphrase"
         static let passphraseSet = "set"
