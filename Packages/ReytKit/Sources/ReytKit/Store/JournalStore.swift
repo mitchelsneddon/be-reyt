@@ -110,7 +110,7 @@ public actor JournalStore {
     public func setReadOnly(_ value: Bool) { readOnly = value }
     public var isReadOnly: Bool { readOnly }
 
-    private func requireWritable() throws {
+    func requireWritable() throws {
         if readOnly { throw JournalStoreError.readOnly }
     }
 
@@ -569,7 +569,7 @@ public actor JournalStore {
     // MARK: Helpers
 
     /// Bumps each distinct week once, saves, then reports which candidate days flipped. Rolls back on failure.
-    private func commit(candidateDays: Set<DateKey>, before: [DateKey: Bool], bumpDays: Set<DateKey>) throws
+    func commit(candidateDays: Set<DateKey>, before: [DateKey: Bool], bumpDays: Set<DateKey>) throws
         -> StoreEffect
     {
         do {

@@ -210,6 +210,25 @@ enum Copy {
         static let nothingFound = "no workouts found, or health access is off."
     }
 
+    enum Reminder {
+        static let section = "reminder"
+        static let toggle = "remind me in the evening"
+        static let time = "time"
+        static func hourLabel(_ hour: Int) -> String {
+            let h12 = hour % 12 == 0 ? 12 : hour % 12
+            return "\(h12) \(hour < 12 ? "am" : "pm")"
+        }
+        static let allow = "allow notifications"
+        static let allowHint = "shows the iOS notification permission sheet"
+        static let denied = "notifications are off for be reyt, so the reminder can't show."
+        static let openSettings = "open ios settings"
+        static let openSettingsHint = "opens the notification settings for be reyt"
+        static let footer =
+            "reminders are scheduled ahead for 4 weeks and refresh whenever you open be reyt. if you don't open it for 4 weeks, they stop. a reminder is skipped on days you've already written something. focus modes and notification summaries can delay or hide it. nothing from your journal appears in the notification."
+        static let notificationTitle = "be reyt"
+        static let notificationBody = "a little space for your day, if you'd like it."
+    }
+
     enum Save {
         static let saving = "saving…"
         static let saved = "saved"

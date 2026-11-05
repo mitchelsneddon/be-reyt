@@ -10,6 +10,7 @@ struct BeReytApp: App {
     @State private var backup: BackupSettingsModel
     @State private var restore: RestoreCoordinator
     @State private var health: HealthCoordinator
+    @State private var reminders: ReminderScheduler
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -20,7 +21,11 @@ struct BeReytApp: App {
         _backup = State(initialValue: BackupSettingsModel(host: host))
         let restore = RestoreCoordinator(host: host, events: events)
         let health = HealthCoordinator(host: host, events: events)
+        let reminders = ReminderScheduler(host: host, events: events)
         restore.registerPostRestoreHook { await health.resyncAfterRestore() }
+        restore.registerPostRestoreHook { await reminders.refresh() }
+        events.onContentChange = { days in Task { await reminders.contentChanged(days: days) } }
+        _reminders = State(initialValue: reminders)
         _restore = State(initialValue: restore)
         _health = State(initialValue: health)
     }
@@ -38,6 +43,7 @@ struct BeReytApp: App {
                         host.openIfPossible()
                         lock.didBecomeActive()
                         Task { await health.syncIfDue() }
+                        Task { await reminders.refresh() }
                     case .background:
                         lock.didEnterBackground()
                         host.protect()
@@ -73,7 +79,21 @@ extension BeReytApp {
         RootView(store: store, events: events, attachments: attachments, backup: backup, restore: restore)
             .modelContainer(container)
             .environment(health)
+            .environment(reminders)
             .task { await health.syncIfDue() }
+            .task {
+                #if DEBUG
+                    if CommandLine.arguments.contains("-autoEnableReminders") {
+                        await reminders.requestAuthorizationIfNeeded()
+                    }
+                #endif
+                await reminders.refresh()
+            }
+            .task {
+                for await _ in NotificationCenter.default.notifications(named: .NSCalendarDayChanged) {
+                    await reminders.refresh()
+                }
+            }
             .id(generation)
     }
 }

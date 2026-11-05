@@ -14,7 +14,7 @@ final class JournalEvents {
     /// Bumped on every persisted change, so history can refresh its dots, list and search.
     private(set) var contentRevision = 0
 
-    /// Hook for reminders: called with the days whose `hasUserContent` flipped. No-op until S10.
+    /// Hook for reminders: called with the days whose `hasUserContent` flipped.
     @ObservationIgnored var onContentChange: (Set<DateKey>) -> Void = { _ in }
 
     @ObservationIgnored private var flushers: [WeakFlusher] = []

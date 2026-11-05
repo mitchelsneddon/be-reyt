@@ -18,6 +18,7 @@ struct ExportImportView: View {
 
     var body: some View {
         List {
+            ReminderSection()
             HealthSection()
             Section {
                 passphraseRow
