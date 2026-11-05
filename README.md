@@ -58,3 +58,14 @@ _to be filled in_
 
 ### Backup and restore
 _to be filled in_
+
+## Opening a backup on a Mac (disaster recovery)
+
+Backups (`.aea`) are Apple Encrypted Archives using the scrypt password profile. To open one without the app:
+
+```sh
+aea decrypt -i be-reyt-export-YYYY-MM-DD-xxxxxxxx.aea -o backup.aar -password-value 'PASSWORD'
+aa extract -i backup.aar -d backup/
+```
+
+`PASSWORD` is your backup passphrase, **plus the suffix ` | be reyt backup` if your passphrase is shorter than 20 bytes** (Apple's engine rejects shorter passwords, so the app appends this fixed suffix). Example: passphrase `sunny dog` → password `sunny dog | be reyt backup`. The extracted folder holds `manifest.json`, `data.json` and `attachments/`.
