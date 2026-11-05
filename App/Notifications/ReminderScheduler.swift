@@ -21,6 +21,17 @@ final class ReminderScheduler {
 
     static let threadID = "reminder"
 
+    /// Delete-all: removes every pending and delivered reminder this app created.
+    nonisolated static func removeAllReminders() async {
+        let center = UNUserNotificationCenter.current()
+        let pending = await center.pendingNotificationRequests().map(\.identifier)
+        center.removePendingNotificationRequests(
+            withIdentifiers: pending.filter { $0.hasPrefix(ReminderPlan.identifierPrefix) })
+        let delivered = await center.deliveredNotifications().map(\.request.identifier)
+        center.removeDeliveredNotifications(
+            withIdentifiers: delivered.filter { $0.hasPrefix(ReminderPlan.identifierPrefix) })
+    }
+
     init(host: ContainerHost, events: JournalEvents) {
         self.host = host
         self.events = events

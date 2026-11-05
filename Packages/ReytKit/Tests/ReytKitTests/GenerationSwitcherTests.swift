@@ -224,3 +224,57 @@ struct GenerationSweepTests {
         #expect(RecoveryRecord.load(from: f.paths) == nil)
     }
 }
+
+@Suite("Delete all data")
+struct DeleteAllTests {
+    struct Boom: Error {}
+
+    private func names(_ f: ArchiveFixture) throws -> Set<String> {
+        Set(try FileManager.default.contentsOfDirectory(atPath: f.paths.dataRoot.path))
+    }
+
+    @Test("a new empty generation becomes current and every old generation directory is gone")
+    func deleteAll() async throws {
+        let f = try await ArchiveFixture()
+        let archive = try ArchiveValidator.validate(directory: try await f.writePayload())
+        let switcher = GenerationSwitcher(paths: f.paths)
+        let second = try switcher.build(from: archive)  // an extra old generation (e.g. a restore recovery copy)
+        try RecoveryRecord(generationID: second.id, recordedAt: .now).save(to: f.paths)
+
+        let empty = try switcher.createEmptyAndFlip()
+        let report = switcher.removeAllGenerations(except: empty.id)
+
+        #expect(f.paths.currentGenerationID() == empty.id)
+        #expect(try names(f) == ["current", empty.id])
+        #expect(report.failed.isEmpty)
+        #expect(Set(report.removed) == ["g1", second.id])
+        #expect(RecoveryRecord.load(from: f.paths) == nil)
+        let fetched = try ArchiveData.fetch(
+            from: ModelContext(try GenerationSwitcher.openContainer(at: f.paths.store(in: empty.directory))))
+        #expect(fetched.entries.isEmpty && fetched.attachments.isEmpty && fetched.tags.isEmpty)
+        #expect(fetched.reviews.isEmpty && fetched.intentions.isEmpty && fetched.workouts.isEmpty)
+        #expect(FileManager.default.fileExists(atPath: f.paths.attachments(in: empty.directory).path))
+    }
+
+    @Test(
+        "a failure before the flip leaves the old journal intact and no new directory",
+        arguments: [GenerationSwitcher.Step.directoryCreated, .verified, .beforeFlip, .pointerStaged])
+    func failureBeforeFlip(step: GenerationSwitcher.Step) async throws {
+        let f = try await ArchiveFixture()
+        var switcher = GenerationSwitcher(paths: f.paths)
+        switcher.hook = { if $0 == step { throw Boom() } }
+        #expect(throws: Boom.self) { try switcher.createEmptyAndFlip() }
+        #expect(f.paths.currentGenerationID() == "g1")
+        #expect(try names(f) == ["g1", "current"])
+        #expect(try ArchiveData.fetch(from: ModelContext(f.container)) == (try f.rawData()))
+    }
+
+    @Test("removal refuses to run when the kept id is not the current generation")
+    func refusesWhenNotCurrent() async throws {
+        let f = try await ArchiveFixture()
+        let switcher = GenerationSwitcher(paths: f.paths)
+        let report = switcher.removeAllGenerations(except: "g9")
+        #expect(report == .init())
+        #expect(try names(f) == ["g1", "current"])
+    }
+}

@@ -38,6 +38,7 @@ struct ExportImportView: View {
                     if let note = statusNote { Text(note).foregroundStyle(Color("ink")) }
                 }
             }
+            DeleteAllSection()
         }
         .scrollContentBackground(.hidden)
         .background(Color("paper"))

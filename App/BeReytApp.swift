@@ -11,6 +11,7 @@ struct BeReytApp: App {
     @State private var restore: RestoreCoordinator
     @State private var health: HealthCoordinator
     @State private var reminders: ReminderScheduler
+    @State private var deleteAll: DeleteAllCoordinator
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -26,6 +27,9 @@ struct BeReytApp: App {
         restore.registerPostRestoreHook { await reminders.refresh() }
         events.onContentChange = { days in Task { await reminders.contentChanged(days: days) } }
         _reminders = State(initialValue: reminders)
+        let registry = DeviceDataRegistry()
+        Self.registerDeviceWipers(registry, deviceRoot: host.paths.deviceRoot)
+        _deleteAll = State(initialValue: DeleteAllCoordinator(host: host, events: events, registry: registry))
         _restore = State(initialValue: restore)
         _health = State(initialValue: health)
     }
@@ -73,6 +77,21 @@ struct BeReytApp: App {
 }
 
 extension BeReytApp {
+    /// Device-local state that delete-all clears. Anything new that lives outside the journal (the automatic
+    /// backup's data key, index, folder bookmark) registers its own wiper here.
+    fileprivate static func registerDeviceWipers(_ registry: DeviceDataRegistry, deviceRoot: URL) {
+        registry.register(Copy.DeleteAll.wiperPassphrase) { PassphraseStore().clear() }
+        registry.register(Copy.DeleteAll.wiperHealthAnchor) { HealthAnchorStore(deviceRoot: deviceRoot).reset() }
+        registry.register(Copy.DeleteAll.wiperReminders) { await ReminderScheduler.removeAllReminders() }
+        registry.register(Copy.DeleteAll.wiperDeviceFiles) {
+            let fm = FileManager.default
+            for name in ["recovery.json", "pre-restore"] {
+                let url = deviceRoot.appending(path: name)
+                if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
+            }
+        }
+    }
+
     fileprivate func root(
         store: JournalStore, attachments: AttachmentStore, container: ModelContainer, generation: String
     ) -> some View {
@@ -80,6 +99,12 @@ extension BeReytApp {
             .modelContainer(container)
             .environment(health)
             .environment(reminders)
+            .environment(deleteAll)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let note = deleteAll.completionNote {
+                    DeleteAllNoteBanner(text: note, dismiss: deleteAll.dismissCompletionNote)
+                }
+            }
             .task { await health.syncIfDue() }
             .task {
                 #if DEBUG
