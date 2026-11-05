@@ -415,4 +415,32 @@ enum Copy {
             }
         }
     }
+
+    enum ReadableExport {
+        static let row = "readable exports"
+        static let rowHint = "make a markdown or pdf copy of your journal that you can read anywhere"
+        static let title = "readable exports"
+        static let markdownRow = "export as markdown"
+        static let pdfRow = "export as pdf"
+        static let notEncrypted = "readable exports aren't encrypted. keep them somewhere private."
+        static let footer =
+            "these are for reading, not for restoring. use a backup if you want to bring your journal back into be reyt."
+        static let rangeSection = "which days"
+        static let rangeLabel = "days to include"
+        static let rangeAll = "all days"
+        static let rangeCustom = "pick dates"
+        static let startLabel = "from"
+        static let endLabel = "to"
+        static let workoutsToggle = "include workouts"
+        static let workoutsFooter =
+            "workouts are copied from apple health. when this is off, they are left out of the export and it says so."
+        static let working = "putting it together…"
+        static let saved = "export saved. it isn't encrypted, so keep it somewhere private."
+        static let nothing = "there's nothing to export for those days."
+        static let failed = "couldn't make the export. nothing was changed, try again in a moment."
+        static let storageFull =
+            "there isn't enough space on this phone to make the export. free some up and try again."
+        static let exporterError = "couldn't save the export there. try another place."
+        static func progress(_ percent: Int) -> String { "writing the pdf, \(percent)%…" }
+    }
 }

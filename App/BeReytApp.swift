@@ -35,6 +35,7 @@ struct BeReytApp: App {
             content
                 #if DEBUG
                     .task { await DebugBackup.runIfRequested(host: host, restore: restore) }
+                    .task { await DebugReadableExport.runIfRequested(host: host) }
                 #endif
                 .overlay { if scenePhase != .active { PrivacyCover() } }
                 .onChange(of: scenePhase) { _, phase in
