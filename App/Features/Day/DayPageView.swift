@@ -14,6 +14,7 @@ struct DayPageView: View {
     static let photosAnchor = "photos"
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(HealthCoordinator.self) private var health
     @FocusState private var editorFocused: Bool
 
     var body: some View {
@@ -65,7 +66,7 @@ struct DayPageView: View {
                     reflections
                     planLifecycle
                     PhotoStrip(model: photos).id(DayPageView.photosAnchor)
-                    // INSERT S9: workout cards go here.
+                    WorkoutSection(dateKey: model.dateKey)
                 }
             }
             .padding(.horizontal, 20)
@@ -76,6 +77,7 @@ struct DayPageView: View {
         .background(Color("paper"))
         .environment(model)
         .task { await model.load() }
+        .task { await health.syncIfDue() }
         .onChange(of: editorFocused) { _, focused in model.isEditorFocused = focused }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.flush() } }
         .onDisappear { model.flush() }

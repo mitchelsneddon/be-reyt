@@ -9,6 +9,7 @@ struct BeReytApp: App {
     @State private var lock = AppLock()
     @State private var backup: BackupSettingsModel
     @State private var restore: RestoreCoordinator
+    @State private var health: HealthCoordinator
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -17,7 +18,11 @@ struct BeReytApp: App {
         _host = State(initialValue: host)
         _events = State(initialValue: events)
         _backup = State(initialValue: BackupSettingsModel(host: host))
-        _restore = State(initialValue: RestoreCoordinator(host: host, events: events))
+        let restore = RestoreCoordinator(host: host, events: events)
+        let health = HealthCoordinator(host: host, events: events)
+        restore.registerPostRestoreHook { await health.resyncAfterRestore() }
+        _restore = State(initialValue: restore)
+        _health = State(initialValue: health)
     }
 
     var body: some Scene {
@@ -32,6 +37,7 @@ struct BeReytApp: App {
                     case .active:
                         host.openIfPossible()
                         lock.didBecomeActive()
+                        Task { await health.syncIfDue() }
                     case .background:
                         lock.didEnterBackground()
                         host.protect()
@@ -66,6 +72,8 @@ extension BeReytApp {
     ) -> some View {
         RootView(store: store, events: events, attachments: attachments, backup: backup, restore: restore)
             .modelContainer(container)
+            .environment(health)
+            .task { await health.syncIfDue() }
             .id(generation)
     }
 }

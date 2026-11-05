@@ -108,6 +108,7 @@ public actor JournalStore {
 
     /// While on, every mutation throws `JournalStoreError.readOnly` (restore swaps the data generation).
     public func setReadOnly(_ value: Bool) { readOnly = value }
+    public var isReadOnly: Bool { readOnly }
 
     private func requireWritable() throws {
         if readOnly { throw JournalStoreError.readOnly }
@@ -501,6 +502,21 @@ public actor JournalStore {
             var d = FetchDescriptor<WorkoutSnapshot>(predicate: #Predicate { $0.healthKitUUID == id })
             d.fetchLimit = 1
             guard let w = try modelContext.fetch(d).first else { continue }
+            if let key = DateKey(w.dateKey) { bumpDays.insert(key) }
+            modelContext.delete(w)
+            changed = true
+        }
+        guard changed else { return StoreEffect() }
+        return try commit(candidateDays: [], before: [:], bumpDays: bumpDays)
+    }
+
+    /// Deletes every workout whose UUID is not in `keeping`. After a restore, a full Health sync names what still
+    /// exists; the rest were deleted in Health since the backup was made.
+    public func pruneWorkouts(keeping: Set<UUID>) throws -> StoreEffect {
+        try requireWritable()
+        var bumpDays = Set<DateKey>()
+        var changed = false
+        for w in try modelContext.fetch(FetchDescriptor<WorkoutSnapshot>()) where !keeping.contains(w.healthKitUUID) {
             if let key = DateKey(w.dateKey) { bumpDays.insert(key) }
             modelContext.delete(w)
             changed = true

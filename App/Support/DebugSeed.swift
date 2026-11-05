@@ -50,6 +50,7 @@
                     _ = await attachments.importData(data, for: AppClock.today())
                 }
             }
+            if args.contains("-seedWorkouts") { await seedWorkouts(store) }
             if args.contains("-deleteFirstPhoto"), let first = try? await store.attachmentRefs().first {
                 _ = try? await attachments.deletePhoto(first)
             }
@@ -59,6 +60,33 @@
                     _ = try? await store.createTag(name: "late tag")
                 }
             }
+        }
+
+        /// `-seedWorkouts`: workout snapshots on today through the store (the simulator's Health store cannot be
+        /// written without a share entitlement, which release must not carry). Includes the same run from COROS and
+        /// Strava, which must show as one card.
+        private static func seedWorkouts(_ store: JournalStore) async {
+            let today = AppClock.today()
+            let midnight = today.date(in: .current)
+            func input(
+                _ n: Int, _ source: String, _ type: String, hour: Double, minutes: Double, km: Double?, kcal: Double?
+            )
+                -> WorkoutInput
+            {
+                let start = midnight.addingTimeInterval(hour * 3600)
+                return WorkoutInput(
+                    healthKitUUID: UUID(uuidString: String(format: "00000000-0000-0000-0000-0000000000%02d", n))
+                        ?? UUID(),
+                    sourceName: source, activityType: type, start: start, end: start.addingTimeInterval(minutes * 60),
+                    dateKey: today, durationSeconds: minutes * 60, distanceMeters: km.map { $0 * 1000 },
+                    energyKcal: kcal)
+            }
+            _ = try? await store.upsertWorkouts([
+                input(1, "COROS", "running", hour: 7, minutes: 76, km: 12.3, kcal: 810),
+                input(2, "Strava", "running", hour: 7, minutes: 76, km: 12.3, kcal: nil),
+                input(3, "Health", "yoga", hour: 18, minutes: 45, km: nil, kcal: 150),
+                input(4, "COROS", "swimming", hour: 12.5, minutes: 30, km: 1.2, kcal: 300),
+            ])
         }
 
         /// `-seedHistory`: about twenty days across Oct and Nov 2026 with varied fields, a few tags, a Sunday plan with

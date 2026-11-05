@@ -167,6 +167,49 @@ enum Copy {
         static let loadFailed = "couldn't show this photo."
     }
 
+    enum Workouts {
+        static let title = "workouts"
+
+        /// "1 h 16 min", "45 min", "2 h".
+        static func duration(seconds: Double) -> String {
+            let total = Int((seconds / 60).rounded())
+            let hours = total / 60
+            let minutes = total % 60
+            if hours == 0 { return "\(max(minutes, 1)) min" }
+            return minutes == 0 ? "\(hours) h" : "\(hours) h \(minutes) min"
+        }
+
+        /// "12.3 km" or "7.6 mi" by locale; swims stay in metres or yards.
+        static func distance(meters: Double, swimming: Bool) -> String {
+            let measurement = Measurement(value: meters, unit: UnitLength.meters)
+            if swimming {
+                return measurement.formatted(
+                    .measurement(
+                        width: .abbreviated, usage: .asProvided,
+                        numberFormatStyle: .number.precision(.fractionLength(0))))
+            }
+            return measurement.formatted(
+                .measurement(
+                    width: .abbreviated, usage: .road, numberFormatStyle: .number.precision(.fractionLength(0...1))))
+        }
+
+        static func cardLabel(name: String, duration: String, distance: String?) -> String {
+            [name, duration, distance].compactMap { $0 }.joined(separator: ", ")
+        }
+    }
+
+    enum Health {
+        static let section = "health"
+        static let unavailable = "health isn't available on this device."
+        static let notAsked = "be reyt hasn't asked to read your workouts yet."
+        static let asked = "be reyt has asked to read your workouts."
+        static let allow = "allow access to workouts"
+        static let allowHint = "shows the iOS health permission sheet"
+        static let guidance =
+            "ios doesn't tell apps if read access was denied, so be reyt can't see it either. if workouts don't appear, check settings › privacy & security › health › be reyt."
+        static let nothingFound = "no workouts found, or health access is off."
+    }
+
     enum Save {
         static let saving = "saving…"
         static let saved = "saved"
