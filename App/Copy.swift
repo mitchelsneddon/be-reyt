@@ -45,6 +45,17 @@ enum Copy {
         }
     }
 
+    enum Reflection {
+        static let smileQuestion = "what made me smile today?"
+        static let smileHelper = "a highlight, a small win, or just something you appreciated. small counts."
+        static let smileAnswerLabel = "answer to what made me smile today"
+        static let answerPlaceholder = "write here, or leave it blank."
+        static let anotherPrompt = "another prompt"
+        static let anotherPromptHint = "swaps today's reflection question for a different one"
+        static let promptHelper = "optional. answer it only if it fits your day."
+        static func promptAnswerLabel(_ question: String) -> String { "answer to \(question)" }
+    }
+
     enum Tags {
         static let recentTitle = "recent"
         static let addPlaceholder = "add a tag"

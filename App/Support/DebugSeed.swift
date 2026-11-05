@@ -11,6 +11,7 @@
                 let today = DateKey(date: .now, calendar: .current)
                 _ = try? await store.updateEntry(
                     today, .text("a slow morning, coffee on the step.\nlong walk after lunch, the light was lovely."))
+                _ = try? await store.updateEntry(today, .smileAnswer("the dog fell asleep on my feet."))
                 _ = try? await store.updateEntry(today, .score(.good))
                 _ = try? await store.updateEntry(today, .moods(["happy", "tired"]))
                 // Nine extra tags, each used on an earlier day, so the recent-suggestions cap is visible.

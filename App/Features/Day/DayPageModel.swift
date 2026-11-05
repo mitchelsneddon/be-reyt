@@ -8,7 +8,7 @@ import ReytKit
 final class DayPageModel {
     enum SaveState: Equatable { case idle, saving, saved, failed }
     enum AddTagResult { case added, blank, failed }
-    private enum Field: Hashable { case text, score, moods, tags }
+    private enum Field: Hashable { case text, smile, rotating, score, moods, tags }
 
     let dateKey: DateKey
 
@@ -16,11 +16,17 @@ final class DayPageModel {
     private(set) var score: DayScore?
     private(set) var moodIDs: [String] = []
     private(set) var tagIDs: [UUID] = []
+    private(set) var smileAnswer = ""
+    private(set) var rotatingAnswer = ""
+    /// The persisted assignment for this day; the displayed wording always comes from here.
+    private(set) var prompt: PromptChoice?
     private(set) var isLoaded = false
     private(set) var loadFailed = false
     var isEditorFocused = false
 
     private var savedText = ""
+    private var savedSmile = ""
+    private var savedRotating = ""
     private var inFlight = 0
     private var failedFields: Set<Field> = []
     private var didSave = false
@@ -28,7 +34,8 @@ final class DayPageModel {
     @ObservationIgnored private let store: JournalStore
     @ObservationIgnored private let events: JournalEvents
     @ObservationIgnored private let debounce: Duration
-    @ObservationIgnored private var debounceTask: Task<Void, Never>?
+    @ObservationIgnored private var debounceTasks: [Field: Task<Void, Never>] = [:]
+    @ObservationIgnored private let selector = PromptSelector()
     @ObservationIgnored private var chain: Task<Void, Never>?
 
     init(dateKey: DateKey, store: JournalStore, events: JournalEvents, debounce: Duration = .milliseconds(800)) {
@@ -41,15 +48,21 @@ final class DayPageModel {
     // MARK: State
 
     private var textIsDirty: Bool { text != savedText }
+    private var hasUnsavedDrafts: Bool {
+        text != savedText || smileAnswer != savedSmile || rotatingAnswer != savedRotating
+    }
+
+    /// "another prompt" shows only while the rotating answer is blank and a prompt is assigned.
+    var canRerollPrompt: Bool { prompt != nil && rotatingAnswer.isEmpty }
 
     var saveState: SaveState {
         if !failedFields.isEmpty { return .failed }
-        if textIsDirty || inFlight > 0 { return .saving }
+        if hasUnsavedDrafts || inFlight > 0 { return .saving }
         return didSave ? .saved : .idle
     }
 
     /// True when Today may roll to a new day: not focused and nothing waiting to be saved.
-    var isIdle: Bool { !isEditorFocused && !textIsDirty && inFlight == 0 }
+    var isIdle: Bool { !isEditorFocused && !hasUnsavedDrafts && inFlight == 0 }
 
     // MARK: Loading
 
@@ -62,10 +75,45 @@ final class DayPageModel {
             score = content.dayScore.flatMap { DayScore($0) }
             moodIDs = content.moodIDs
             tagIDs = content.tagIDs
+            smileAnswer = content.smileAnswer ?? ""
+            savedSmile = smileAnswer
+            rotatingAnswer = content.rotatingAnswer ?? ""
+            savedRotating = rotatingAnswer
             loadFailed = false
             isLoaded = true
         } catch {
             loadFailed = true
+            return
+        }
+        await assignPrompt()
+    }
+
+    /// First display of a day assigns its prompt; reopening returns the stored one. A failure just hides the card.
+    private func assignPrompt() async {
+        let selector = selector
+        do {
+            let result = try await store.assignPromptIfNeeded(dateKey) { key, history in
+                selector.select(for: key, history: history)
+            }
+            events.receive(result.effect)
+            prompt = result.choice
+        } catch {
+            prompt = nil
+        }
+    }
+
+    /// "another prompt": refused by the store once the answer is nonblank, so a written answer is never orphaned.
+    func rerollPrompt() async {
+        guard isLoaded, canRerollPrompt else { return }
+        let selector = selector
+        do {
+            let result = try await store.rerollPrompt(dateKey) { key, current, history in
+                selector.reroll(for: key, current: current, history: history)
+            }
+            events.receive(result.effect)
+            prompt = result.choice
+        } catch {
+            // Answered meanwhile or store unavailable: keep the current prompt.
         }
     }
 
@@ -74,10 +122,26 @@ final class DayPageModel {
     func setText(_ newValue: String) {
         guard isLoaded, newValue != text else { return }
         text = newValue
-        debounceTask?.cancel()
-        debounceTask = Task { [weak self, debounce] in
+        scheduleWrite(.text)
+    }
+
+    func setSmileAnswer(_ newValue: String) {
+        guard isLoaded, newValue != smileAnswer else { return }
+        smileAnswer = newValue
+        scheduleWrite(.smile)
+    }
+
+    func setRotatingAnswer(_ newValue: String) {
+        guard isLoaded, newValue != rotatingAnswer else { return }
+        rotatingAnswer = newValue
+        scheduleWrite(.rotating)
+    }
+
+    private func scheduleWrite(_ field: Field) {
+        debounceTasks[field]?.cancel()
+        debounceTasks[field] = Task { [weak self, debounce] in
             do { try await Task.sleep(for: debounce) } catch { return }
-            self?.write(.text)
+            self?.write(field)
         }
     }
 
@@ -120,8 +184,11 @@ final class DayPageModel {
 
     /// Writes any pending text now (scene leaving active, navigating away).
     func flush() {
-        debounceTask?.cancel()
+        for task in debounceTasks.values { task.cancel() }
+        debounceTasks = [:]
         if textIsDirty { write(.text) }
+        if smileAnswer != savedSmile { write(.smile) }
+        if rotatingAnswer != savedRotating { write(.rotating) }
     }
 
     func retry() {
@@ -143,10 +210,18 @@ final class DayPageModel {
         defer { inFlight -= 1 }
         let change: EntryChange
         var sentText: String?
+        var sentSmile: String?
+        var sentRotating: String?
         switch field {
         case .text:
             sentText = text
             change = .text(text)
+        case .smile:
+            sentSmile = smileAnswer
+            change = .smileAnswer(smileAnswer)
+        case .rotating:
+            sentRotating = rotatingAnswer
+            change = .rotatingAnswer(rotatingAnswer)
         case .score: change = .score(score)
         case .moods: change = .moods(moodIDs)
         case .tags: change = .tags(tagIDs)
@@ -157,6 +232,8 @@ final class DayPageModel {
             failedFields.remove(field)
             didSave = true
             if let sentText { savedText = sentText }
+            if let sentSmile { savedSmile = sentSmile }
+            if let sentRotating { savedRotating = sentRotating }
         } catch {
             // The draft stays in memory; the indicator offers a retry.
             failedFields.insert(field)

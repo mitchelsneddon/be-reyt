@@ -41,6 +41,9 @@ public struct PromptHistoryItem: Sendable, Equatable {
 /// Supplied by the app (S5a's `PromptSelector`): picks a prompt for a day given the assignment history.
 public typealias PromptSelection = @Sendable (DateKey, [PromptHistoryItem]) -> PromptChoice
 
+/// Supplied by the app: picks the next prompt for a day given its current prompt ID and the assignment history.
+public typealias PromptReroll = @Sendable (DateKey, String?, [PromptHistoryItem]) -> PromptChoice
+
 /// A workout parsed at the HealthKit boundary (A6).
 public struct WorkoutInput: Sendable, Equatable {
     public var healthKitUUID: UUID
@@ -235,13 +238,28 @@ public actor JournalStore {
         if let existing = try fetchAssignment(key) {
             return (PromptChoice(id: existing.promptID, text: existing.promptText), StoreEffect())
         }
-        let history = try modelContext.fetch(FetchDescriptor<PromptAssignment>()).compactMap { a in
-            DateKey(a.dateKey).map { PromptHistoryItem(dateKey: $0, promptID: a.promptID) }
-        }
-        let choice = selector(key, history)
+        let choice = selector(key, try promptHistory())
         modelContext.insert(
             PromptAssignment(dateKey: key.string, promptID: choice.id, promptText: choice.text, assignedAt: clock()))
         return (choice, try commit(candidateDays: [], before: [:], bumpDays: []))
+    }
+
+    /// Every persisted assignment (imported and rerolled ones included), as the selector's history.
+    private func promptHistory() throws -> [PromptHistoryItem] {
+        try modelContext.fetch(FetchDescriptor<PromptAssignment>()).compactMap { a in
+            DateKey(a.dateKey).map { PromptHistoryItem(dateKey: $0, promptID: a.promptID) }
+        }
+    }
+
+    /// "Another prompt", choosing inside the store so the history read and the overwrite are one step.
+    /// Refused while the rotating answer is nonblank.
+    public func rerollPrompt(
+        _ key: DateKey, selector: PromptReroll
+    ) throws -> (choice: PromptChoice, effect: StoreEffect) {
+        try requireWritable()
+        if DayContent.isNonblank(try fetchEntry(key)?.rotatingAnswer) { throw JournalStoreError.promptAnswered }
+        let choice = selector(key, try fetchAssignment(key)?.promptID, try promptHistory())
+        return (choice, try rerollPrompt(key, candidate: choice))
     }
 
     /// "Another prompt": only while the rotating answer is blank. Never touches the answer.

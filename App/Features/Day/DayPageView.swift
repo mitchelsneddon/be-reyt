@@ -8,10 +8,28 @@ struct DayPageView: View {
     let today: DateKey
     let onNavigate: (DateKey) -> Void
 
+    static let reflectionsAnchor = "reflections"
+
     @Environment(\.scenePhase) private var scenePhase
     @FocusState private var editorFocused: Bool
 
     var body: some View {
+        ScrollViewReader { proxy in
+            page
+                .task(id: model.prompt?.id) { await scrollToReflectionsIfRequested(proxy) }
+        }
+    }
+
+    private func scrollToReflectionsIfRequested(_ proxy: ScrollViewProxy) async {
+        #if DEBUG
+            // Simulator-only: `-scrollToReflections` brings the reflection cards into view for screenshots.
+            guard CommandLine.arguments.contains("-scrollToReflections"), model.prompt != nil else { return }
+            try? await Task.sleep(for: .milliseconds(400))
+            proxy.scrollTo(Self.reflectionsAnchor, anchor: .top)
+        #endif
+    }
+
+    private var page: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 Text(Copy.Day.heading(for: model.dateKey))
@@ -29,7 +47,8 @@ struct DayPageView: View {
                     moods
                     TagEditor()
                     editor
-                    // INSERT S5a/S5b: reflection section (smile question, rotating prompt, sunday plan) goes here.
+                    reflections
+                    // INSERT S5b: sunday plan question goes here.
                     // INSERT S6: photo strip goes here.
                     // INSERT S9: workout cards go here.
                 }
@@ -79,6 +98,32 @@ struct DayPageView: View {
                 items: MoodCatalog.all.map { ChipItem(id: $0.id, label: $0.label) },
                 selection: Binding(get: { Set(model.moodIDs) }, set: { _ in }),
                 onToggle: { model.toggleMood($0) })
+        }
+    }
+
+    @ViewBuilder private var reflections: some View {
+        ReflectionCard(
+            question: Copy.Reflection.smileQuestion, helper: Copy.Reflection.smileHelper,
+            answerLabel: Copy.Reflection.smileAnswerLabel,
+            answer: Binding(get: { model.smileAnswer }, set: { model.setSmileAnswer($0) }),
+            isEnabled: model.isLoaded
+        )
+        .id(DayPageView.reflectionsAnchor)
+        if let prompt = model.prompt {
+            ReflectionCard(
+                question: prompt.text, helper: Copy.Reflection.promptHelper,
+                answerLabel: Copy.Reflection.promptAnswerLabel(prompt.text),
+                answer: Binding(get: { model.rotatingAnswer }, set: { model.setRotatingAnswer($0) }),
+                isEnabled: model.isLoaded
+            ) {
+                if model.canRerollPrompt {
+                    Button(Copy.Reflection.anotherPrompt) { Task { await model.rerollPrompt() } }
+                        .font(.footnote)
+                        .foregroundStyle(Color("accent"))
+                        .frame(minHeight: 44)
+                        .accessibilityHint(Copy.Reflection.anotherPromptHint)
+                }
+            }
         }
     }
 
