@@ -388,6 +388,24 @@ struct NarrativeInvalidationTests {
         #expect(try h.narrativeIntact(week))
     }
 
+    @Test("a photo-only day counts as content until its last photo is removed, and refs list the records")
+    func photoOnlyDay() async throws {
+        let h = try Harness()
+        let id = UUID()
+        #expect(try await h.store.dayContent(day).hasUserContent == false)
+        _ = try await h.store.addAttachmentRecord(
+            id: id, dateKey: day, relativePath: "\(id.uuidString.lowercased()).jpg", uti: "public.jpeg", sha256: "h")
+        #expect(try await h.store.dayContent(day).hasUserContent)
+        #expect(
+            try await h.store.attachmentRefs() == [
+                AttachmentRef(id: id, relativePath: "\(id.uuidString.lowercased()).jpg")
+            ])
+        let removed = try await h.store.deleteAttachmentRecord(id: id)
+        #expect(removed.contentChangedDays == [day])
+        #expect(try await h.store.dayContent(day).hasUserContent == false)
+        #expect(try await h.store.attachmentRefs().isEmpty)
+    }
+
     @Test("workout energy change is persisted (dirty) but does not bump")
     func workoutEnergy() async throws {
         let (h, _) = try await seeded()

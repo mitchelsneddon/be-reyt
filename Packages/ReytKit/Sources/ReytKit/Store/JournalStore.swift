@@ -45,6 +45,15 @@ public typealias PromptSelection = @Sendable (DateKey, [PromptHistoryItem]) -> P
 public typealias PromptReroll = @Sendable (DateKey, String?, [PromptHistoryItem]) -> PromptChoice
 
 /// A workout parsed at the HealthKit boundary (A6).
+public struct AttachmentRef: Sendable, Equatable, Hashable, Identifiable {
+    public let id: UUID
+    public let relativePath: String
+    public init(id: UUID, relativePath: String) {
+        self.id = id
+        self.relativePath = relativePath
+    }
+}
+
 public struct WorkoutInput: Sendable, Equatable {
     public var healthKitUUID: UUID
     public var sourceName: String
@@ -408,6 +417,14 @@ public actor JournalStore {
                 id: id, entryDateKey: dateKey.string, relativePath: relativePath, uti: uti, sha256: sha256,
                 pixelSize: pixelSize, createdAt: clock()))
         return try commit(candidateDays: [dateKey], before: before, bumpDays: [])
+    }
+
+    /// Every attachment's id and file path, oldest first. Used to find a photo's file and to sweep orphans.
+    public func attachmentRefs() throws -> [AttachmentRef] {
+        try modelContext.fetch(
+            FetchDescriptor<Attachment>(sortBy: [SortDescriptor(\.createdAt), SortDescriptor(\.relativePath)])
+        )
+        .map { AttachmentRef(id: $0.id, relativePath: $0.relativePath) }
     }
 
     public func deleteAttachmentRecord(id: UUID) throws -> StoreEffect {

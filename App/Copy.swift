@@ -99,6 +99,31 @@ enum Copy {
         }
     }
 
+    enum Photos {
+        static let title = "photos"
+        static let add = "add photos"
+        static let addHint = "choose photos from your library"
+        static func thumbnailLabel(_ index: Int, of count: Int) -> String { "photo \(index) of \(count)" }
+        static let thumbnailHint = "opens the photo full screen"
+        static let viewerLabel = "photo"
+        static let close = "close"
+        static let remove = "remove photo"
+        static let removeConfirm = "remove this photo from the day?"
+        static let removeAction = "remove"
+        static let keep = "keep it"
+        static func importing(_ current: Int, of total: Int) -> String {
+            total == 1 ? "bringing in your photo…" : "bringing in photo \(current) of \(total)…"
+        }
+        static let unsupported = "that isn't a kind of photo be reyt can keep."
+        static let importFailed = "couldn't bring in this photo. try again when it's downloaded."
+        static func importFailedMany(_ count: Int) -> String {
+            "couldn't bring in \(count) photos. try again when they're downloaded."
+        }
+        static let storageFull = "there isn't enough space on this phone for that photo. free some up and try again."
+        static let removeFailed = "couldn't remove that photo. try again in a moment."
+        static let loadFailed = "couldn't show this photo."
+    }
+
     enum Save {
         static let saving = "saving…"
         static let saved = "saved"

@@ -11,6 +11,7 @@ import UIKit
 final class ContainerHost {
     private(set) var container: ModelContainer?
     private(set) var store: JournalStore?
+    private(set) var attachments: AttachmentStore?
     /// Keys the root view, so a future restore that switches generation rebuilds everything.
     private(set) var generationID: String?
     private(set) var openFailed = false
@@ -68,9 +69,9 @@ final class ContainerHost {
         }
         let generation = paths.generation(id)
         try fm.createDirectory(at: generation, withIntermediateDirectories: true)
-        let attachments = paths.attachments(in: generation)
-        try fm.createDirectory(at: attachments, withIntermediateDirectories: true)
-        try Paths.applyCompleteProtection(toDirectory: attachments)
+        let attachmentsDirectory = paths.attachments(in: generation)
+        try fm.createDirectory(at: attachmentsDirectory, withIntermediateDirectories: true)
+        try Paths.applyCompleteProtection(toDirectory: attachmentsDirectory)
 
         let schema = Schema(versionedSchema: SchemaV1.self)
         let configuration = ModelConfiguration(schema: schema, url: paths.store(in: generation))
@@ -80,20 +81,26 @@ final class ContainerHost {
         protect()
 
         let store = JournalStore(modelContainer: container, clock: AppClock.now)
+        let attachments = AttachmentStore(store: store, paths: paths, generation: generation, generationID: id)
         #if DEBUG
             Task {
-                await DebugSeed.runIfRequested(store)
+                await attachments.sweepOrphans()
+                await DebugSeed.runIfRequested(store, attachments: attachments)
                 DebugSeed.dumpProtectionIfRequested(generation: generation, generationID: id)
-                publish(container: container, store: store, generationID: id)
+                publish(container: container, store: store, attachments: attachments, generationID: id)
             }
         #else
-            publish(container: container, store: store, generationID: id)
+            publish(container: container, store: store, attachments: attachments, generationID: id)
+            Task { await attachments.sweepOrphans() }
         #endif
     }
 
-    private func publish(container: ModelContainer, store: JournalStore, generationID: String) {
+    private func publish(
+        container: ModelContainer, store: JournalStore, attachments: AttachmentStore, generationID: String
+    ) {
         self.container = container
         self.store = store
+        self.attachments = attachments
         self.generationID = generationID
         unlockWatcher?.cancel()
         unlockWatcher = nil

@@ -4,12 +4,14 @@ import SwiftUI
 /// One day's page: heading, score, moods, tags, editor. Reflections, photos and workouts slot in below the editor.
 struct DayPageView: View {
     let model: DayPageModel
+    let photos: PhotosModel
     /// The latest civil day; the next-day arrow stops here (no future days).
     let today: DateKey
     let onNavigate: (DateKey) -> Void
 
     static let reflectionsAnchor = "reflections"
     static let planAnchor = "plan"
+    static let photosAnchor = "photos"
 
     @Environment(\.scenePhase) private var scenePhase
     @FocusState private var editorFocused: Bool
@@ -26,10 +28,15 @@ struct DayPageView: View {
             // Simulator-only: `-scrollToReflections` brings the reflection cards into view for screenshots.
             // `-scrollToPlan` brings the follow-up and Sunday plan cards into view instead.
             let args = CommandLine.arguments
-            guard args.contains("-scrollToReflections") || args.contains("-scrollToPlan"), model.prompt != nil
+            guard
+                args.contains("-scrollToReflections") || args.contains("-scrollToPlan")
+                    || args.contains("-scrollToPhotos"),
+                model.prompt != nil
             else { return }
             try? await Task.sleep(for: .milliseconds(400))
-            let anchor = args.contains("-scrollToPlan") ? Self.planAnchor : Self.reflectionsAnchor
+            let anchor =
+                args.contains("-scrollToPhotos")
+                ? Self.photosAnchor : args.contains("-scrollToPlan") ? Self.planAnchor : Self.reflectionsAnchor
             proxy.scrollTo(anchor, anchor: .top)
         #endif
     }
@@ -57,7 +64,7 @@ struct DayPageView: View {
                     editor
                     reflections
                     planLifecycle
-                    // INSERT S6: photo strip goes here.
+                    PhotoStrip(model: photos).id(DayPageView.photosAnchor)
                     // INSERT S9: workout cards go here.
                 }
             }

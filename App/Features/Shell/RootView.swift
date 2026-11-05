@@ -5,11 +5,12 @@ import SwiftUI
 struct RootView: View {
     let store: JournalStore
     let events: JournalEvents
+    let attachments: AttachmentStore
 
     var body: some View {
         TabView {
             Tab(Copy.Tab.today, systemImage: "sun.horizon") {
-                TodayView(store: store, events: events)
+                TodayView(store: store, events: events, attachments: attachments)
             }
             Tab(Copy.Tab.history, systemImage: "calendar") {
                 PlaceholderScreen(title: Copy.Tab.history, message: Copy.Placeholder.historyBody)

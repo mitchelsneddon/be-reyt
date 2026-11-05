@@ -1,11 +1,12 @@
 #if DEBUG
     import Foundation
     import ReytKit
+    import UIKit
 
     /// Simulator-only: `-seedDemoDay` fills today through `JournalStore`, `-seedLateTag` adds a tag a few
     /// seconds after launch (proves `@Query` refreshes from an actor save). Never compiled into release.
     enum DebugSeed {
-        static func runIfRequested(_ store: JournalStore) async {
+        static func runIfRequested(_ store: JournalStore, attachments: AttachmentStore) async {
             let args = CommandLine.arguments
             if args.contains("-seedDemoDay") {
                 let today = AppClock.today()
@@ -31,6 +32,26 @@
                     _ = try? await store.saveIntention(sunday: sunday, text: "book the dentist", category: "need-to-do")
                 }
             }
+            if args.contains("-seedPhotos") {
+                // Three generated solid-colour images (two JPEG, one HEIC), through the same import path as the picker.
+                let colours: [UIColor] = [.systemTeal, .systemOrange, .systemIndigo]
+                for (index, colour) in colours.enumerated() {
+                    let renderer = UIGraphicsImageRenderer(size: CGSize(width: 600, height: 800))
+                    let image = renderer.image { ctx in
+                        colour.setFill()
+                        ctx.fill(CGRect(x: 0, y: 0, width: 600, height: 800))
+                        UIColor.white.withAlphaComponent(0.5).setFill()
+                        ctx.fill(CGRect(x: 0, y: 100 * CGFloat(index + 1), width: 600, height: 60))
+                    }
+                    guard let data = index == 2 ? image.heicData() : image.jpegData(compressionQuality: 0.9) else {
+                        continue
+                    }
+                    _ = await attachments.importData(data, for: AppClock.today())
+                }
+            }
+            if args.contains("-deleteFirstPhoto"), let first = try? await store.attachmentRefs().first {
+                _ = try? await attachments.deletePhoto(first)
+            }
             if args.contains("-seedLateTag") {
                 Task {
                     try? await Task.sleep(for: .seconds(4))
@@ -51,6 +72,12 @@
             }
             let attachments = generation.appending(path: "attachments", directoryHint: .isDirectory)
             report["attachments"] = protection(of: attachments)
+            let files = (try? FileManager.default.contentsOfDirectory(atPath: attachments.path)) ?? []
+            report["attachmentFileCount"] = String(files.count)
+            for name in files.sorted() {
+                report["attachment:" + name] = protection(
+                    of: attachments.appending(path: name, directoryHint: .notDirectory))
+            }
             guard
                 let documents = try? FileManager.default.url(
                     for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true),

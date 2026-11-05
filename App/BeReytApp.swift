@@ -22,8 +22,10 @@ struct BeReytApp: App {
     }
 
     @ViewBuilder private var content: some View {
-        if let store = host.store, let container = host.container, let generation = host.generationID {
-            RootView(store: store, events: events)
+        if let store = host.store, let attachments = host.attachments, let container = host.container,
+            let generation = host.generationID
+        {
+            RootView(store: store, events: events, attachments: attachments)
                 .modelContainer(container)
                 .id(generation)
         } else {

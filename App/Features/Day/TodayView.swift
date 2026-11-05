@@ -6,6 +6,7 @@ import SwiftUI
 struct TodayView: View {
     let store: JournalStore
     let events: JournalEvents
+    let attachments: AttachmentStore
     var provisioning = ProvisioningInfo.load()
     /// Injected so the banner rule can be exercised with any date.
     var now: () -> Date = { .now }
@@ -13,21 +14,27 @@ struct TodayView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var today: DateKey
     @State private var model: DayPageModel
+    @State private var photos: PhotosModel
     /// True while the open page is the live "today" (so a roll may move it), false after the user steps back.
     @State private var followsToday = true
 
-    init(store: JournalStore, events: JournalEvents, provisioning: ProvisioningInfo = .load()) {
+    init(
+        store: JournalStore, events: JournalEvents, attachments: AttachmentStore,
+        provisioning: ProvisioningInfo = .load()
+    ) {
         self.store = store
         self.events = events
+        self.attachments = attachments
         self.provisioning = provisioning
         let key = Self.currentDay()
         _today = State(initialValue: key)
         _model = State(initialValue: DayPageModel(dateKey: key, store: store, events: events))
+        _photos = State(initialValue: PhotosModel(dateKey: key, attachments: attachments, events: events))
     }
 
     var body: some View {
         NavigationStack {
-            DayPageView(model: model, today: today, onNavigate: show)
+            DayPageView(model: model, photos: photos, today: today, onNavigate: show)
                 .id(model.dateKey)
                 .safeAreaInset(edge: .top, spacing: 0) {
                     if let days = provisioning.daysLeftIfExpiring(now: now()) {
@@ -47,6 +54,7 @@ struct TodayView: View {
         guard key <= today else { return }
         followsToday = key == today
         model = DayPageModel(dateKey: key, store: store, events: events)
+        photos = PhotosModel(dateKey: key, attachments: attachments, events: events)
     }
 
     private func rollIfIdle() {
