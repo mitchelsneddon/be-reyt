@@ -11,6 +11,7 @@ struct BeReytApp: App {
     @State private var restore: RestoreCoordinator
     @State private var health: HealthCoordinator
     @State private var reminders: ReminderScheduler
+    @State private var journalImporter: AppleJournalImporter
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -26,6 +27,7 @@ struct BeReytApp: App {
         restore.registerPostRestoreHook { await reminders.refresh() }
         events.onContentChange = { days in Task { await reminders.contentChanged(days: days) } }
         _reminders = State(initialValue: reminders)
+        _journalImporter = State(initialValue: AppleJournalImporter(host: host, events: events))
         _restore = State(initialValue: restore)
         _health = State(initialValue: health)
     }
@@ -36,6 +38,7 @@ struct BeReytApp: App {
                 #if DEBUG
                     .task { await DebugBackup.runIfRequested(host: host, restore: restore) }
                     .task { await DebugReadableExport.runIfRequested(host: host) }
+                    .task { await DebugImport.runIfRequested(host: host, importer: journalImporter) }
                 #endif
                 .overlay { if scenePhase != .active { PrivacyCover() } }
                 .onChange(of: scenePhase) { _, phase in
@@ -81,6 +84,8 @@ extension BeReytApp {
             .modelContainer(container)
             .environment(health)
             .environment(reminders)
+            .environment(journalImporter)
+            .appleJournalImportSheet(journalImporter)
             .task { await health.syncIfDue() }
             .task {
                 #if DEBUG

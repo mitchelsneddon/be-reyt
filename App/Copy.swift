@@ -502,4 +502,82 @@ enum Copy {
         static let exporterError = "couldn't save the export there. try another place."
         static func progress(_ percent: Int) -> String { "writing the pdf, \(percent)%…" }
     }
+
+    enum Import {
+        static let settingsSection = "apple journal"
+        static let row = "import from apple journal"
+        static let rowHint = "choose the unzipped AppleJournalEntries folder"
+        static let sectionFooter =
+            "unzip the export in files first, then choose the folder. everything is read on this phone, nothing is sent anywhere."
+        static let title = "import from apple journal"
+        static let close = "close"
+        static let cancel = "cancel"
+        static let importAction = "import"
+        static let done = "done"
+        static let tryAgain = "choose another folder"
+        static let readingTitle = "reading your export…"
+        static func progress(done: Int, total: Int) -> String { "\(done) of \(total) entries" }
+        static let importingTitle = "adding to your journal…"
+        static let noTimes = "the export has no times, so only dates and titles are kept."
+        static let nothingNew = "nothing new to import."
+        static let nothingNewDetail = "every entry in this export is already in your journal."
+        static func entries(_ n: Int) -> String { n == 1 ? "1 entry" : "\(n) entries" }
+        static func days(_ n: Int) -> String { n == 1 ? "1 day" : "\(n) days" }
+        static func photos(_ n: Int) -> String { n == 1 ? "1 photo" : "\(n) photos" }
+        static func summary(entries: Int, days: Int, photos: Int) -> String {
+            photos == 0
+                ? "\(Self.entries(entries)) on \(Self.days(days))"
+                : "\(Self.entries(entries)) on \(Self.days(days)), \(Self.photos(photos))"
+        }
+        static let willImportSection = "will be added"
+        static let alreadyImportedSection = "already imported"
+        static func alreadyImported(_ n: Int) -> String {
+            n == 1
+                ? "1 entry is already in your journal and will be skipped."
+                : "\(n) entries are already in your journal and will be skipped."
+        }
+        static let unsupportedSection = "left out"
+        static let unsupportedFooter = "these can't be brought in, the rest of the entry still can."
+        static let fallbackNote =
+            "some entries had no readable date, so the date in the file name was used (one day earlier, as the export names files)."
+        static let conflictsSection = "days that already have writing"
+        static let conflictsFooter = "add puts the imported text after what you wrote. skip leaves that day alone."
+        static let append = "add after mine"
+        static let skip = "skip"
+        static func conflictLabel(_ day: String) -> String { "choose for \(day)" }
+        static let failuresSection = "couldn't be read"
+        static func failure(_ reason: AppleJournalParseFailure.Reason) -> String {
+            switch reason {
+            case .notAnEntry: "doesn't look like a journal entry"
+            case .unreadable: "couldn't be opened"
+            case .tooLarge: "too large"
+            case .symbolicLink: "a shortcut, not a real file"
+            case .noDate: "no date found"
+            }
+        }
+        static let failuresFooter = "these files were left alone. nothing already in your journal was changed."
+        static let resultTitle = "import finished"
+        static func resultLine(entries: Int, days: Int) -> String {
+            "added \(Self.entries(entries)) across \(Self.days(days))."
+        }
+        static func photosResult(imported: Int, failed: Int) -> String? {
+            if imported == 0, failed == 0 { return nil }
+            if failed == 0 { return imported == 1 ? "1 photo added." : "\(imported) photos added." }
+            return "\(imported) added, \(failed) couldn't be added. the writing is saved either way."
+        }
+
+        static func error(_ error: AppleJournalParseError) -> String {
+            switch error {
+            case .noEntriesFolder:
+                "that folder doesn't have an Entries folder inside. choose the unzipped AppleJournalEntries folder."
+            case .unsafeFolder: "that folder isn't safe to read, so nothing was changed."
+            case .tooManyFiles: "that folder has more files than be reyt will read, so nothing was changed."
+            case .tooLarge: "that export is larger than be reyt will read, so nothing was changed."
+            case .cancelled: "the import was cancelled, nothing was changed."
+            }
+        }
+        static let genericError = "something went wrong, so nothing was changed. try again in a moment."
+        static let noAccess = "be reyt couldn't open that folder, so nothing was changed. try choosing it again."
+        static let busy = "an import is already running."
+    }
 }

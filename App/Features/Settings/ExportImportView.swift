@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct ExportImportView: View {
     let backup: BackupSettingsModel
     let restore: RestoreCoordinator
+    @Environment(AppleJournalImporter.self) private var journalImporter
 
     private enum PassphraseSheet: String, Identifiable {
         case set, change
@@ -13,6 +14,7 @@ struct ExportImportView: View {
 
     @State private var passphraseSheet: PassphraseSheet?
     @State private var showImporter = false
+    @State private var showJournalPicker = false
     @State private var showUndoConfirm = false
     @State private var authMessage: String?
 
@@ -21,6 +23,7 @@ struct ExportImportView: View {
             ReminderSection()
             HealthSection()
             OnDeviceAISection()
+            ImportSection { showJournalPicker = true }
             Section {
                 passphraseRow
                 exportRow
@@ -60,6 +63,9 @@ struct ExportImportView: View {
         .sheet(isPresented: restoreSheetBinding) { RestoreFlowView(restore: restore) }
         .fileImporter(isPresented: $showImporter, allowedContentTypes: UTType.restoreSources) { result in
             if case .success(let url) = result { restore.beginRestore(from: url) }
+        }
+        .fileImporter(isPresented: $showJournalPicker, allowedContentTypes: [.folder]) { result in
+            if case .success(let url) = result { journalImporter.begin(folder: url) }
         }
         .fileExporter(
             isPresented: Bindable(backup).showExporter, item: backup.file, contentTypes: [.beReytArchive],

@@ -36,6 +36,7 @@ struct HistoryView: View {
         #endif
         _model = State(initialValue: model)
         _mode = State(initialValue: initialMode)
+        _path = State(initialValue: [])
         _searchPresented = State(initialValue: presented)
     }
 
