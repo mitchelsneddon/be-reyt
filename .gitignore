@@ -1,0 +1,7 @@
+.claude/artifacts/
+*.xcodeproj
+DerivedData/
+.build/
+.DS_Store
+xcuserdata/
+build/

@@ -1,0 +1,58 @@
+name: BeReyt
+options:
+  bundleIdPrefix: local.mitchel
+  deploymentTarget:
+    iOS: "27.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    DEVELOPMENT_TEAM: C76RQ9NG73
+    CODE_SIGN_STYLE: Automatic
+packages:
+  ReytKit:
+    path: Packages/ReytKit
+targets:
+  BeReyt:
+    type: application
+    platform: iOS
+    deploymentTarget: "27.0"
+    sources:
+      - path: App
+        excludes:
+          - Info.plist
+    dependencies:
+      - package: ReytKit
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: be reyt
+        NSHealthShareUsageDescription: be reyt reads your workouts from apple health so they can sit quietly beside your day. nothing leaves your phone.
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+    entitlements:
+      path: App/BeReyt.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+        com.apple.developer.default-data-protection: NSFileProtectionComplete
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.mitchel.bereyt
+        PRODUCT_NAME: BeReyt
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+schemes:
+  BeReyt:
+    build:
+      targets:
+        BeReyt: all
+    run:
+      config: Debug
