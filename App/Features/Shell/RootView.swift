@@ -1,7 +1,7 @@
 import ReytKit
 import SwiftUI
 
-/// Four tabs; Today is the root. Reviews and settings are placeholders until their sections land.
+/// Four tabs; Today is the root.
 struct RootView: View {
     let store: JournalStore
     let events: JournalEvents
@@ -18,6 +18,7 @@ struct RootView: View {
             // Simulator-only: `-openHistory ...` starts on the history tab.
             if CommandLine.arguments.contains("-openHistory") { return .history }
             if CommandLine.arguments.contains("-openSettings") { return .settings }
+            if CommandLine.arguments.contains("-openReview") { return .reviews }
         #endif
         return .today
     }
@@ -31,7 +32,7 @@ struct RootView: View {
                 HistoryView(store: store, events: events, attachments: attachments)
             }
             Tab(Copy.Tab.reviews, systemImage: "text.book.closed", value: Destination.reviews) {
-                PlaceholderScreen(title: Copy.Tab.reviews, message: Copy.Placeholder.reviewsBody)
+                ReviewsListView(store: store, events: events, attachments: attachments)
             }
             Tab(Copy.Tab.settings, systemImage: "gearshape", value: Destination.settings) {
                 SettingsView(backup: backup, restore: restore)
@@ -42,27 +43,6 @@ struct RootView: View {
             if let note = restore.completionNote {
                 RestoreNoteBanner(text: note, dismiss: restore.dismissCompletionNote)
             }
-        }
-    }
-}
-
-struct PlaceholderScreen: View {
-    let title: String
-    let message: String
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(title)
-                    .font(.system(.largeTitle, design: .serif))
-                    .foregroundStyle(Color("ink"))
-                    .accessibilityAddTraits(.isHeader)
-                Text(message).font(.footnote).foregroundStyle(Color("inkSecondary"))
-            }
-            .padding(.horizontal, 20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(Color("paper"))
-            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

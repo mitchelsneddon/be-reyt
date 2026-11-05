@@ -87,8 +87,8 @@ public struct WorkoutInput: Sendable, Equatable {
 /// effect and neither saves nor bumps. All inserts fetch first, so a unique key never gets a second row.
 @ModelActor
 public actor JournalStore {
-    private var clock: @Sendable () -> Date = { Date.now }
-    private var timeZone: TimeZone = .current
+    var clock: @Sendable () -> Date = { Date.now }
+    var timeZone: TimeZone = .current
     private var readOnly = false
     /// Increments on every successful save. The archive writer compares it before and after copying attachments
     /// to detect a write that raced the snapshot.

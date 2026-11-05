@@ -50,6 +50,13 @@
                     _ = await attachments.importData(data, for: AppClock.today())
                 }
             }
+            if args.contains("-seedMoreOfThis") {
+                // Written on Sunday 2026-11-08 for the review of 2026-10-25: targets 2026-11-08 to 2026-11-14.
+                if let sunday = DateKey("2026-10-25"), let saved = DateKey("2026-11-08") {
+                    _ = try? await store.saveMoreOfThis(
+                        weekStart: sunday, text: "time outdoors, and a long walk with mum.", savedOn: saved)
+                }
+            }
             if args.contains("-seedWorkouts") { await seedWorkouts(store) }
             if args.contains("-deleteFirstPhoto"), let first = try? await store.attachmentRefs().first {
                 _ = try? await attachments.deletePhoto(first)
@@ -69,16 +76,18 @@
             let today = AppClock.today()
             let midnight = today.date(in: .current)
             func input(
-                _ n: Int, _ source: String, _ type: String, hour: Double, minutes: Double, km: Double?, kcal: Double?
+                _ n: Int, _ source: String, _ type: String, hour: Double, minutes: Double, km: Double?, kcal: Double?,
+                on day: DateKey? = nil
             )
                 -> WorkoutInput
             {
-                let start = midnight.addingTimeInterval(hour * 3600)
+                let dateKey = day ?? today
+                let start = (day?.date(in: .current) ?? midnight).addingTimeInterval(hour * 3600)
                 return WorkoutInput(
                     healthKitUUID: UUID(uuidString: String(format: "00000000-0000-0000-0000-0000000000%02d", n))
                         ?? UUID(),
                     sourceName: source, activityType: type, start: start, end: start.addingTimeInterval(minutes * 60),
-                    dateKey: today, durationSeconds: minutes * 60, distanceMeters: km.map { $0 * 1000 },
+                    dateKey: dateKey, durationSeconds: minutes * 60, distanceMeters: km.map { $0 * 1000 },
                     energyKcal: kcal)
             }
             _ = try? await store.upsertWorkouts([
@@ -86,6 +95,11 @@
                 input(2, "Strava", "running", hour: 7, minutes: 76, km: 12.3, kcal: nil),
                 input(3, "Health", "yoga", hour: 18, minutes: 45, km: nil, kcal: 150),
                 input(4, "COROS", "swimming", hour: 12.5, minutes: 30, km: 1.2, kcal: 300),
+                // Workouts inside earlier review weeks: 2026-11-01 week, and the otherwise empty 2026-09-20 week.
+                input(5, "COROS", "running", hour: 7, minutes: 52, km: 9.4, kcal: 620, on: DateKey("2026-11-03")),
+                input(6, "Health", "strength", hour: 18, minutes: 40, km: nil, kcal: 210, on: DateKey("2026-11-05")),
+                input(7, "COROS", "cycling", hour: 9, minutes: 95, km: 31.0, kcal: 700, on: DateKey("2026-11-06")),
+                input(8, "Health", "walking", hour: 17, minutes: 35, km: 2.8, kcal: 120, on: DateKey("2026-09-22")),
             ])
         }
 
@@ -110,6 +124,8 @@
             let seeds: [Seed] = [
                 Seed(
                     day: "2026-10-03", text: "slow saturday.\nbread in the oven, rain on the window.", tags: [reading]),
+                // A week with nothing written (2026-09-20 to 26); only a workout is seeded there.
+                Seed(day: "2026-09-15", text: "a quiet tuesday."),
                 Seed(day: "2026-10-05", smile: "the neighbour waved from her garden.", score: .okay),
                 Seed(
                     day: "2026-10-07", text: "a long meeting day, but the walk home helped.", moods: ["tired"],
@@ -127,20 +143,24 @@
                 Seed(
                     day: "2026-10-24", text: "market, then the cinema.\nthe film was slower than i hoped.",
                     tags: [friends]),
-                Seed(day: "2026-10-27", rotating: "a good chapter and a quiet cup of tea.", tags: [reading]),
                 Seed(
-                    day: "2026-10-29", text: "windy. kept the doors shut and read all afternoon.", moods: ["calm"],
-                    tags: [reading]),
+                    day: "2026-10-27", rotating: "a good chapter and a quiet cup of tea.", score: .okay,
+                    moods: ["tired"], tags: [reading]),
+                Seed(
+                    day: "2026-10-29", text: "windy. kept the doors shut and read all afternoon.", score: .difficult,
+                    moods: ["calm"], tags: [reading]),
                 Seed(
                     day: "2026-10-31", text: "pumpkins on the step, a few kids came by.", score: .good, moods: ["happy"]
                 ),
-                Seed(day: "2026-11-01", text: "sunday. planned the week over breakfast."),
+                Seed(day: "2026-11-01", text: "sunday. planned the week over breakfast.", score: .okay),
                 Seed(day: "2026-11-02", smile: "found the old cafe still does the good scones.", tags: [friends]),
                 Seed(day: "2026-11-03", text: "busy. barely looked up until four.", score: .okay, moods: ["tired"]),
                 Seed(
                     day: "2026-11-04",
                     text: "a slow morning, coffee on the step.\nlong walk after lunch, the light was lovely.",
                     smile: "the dog fell asleep on my feet.", score: .good, moods: ["happy", "tired"], tags: [walk]),
+                // 2026-11-02 and 11-05 have no score: gaps in the chart for the week of 2026-11-01.
+                Seed(day: "2026-11-06", text: "friday. long lunch with friends.", score: .excellent, moods: ["happy"]),
             ]
             for seed in seeds {
                 let day = key(seed.day)

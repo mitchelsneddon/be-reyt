@@ -121,4 +121,54 @@ struct ReviewEligibilityTests {
         _ = try await store.updateEntry(day("2026-10-09"), .text("hi"))
         #expect(try await store.earliestContentDay() == day("2026-10-03"))
     }
+
+    @Test("more of this: first nonblank save stores the target week, later edits keep it")
+    func moreOfThisTarget() async throws {
+        let store = try makeStore()
+        #expect(try await store.moreOfThis(weekStart: day("2026-11-01")) == nil)
+        // Written late, on Wednesday 2026-11-11: targets 2026-11-08 to 2026-11-14.
+        let first = try await store.saveMoreOfThis(
+            weekStart: day("2026-11-01"), text: "time outdoors", savedOn: day("2026-11-11"))
+        #expect(first.dirty)
+        #expect(first.revisionBumpedWeeks.isEmpty)
+        var saved = try #require(try await store.moreOfThis(weekStart: day("2026-11-01")))
+        #expect(saved.text == "time outdoors")
+        #expect(saved.targetStart == day("2026-11-08"))
+        #expect(saved.targetEnd == day("2026-11-14"))
+
+        // Edited much later: the text changes, the target does not.
+        _ = try await store.saveMoreOfThis(
+            weekStart: day("2026-11-01"), text: "seeing friends", savedOn: day("2026-12-20"))
+        saved = try #require(try await store.moreOfThis(weekStart: day("2026-11-01")))
+        #expect(saved.text == "seeing friends")
+        #expect(saved.targetStart == day("2026-11-08"))
+        #expect(saved.targetEnd == day("2026-11-14"))
+        // An unchanged save is a no-op.
+        #expect(
+            try await store.saveMoreOfThis(
+                weekStart: day("2026-11-01"), text: "seeing friends", savedOn: day("2026-12-20")
+            )
+            .isEmpty)
+    }
+
+    @Test("more of this: blank clears the text only and never creates a row or changes the target")
+    func moreOfThisBlank() async throws {
+        let store = try makeStore()
+        let none = try await store.saveMoreOfThis(
+            weekStart: day("2026-11-01"), text: "  \n", savedOn: day("2026-11-08"))
+        #expect(none.isEmpty)
+        #expect(try await store.reviewRows().isEmpty)
+
+        _ = try await store.saveMoreOfThis(weekStart: day("2026-11-01"), text: "rest", savedOn: day("2026-11-08"))
+        _ = try await store.saveMoreOfThis(weekStart: day("2026-11-01"), text: "", savedOn: day("2026-11-20"))
+        var saved = try #require(try await store.moreOfThis(weekStart: day("2026-11-01")))
+        #expect(saved.text == "")
+        #expect(saved.targetStart == day("2026-11-08"))
+
+        // Writing again later keeps the original target.
+        _ = try await store.saveMoreOfThis(weekStart: day("2026-11-01"), text: "rest", savedOn: day("2026-11-20"))
+        saved = try #require(try await store.moreOfThis(weekStart: day("2026-11-01")))
+        #expect(saved.targetStart == day("2026-11-08"))
+        #expect(try await store.reviewRows().count == 1)
+    }
 }

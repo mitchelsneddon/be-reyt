@@ -54,4 +54,54 @@ extension JournalStore {
         ).map(WorkoutSnapshotValue.init)
         return WeekInput(days: days, workouts: workouts)
     }
+
+    /// Saves the user's "a little more of next week" answer for a review. The target week (the Sunday to Saturday
+    /// week containing `savedOn`) is stored on the first nonblank save and never moves afterwards. A blank value
+    /// clears the text only. This is the user's own text, never model input, so no narrative is purged. A review
+    /// row that does not exist yet is created, so a save is never lost.
+    public func saveMoreOfThis(weekStart: DateKey, text: String, savedOn: DateKey) throws -> StoreEffect {
+        try requireWritable()
+        let week = WeekCalendar.reviewWeekStart(containing: weekStart)
+        let s = week.string
+        var d = FetchDescriptor<WeeklyReview>(predicate: #Predicate { $0.weekStartKey == s })
+        d.fetchLimit = 1
+        let nonblank = DayContent.isNonblank(text)
+        let row: WeeklyReview
+        if let existing = try modelContext.fetch(d).first {
+            row = existing
+        } else {
+            guard nonblank else { return StoreEffect() }
+            row = WeeklyReview(
+                weekStartKey: s, weekEndKey: week.adding(days: 6).string, timeZoneID: timeZone.identifier,
+                unlockedAt: clock())
+            modelContext.insert(row)
+        }
+        let newText: String? = nonblank ? text : nil
+        let needsTarget = nonblank && row.moreOfThisTargetStartKey == nil
+        guard row.moreOfThisText != newText || needsTarget else { return StoreEffect() }
+        row.moreOfThisText = newText
+        if needsTarget {
+            let target = WeekCalendar.moreOfThisTarget(savedOn: savedOn)
+            row.moreOfThisTargetStartKey = target.start.string
+            row.moreOfThisTargetEndKey = target.end.string
+        }
+        return try commit(candidateDays: [], before: [:], bumpDays: [])
+    }
+
+    /// The saved "more of this" answer and its target week for a review, nil when nothing was ever saved.
+    public func moreOfThis(weekStart: DateKey) throws -> MoreOfThis? {
+        let s = WeekCalendar.reviewWeekStart(containing: weekStart).string
+        var d = FetchDescriptor<WeeklyReview>(predicate: #Predicate { $0.weekStartKey == s })
+        d.fetchLimit = 1
+        guard let row = try modelContext.fetch(d).first else { return nil }
+        return MoreOfThis(
+            text: row.moreOfThisText ?? "", targetStart: row.moreOfThisTargetStartKey.flatMap { DateKey($0) },
+            targetEnd: row.moreOfThisTargetEndKey.flatMap { DateKey($0) })
+    }
+}
+
+public struct MoreOfThis: Sendable, Equatable {
+    public let text: String
+    public let targetStart: DateKey?
+    public let targetEnd: DateKey?
 }

@@ -59,6 +59,9 @@ public struct WeeklyStats: Sendable, Equatable {
         public let delta: Double
         /// Difference between the two displayed (rounded) averages, in tenths, so the shown numbers agree.
         public let deltaTenths: Int
+        /// The two averages as displayed (rounded half-up, in tenths).
+        public let thisAverageTenths: Int
+        public let previousAverageTenths: Int
         public let thisScoredDays: Int
         public let previousScoredDays: Int
     }
@@ -151,7 +154,8 @@ public struct WeeklyStats: Sendable, Equatable {
             let prevTenths = roundedTenths(sum: prevSum, count: prev.scores.count)
             scoreComparison = ScoreComparison(
                 thisAverage: average, previousAverage: prevAverage, delta: average - prevAverage,
-                deltaTenths: tenths - prevTenths, thisScoredDays: scores.count,
+                deltaTenths: tenths - prevTenths, thisAverageTenths: tenths, previousAverageTenths: prevTenths,
+                thisScoredDays: scores.count,
                 previousScoredDays: prev.scores.count)
         }
 

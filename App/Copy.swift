@@ -10,10 +10,6 @@ enum Copy {
         static let settings = "settings"
     }
 
-    enum Placeholder {
-        static let reviewsBody = "weekly reflections will gather here."
-    }
-
     enum History {
         static let modeLabel = "history view"
         static let calendar = "calendar"
@@ -86,6 +82,74 @@ enum Copy {
                 .weekday(.wide).day().month(.wide).year()
             return key.date(in: calendar).formatted(style).lowercased()
         }
+    }
+
+    enum Reviews {
+        static let title = "reviews"
+        static let thisWeeksReview = "this week's review"
+        static let loadFailed = "couldn't open your reviews. tap to try again."
+        static let weekdayShort = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
+
+        static func weekOf(_ range: String) -> String { "week of \(range)" }
+        static func coverage(_ recorded: Int) -> String { "\(recorded) of 7 days recorded" }
+        static func rowLabel(week: String, coverage: String, isLatest: Bool) -> String {
+            isLatest ? "\(thisWeeksReview), \(week), \(coverage)" : "\(week), \(coverage)"
+        }
+
+        /// "your first review opens on sunday 8 nov."
+        static func emptyList(opensOn key: DateKey, calendar: Calendar = .current) -> String {
+            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone)
+                .weekday(.wide).day().month(.abbreviated)
+            return "your first review opens on \(key.date(in: calendar).formatted(style).lowercased())."
+        }
+
+        static let reflectionPlaceholder = "a written reflection will appear here."
+        static let emptyWeek = "nothing was written this week."
+
+        static let scoresTitle = "day scores"
+        static func average(_ display: String, scoredDays: Int) -> String {
+            "\(display) average across \(scoredDays) scored \(scoredDays == 1 ? "day" : "days")"
+        }
+        static let noScores = "no day scores this week."
+        static let chartLabel = "day scores, sunday to saturday"
+        static func pointLabel(date: String, score: DayScore) -> String { "\(date), \(score.label)" }
+        static func chartSummary(scoredDays: Int) -> String {
+            "day scores for \(scoredDays) of 7 days. days without a score are left blank."
+        }
+
+        static let moodsTitle = "moods"
+        static let noMoods = "no moods recorded this week."
+        static func moodRow(label: String, count: Int, of days: Int) -> String {
+            "\(label) · \(count) of \(days) mood-logged \(days == 1 ? "day" : "days")"
+        }
+
+        static let comparisonTitle = "compared with last week"
+        static func comparisonScore(average: String, days: Int, lastAverage: String, lastDays: Int) -> String {
+            "average \(average) across \(days) days, last week \(lastAverage) across \(lastDays)"
+        }
+        static func comparisonMood(label: String, count: Int, of days: Int, lastCount: Int, lastOf: Int) -> String {
+            "\(label) on \(count) of \(days) days, last week \(lastCount) of \(lastOf)"
+        }
+
+        static func highestTitle(count: Int) -> String { count == 1 ? "highest-scored day" : "highest-scored days" }
+        static func lowestTitle(count: Int) -> String { count == 1 ? "lowest-scored day" : "lowest-scored days" }
+        static let openDayHint = "opens that day"
+
+        static func workoutSummary(count: Int, duration: String) -> String {
+            "\(count) \(count == 1 ? "workout" : "workouts"), \(duration) in all"
+        }
+        static func distanceLine(distance: String, kind: WorkoutActivity.DistanceKind) -> String {
+            switch kind {
+            case .walkingRunning: "\(distance) walking and running"
+            case .cycling: "\(distance) cycling"
+            case .swimming: "\(distance) swimming"
+            }
+        }
+
+        static let moreOfThisQuestion = "what would you like a little more of next week?"
+        static let moreOfThisHelper = "time outdoors, seeing friends, rest, anything you choose."
+        static let moreOfThisLabel = "answer to what would you like a little more of next week"
+        static func moreOfThisTarget(_ range: String) -> String { "for \(range)" }
     }
 
     enum Reflection {
