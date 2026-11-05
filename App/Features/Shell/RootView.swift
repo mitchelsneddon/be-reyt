@@ -6,6 +6,8 @@ struct RootView: View {
     let store: JournalStore
     let events: JournalEvents
     let attachments: AttachmentStore
+    let backup: BackupSettingsModel
+    let restore: RestoreCoordinator
 
     private enum Destination: Hashable { case today, history, reviews, settings }
 
@@ -15,6 +17,7 @@ struct RootView: View {
         #if DEBUG
             // Simulator-only: `-openHistory ...` starts on the history tab.
             if CommandLine.arguments.contains("-openHistory") { return .history }
+            if CommandLine.arguments.contains("-openSettings") { return .settings }
         #endif
         return .today
     }
@@ -31,10 +34,15 @@ struct RootView: View {
                 PlaceholderScreen(title: Copy.Tab.reviews, message: Copy.Placeholder.reviewsBody)
             }
             Tab(Copy.Tab.settings, systemImage: "gearshape", value: Destination.settings) {
-                PlaceholderScreen(title: Copy.Tab.settings, message: Copy.Placeholder.settingsBody)
+                SettingsView(backup: backup, restore: restore)
             }
         }
         .tint(Color("accent"))
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let note = restore.completionNote {
+                RestoreNoteBanner(text: note, dismiss: restore.dismissCompletionNote)
+            }
+        }
     }
 }
 
@@ -56,5 +64,22 @@ struct PlaceholderScreen: View {
             .background(Color("paper"))
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+}
+
+/// One calm line after a restore (or undo) rebuilt the app.
+private struct RestoreNoteBanner: View {
+    let text: String
+    let dismiss: () -> Void
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(text).font(.footnote).foregroundStyle(Color("ink"))
+            Spacer()
+            Button(Copy.Restore.dismiss, action: dismiss).font(.footnote).frame(minWidth: 44, minHeight: 44)
+        }
+        .padding(.horizontal, 20)
+        .background(Color("paper"))
+        .accessibilityElement(children: .contain)
     }
 }

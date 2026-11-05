@@ -74,14 +74,15 @@ public struct ArchiveWriter: Sendable {
                 try fm.createDirectory(at: directory, withIntermediateDirectories: true)
                 let snapshot = try await store.archiveSnapshot()
                 await afterSnapshotRead?()
-                let items = try writePayload(snapshot.data, to: directory, kind: options.kind)
+                let payload = try writePayload(snapshot.data, to: directory, kind: options.kind)
                 guard await store.generationCounter() == snapshot.counter else { continue }
                 let manifest = ArchiveManifest(
                     format: ArchiveManifest.formatName, kind: options.kind,
                     schemaVersion: ArchiveManifest.supportedSchemaVersion, appVersion: options.appVersion,
                     createdAt: options.createdAt, timeZone: options.timeZone.identifier,
-                    lineageID: options.lineageID, counts: ArchiveManifest.Counts(snapshot.data),
-                    dateRange: snapshot.data.dateRange, attachments: items)
+                    lineageID: options.lineageID, counts: ArchiveManifest.Counts(payload.data),
+                    dateRange: payload.data.dateRange, attachments: payload.items,
+                    warnings: payload.warnings.isEmpty ? nil : payload.warnings)
                 try ArchiveCoding.encoder().encode(manifest).write(
                     to: directory.appending(path: ArchiveNames.manifest, directoryHint: .notDirectory))
                 return manifest
@@ -93,13 +94,22 @@ public struct ArchiveWriter: Sendable {
         }
     }
 
-    private func writePayload(
-        _ data: ArchiveData, to directory: URL, kind: ArchiveManifest.Kind
-    ) throws -> [ArchiveManifest.Attachment] {
-        try ArchiveCoding.encoder().encode(data).write(
-            to: directory.appending(path: ArchiveNames.data, directoryHint: .notDirectory))
+    /// A portable export skips an attachment whose file is missing on disk (record and file both left out) and
+    /// says so in `warnings`, so one lost photo never blocks a backup of everything else.
+    private struct Payload {
+        var data: ArchiveData
+        var items: [ArchiveManifest.Attachment]
+        var warnings: [String]
+    }
+
+    private func writePayload(_ snapshotData: ArchiveData, to directory: URL, kind: ArchiveManifest.Kind) throws
+        -> Payload
+    {
+        var data = snapshotData
         var items: [ArchiveManifest.Attachment] = []
-        for a in data.attachments {
+        var warnings: [String] = []
+        var kept: [AttachmentDTO] = []
+        for a in snapshotData.attachments {
             let ext = (a.relativePath as NSString).pathExtension
             guard ArchiveNames.isSafeExtension(ext) else { throw ArchiveError.unsafePath(a.relativePath) }
             let source = try paths.resolveAttachment(relativePath: a.relativePath, in: generation)
@@ -109,16 +119,23 @@ public struct ArchiveWriter: Sendable {
                 let target = directory.appending(path: ArchiveNames.attachmentsDir, directoryHint: .isDirectory)
                     .appending(path: name, directoryHint: .notDirectory)
                 guard FileManager.default.fileExists(atPath: source.path) else {
-                    throw ArchiveError.missingFile(a.relativePath)
+                    warnings.append(ArchiveWarning.missingAttachment)
+                    continue
                 }
                 let copied = try FileStreaming.copy(from: source, to: target)
                 items.append(.init(id: a.id, ext: ext, sha256: copied.sha256, bytes: copied.bytes, blob: nil))
+                kept.append(a)
             case .snapshot:
                 // Blobs are produced by the backup run; the manifest records the checksum the record holds.
                 let size = (try? source.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
                 items.append(.init(id: a.id, ext: ext, sha256: a.sha256, bytes: size, blob: nil))
+                kept.append(a)
             }
         }
-        return items.sorted { $0.id.uuidString < $1.id.uuidString }
+        data.attachments = kept
+        try ArchiveCoding.encoder().encode(data).write(
+            to: directory.appending(path: ArchiveNames.data, directoryHint: .notDirectory))
+        return Payload(
+            data: data, items: items.sorted { $0.id.uuidString < $1.id.uuidString }, warnings: warnings)
     }
 }

@@ -5,7 +5,7 @@ import ReytKit
 /// One day's editable state. Owns the `dateKey` it was opened with, so the page never changes underneath the user.
 /// Edits go to `JournalStore` (debounced for text); the store's echo never overwrites the draft.
 @MainActor @Observable
-final class DayPageModel {
+final class DayPageModel: DraftFlushing {
     enum SaveState: Equatable { case idle, saving, saved, failed }
     enum AddTagResult { case added, blank, failed }
     private enum Field: Hashable { case text, smile, rotating, score, moods, tags, intention, followUp }
@@ -57,6 +57,7 @@ final class DayPageModel {
         self.store = store
         self.events = events
         self.debounce = debounce
+        events.register(self)
     }
 
     // MARK: State
@@ -262,6 +263,12 @@ final class DayPageModel {
         if rotatingAnswer != savedRotating { write(.rotating) }
         if intentionText != savedIntention { write(.intention) }
         if followUpNote != savedFollowUpNote { write(.followUp) }
+    }
+
+    /// Restore's quiesce step: writes anything pending, then waits for the write chain to drain.
+    func flushAndSettle() async {
+        flush()
+        await chain?.value
     }
 
     func retry() {

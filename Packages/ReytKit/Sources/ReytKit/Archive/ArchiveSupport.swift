@@ -23,6 +23,12 @@ public enum ArchiveError: Error, Equatable, Sendable {
     case verificationFailed(String)
 }
 
+/// Stable codes for `ArchiveManifest.warnings`; the app turns them into copy.
+public enum ArchiveWarning {
+    /// An attachment record whose file was missing on disk was left out of the export.
+    public static let missingAttachment = "missing-attachment"
+}
+
 /// Naming rules for payload files. Everything derived from untrusted manifest text goes through here.
 enum ArchiveNames {
     static let manifest = "manifest.json"

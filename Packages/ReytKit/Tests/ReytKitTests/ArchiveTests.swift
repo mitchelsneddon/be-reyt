@@ -334,6 +334,35 @@ struct ArchiveValidatorTests {
         }
     }
 
+    @Test("a portable export skips an attachment whose file is missing on disk and warns")
+    func exportSkipsMissingAttachment() async throws {
+        let f = try await ArchiveFixture()
+        try FileManager.default.removeItem(at: f.attachmentFile("\(f.photoB.uuidString.lowercased()).png"))
+        let dir = f.base.appending(path: "payload-missing")
+        let options = ArchiveWriter.Options(
+            kind: .portable, appVersion: "1.0 (1)", lineageID: UUID(), createdAt: f.t(20),
+            timeZone: TimeZone(identifier: "Europe/London")!)
+        let manifest = try await ArchiveWriter(paths: f.paths, generation: f.generation)
+            .write(from: f.store, to: dir, options: options)
+        #expect(manifest.warnings == [ArchiveWarning.missingAttachment])
+        #expect(manifest.counts.attachments == 1 && manifest.attachments.map(\.id) == [f.photoA])
+
+        let validated = try ArchiveValidator.validate(directory: dir)
+        #expect(validated.data.attachments.map(\.id) == [f.photoA])
+        #expect(validated.warnings.contains(ArchiveWarning.missingAttachment))
+        // everything else is untouched
+        #expect(validated.data.entries == (try f.rawData()).entries)
+        // the source journal still lists the record: the export never edits the live store
+        #expect(try f.rawData().attachments.count == 2)
+    }
+
+    @Test("an export with every file present has no warnings field")
+    func noWarningsWhenComplete() async throws {
+        let f = try await ArchiveFixture()
+        let dir = try await f.writePayload()
+        #expect(try ArchiveReader.readManifest(in: dir, maxBytes: 1 << 20).warnings == nil)
+    }
+
     @Test("manifest counts that disagree with data.json are rejected")
     func countMismatch() async throws {
         let p = try await payload()

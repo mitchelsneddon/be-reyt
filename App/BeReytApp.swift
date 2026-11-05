@@ -4,14 +4,28 @@ import SwiftUI
 
 @main
 struct BeReytApp: App {
-    @State private var host = ContainerHost()
-    @State private var events = JournalEvents()
+    @State private var host: ContainerHost
+    @State private var events: JournalEvents
     @State private var lock = AppLock()
+    @State private var backup: BackupSettingsModel
+    @State private var restore: RestoreCoordinator
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        let host = ContainerHost()
+        let events = JournalEvents()
+        _host = State(initialValue: host)
+        _events = State(initialValue: events)
+        _backup = State(initialValue: BackupSettingsModel(host: host))
+        _restore = State(initialValue: RestoreCoordinator(host: host, events: events))
+    }
 
     var body: some Scene {
         WindowGroup {
             content
+                #if DEBUG
+                    .task { await DebugBackup.runIfRequested(host: host, restore: restore) }
+                #endif
                 .overlay { if scenePhase != .active { PrivacyCover() } }
                 .onChange(of: scenePhase) { _, phase in
                     switch phase {
@@ -50,7 +64,7 @@ extension BeReytApp {
     fileprivate func root(
         store: JournalStore, attachments: AttachmentStore, container: ModelContainer, generation: String
     ) -> some View {
-        RootView(store: store, events: events, attachments: attachments)
+        RootView(store: store, events: events, attachments: attachments, backup: backup, restore: restore)
             .modelContainer(container)
             .id(generation)
     }

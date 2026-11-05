@@ -162,3 +162,65 @@ struct GenerationSwitcherTests {
         #expect(Paths.isValidGenerationID(switcher.nextGenerationID()))
     }
 }
+
+@Suite("Generation sweep")
+struct GenerationSweepTests {
+    private func names(_ f: ArchiveFixture) throws -> Set<String> {
+        Set(try FileManager.default.contentsOfDirectory(atPath: f.paths.dataRoot.path))
+    }
+
+    private func make(_ f: ArchiveFixture, _ ids: [String]) throws {
+        for id in ids {
+            try FileManager.default.createDirectory(at: f.paths.generation(id), withIntermediateDirectories: true)
+        }
+    }
+
+    @Test("keeps current, the keep set and a fresh recovery generation; deletes the rest")
+    func keepsAndDeletes() async throws {
+        let f = try await ArchiveFixture()
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        try make(f, ["g2", "g3", "g4", "g5"])
+        try RecoveryRecord(generationID: "g3", recordedAt: now.addingTimeInterval(-3 * 86_400)).save(to: f.paths)
+        let removed = GenerationSwitcher(paths: f.paths).sweepAbandoned(keep: ["g5"], now: now)
+        #expect(removed == ["g2", "g4"])
+        #expect(try names(f) == ["g1", "g3", "g5", "current"])
+        #expect(f.paths.currentGenerationID() == "g1")
+    }
+
+    @Test("a recovery generation older than seven days is deleted and its record cleared")
+    func expiredRecovery() async throws {
+        let f = try await ArchiveFixture()
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        try make(f, ["g2"])
+        try RecoveryRecord(generationID: "g2", recordedAt: now.addingTimeInterval(-8 * 86_400)).save(to: f.paths)
+        let removed = GenerationSwitcher(paths: f.paths).sweepAbandoned(now: now)
+        #expect(removed == ["g2"])
+        #expect(try names(f) == ["g1", "current"])
+        #expect(RecoveryRecord.load(from: f.paths) == nil)
+    }
+
+    @Test("the current generation is never swept even if the recovery record names something else")
+    func currentIsSafe() async throws {
+        let f = try await ArchiveFixture()
+        try RecoveryRecord(generationID: "g9", recordedAt: .now).save(to: f.paths)
+        GenerationSwitcher(paths: f.paths).sweepAbandoned()
+        #expect(FileManager.default.fileExists(atPath: f.paths.store(in: f.generation).path))
+    }
+
+    @Test("a missing or unreadable pointer sweeps nothing")
+    func noPointerNoSweep() async throws {
+        let f = try await ArchiveFixture()
+        try make(f, ["g2"])
+        try Data("../../bad".utf8).write(to: f.paths.currentPointer)
+        #expect(GenerationSwitcher(paths: f.paths).sweepAbandoned().isEmpty)
+        #expect(try names(f) == ["g1", "g2", "current"])
+    }
+
+    @Test("a tampered recovery file is ignored")
+    func badRecoveryFile() async throws {
+        let f = try await ArchiveFixture()
+        try FileManager.default.createDirectory(at: f.paths.deviceRoot, withIntermediateDirectories: true)
+        try Data(#"{"generationID":"../x","recordedAt":"2026-01-01T00:00:00Z"}"#.utf8).write(to: f.paths.recoveryFile)
+        #expect(RecoveryRecord.load(from: f.paths) == nil)
+    }
+}

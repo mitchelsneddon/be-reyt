@@ -98,6 +98,12 @@ actor AttachmentStore {
         return effect
     }
 
+    /// Waits (bounded) for photo imports that are mid-write, so restore never races one.
+    func waitForIdle(timeout: Duration = .seconds(5)) async {
+        let deadline = ContinuousClock.now + timeout
+        while !inFlight.isEmpty, ContinuousClock.now < deadline { try? await Task.sleep(for: .milliseconds(50)) }
+    }
+
     /// Removes attachment files no record owns. Only touches the current generation's attachments directory.
     func sweepOrphans() async {
         guard let refs = try? await store.attachmentRefs() else { return }

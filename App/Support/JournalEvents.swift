@@ -1,6 +1,11 @@
 import Observation
 import ReytKit
 
+/// A model holding unsaved edits. Restore asks every live one to write and settle before the store goes read-only.
+@MainActor protocol DraftFlushing: AnyObject {
+    func flushAndSettle() async
+}
+
 /// Receives every `StoreEffect` from the feature models. Today it only records that the backup is stale;
 /// BackupManager (later) reads `isDirty`, and ReminderScheduler plugs in through `onContentChange`.
 @MainActor @Observable
@@ -11,6 +16,22 @@ final class JournalEvents {
 
     /// Hook for reminders: called with the days whose `hasUserContent` flipped. No-op until S10.
     @ObservationIgnored var onContentChange: (Set<DateKey>) -> Void = { _ in }
+
+    @ObservationIgnored private var flushers: [WeakFlusher] = []
+
+    private struct WeakFlusher {
+        weak var value: DraftFlushing?
+    }
+
+    func register(_ flusher: DraftFlushing) {
+        flushers.removeAll { $0.value == nil }
+        flushers.append(WeakFlusher(value: flusher))
+    }
+
+    /// Writes every pending draft and waits for in-flight writes to finish.
+    func flushAllDrafts() async {
+        for flusher in flushers.compactMap(\.value) { await flusher.flushAndSettle() }
+    }
 
     func receive(_ effect: StoreEffect) {
         guard !effect.isEmpty else { return }

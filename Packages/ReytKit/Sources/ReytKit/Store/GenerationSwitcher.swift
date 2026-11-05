@@ -147,4 +147,30 @@ public struct GenerationSwitcher: Sendable {
         guard paths.currentGenerationID() != id else { throw PathError.invalidGenerationID }
         try? FileManager.default.removeItem(at: paths.generation(id))
     }
+
+    /// Deletes generation directories that are neither current, in `keep`, nor the restore-recovery generation
+    /// (while that is within its seven days; an expired record is cleared). Returns the ids removed.
+    /// Does nothing when the pointer is missing or unreadable, so a damaged pointer can never lead to a wipe.
+    @discardableResult
+    public func sweepAbandoned(keep: Set<String> = [], now: Date = Date.now) -> [String] {
+        guard let current = paths.currentGenerationID() else { return [] }
+        var protected = keep.union([current])
+        if let record = RecoveryRecord.load(from: paths) {
+            if record.isAvailable(now: now) {
+                protected.insert(record.generationID)
+            } else {
+                RecoveryRecord.clear(from: paths)
+            }
+        }
+        let fm = FileManager.default
+        var removed: [String] = []
+        for name in (try? fm.contentsOfDirectory(atPath: paths.dataRoot.path)) ?? [] {
+            guard Paths.isValidGenerationID(name), !protected.contains(name) else { continue }
+            var isDirectory: ObjCBool = false
+            let url = paths.generation(name)
+            guard fm.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else { continue }
+            if (try? fm.removeItem(at: url)) != nil { removed.append(name) }
+        }
+        return removed.sorted()
+    }
 }

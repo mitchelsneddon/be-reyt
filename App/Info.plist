@@ -35,5 +35,25 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>be reyt backup</string>
+			<key>UTTypeIdentifier</key>
+			<string>local.mitchel.bereyt.archive</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>aea</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

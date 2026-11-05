@@ -18,13 +18,21 @@ final class ContainerHost {
     /// Set once an open has started, so a second trigger (scene active, unlock) can never open a second container.
     @ObservationIgnored private var isOpening = false
 
-    @ObservationIgnored private let paths: Paths
-    @ObservationIgnored private var generationURL: URL?
+    @ObservationIgnored let paths: Paths
+    @ObservationIgnored private(set) var generationURL: URL?
     @ObservationIgnored private var unlockWatcher: Task<Void, Never>?
     @ObservationIgnored private let logger = Logger(subsystem: "local.mitchel.bereyt", category: "container")
 
     init(base: URL = .applicationSupportDirectory) {
         paths = Paths(base: base)
+        #if DEBUG
+            // Simulator-only: `-wipeData` starts from an empty app (all generations and device state).
+            if CommandLine.arguments.contains("-wipeData") {
+                try? FileManager.default.removeItem(at: paths.dataRoot)
+                try? FileManager.default.removeItem(at: paths.deviceRoot)
+            }
+        #endif
+        ScratchSpace.clearAll()
         openIfPossible()
     }
 
@@ -55,7 +63,17 @@ final class ContainerHost {
         }
     }
 
-    private func open() throws {
+    /// Everything needed to show one generation.
+    private struct Opened {
+        let container: ModelContainer
+        let store: JournalStore
+        let attachments: AttachmentStore
+        let generationID: String
+        let generation: URL
+    }
+
+    /// Opens whatever `Data/current` points at (creating `g1` on a first run).
+    private func build() throws -> Opened {
         let fm = FileManager.default
         try fm.createDirectory(at: paths.dataRoot, withIntermediateDirectories: true)
         let id: String
@@ -77,22 +95,48 @@ final class ContainerHost {
         let configuration = ModelConfiguration(schema: schema, url: paths.store(in: generation))
         let container = try ModelContainer(
             for: schema, migrationPlan: BeReytMigrationPlan.self, configurations: configuration)
-        generationURL = generation
-        protect()
-
         let store = JournalStore(modelContainer: container, clock: AppClock.now)
         let attachments = AttachmentStore(store: store, paths: paths, generation: generation, generationID: id)
+        return Opened(
+            container: container, store: store, attachments: attachments, generationID: id, generation: generation)
+    }
+
+    private func open() throws {
+        let opened = try build()
+        let (container, store, attachments, id, generation) = (
+            opened.container, opened.store, opened.attachments, opened.generationID, opened.generation
+        )
+        generationURL = generation
+        protect()
+        let paths = self.paths
         #if DEBUG
             Task {
                 await attachments.sweepOrphans()
                 await DebugSeed.runIfRequested(store, attachments: attachments)
                 DebugSeed.dumpProtectionIfRequested(generation: generation, generationID: id)
                 publish(container: container, store: store, attachments: attachments, generationID: id)
+                GenerationSwitcher(paths: paths).sweepAbandoned()
             }
         #else
             publish(container: container, store: store, attachments: attachments, generationID: id)
-            Task { await attachments.sweepOrphans() }
+            Task {
+                await attachments.sweepOrphans()
+                GenerationSwitcher(paths: paths).sweepAbandoned()
+            }
         #endif
+    }
+
+    /// Re-opens at the generation `Data/current` now names. Called by restore after the pointer flips: publishing a
+    /// new `generationID` rebuilds the root view, and with it the container, store and every model.
+    func reopenCurrent() throws {
+        let opened = try build()
+        generationURL = opened.generation
+        protect()
+        publish(
+            container: opened.container, store: opened.store, attachments: opened.attachments,
+            generationID: opened.generationID)
+        let attachments = opened.attachments
+        Task { await attachments.sweepOrphans() }
     }
 
     private func publish(

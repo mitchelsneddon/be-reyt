@@ -327,7 +327,7 @@ public struct ArchiveData: Codable, Equatable, Sendable {
     }
 
     /// First and last day among entries and attachments (days that can hold content), nil when there are none.
-    var dateRange: ArchiveManifest.DateRange? {
+    public var dateRange: ArchiveManifest.DateRange? {
         let keys = entries.map(\.dateKey) + attachments.map(\.entryDateKey)
         guard let first = keys.min(), let last = keys.max() else { return nil }
         return ArchiveManifest.DateRange(first: first, last: last)
@@ -412,10 +412,12 @@ public struct ArchiveManifest: Codable, Equatable, Sendable {
     public var counts: Counts
     public var dateRange: DateRange?
     public var attachments: [Attachment]
+    /// Things the export could not include (e.g. `missing-attachment`), one entry each. Absent in older archives.
+    public var warnings: [String]?
 }
 
 extension ArchiveManifest.Counts {
-    init(_ data: ArchiveData) {
+    public init(_ data: ArchiveData) {
         self.init(
             entries: data.entries.count, attachments: data.attachments.count, intentions: data.intentions.count,
             reviews: data.reviews.count, tags: data.tags.count, workouts: data.workouts.count,

@@ -12,7 +12,6 @@ enum Copy {
 
     enum Placeholder {
         static let reviewsBody = "weekly reflections will gather here."
-        static let settingsBody = "settings will live here."
     }
 
     enum History {
@@ -182,6 +181,111 @@ enum Copy {
             case ...0: "be reyt needs reinstalling from your mac now. your entries stay on your phone."
             case 1: "be reyt needs reinstalling from your mac in 1 day. your entries stay on your phone."
             default: "be reyt needs reinstalling from your mac in \(daysLeft) days. your entries stay on your phone."
+            }
+        }
+    }
+
+    enum Settings {
+        static let title = "settings"
+        static let backupSection = "backup"
+        static let passphraseRow = "backup passphrase"
+        static let passphraseSet = "set"
+        static let passphraseNotSet = "not set yet"
+        static let exportRow = "export a backup"
+        static let exportRowNeedsPassphrase = "set a passphrase first"
+        static let restoreRow = "restore from a file"
+        static let undoRow = "undo last restore"
+        static let undoHint = "goes back to what was on this phone before the last restore"
+        static let backupFooter =
+            "backups are encrypted with your passphrase and stay in the place you choose. nothing leaves your phone on its own."
+    }
+
+    enum Passphrase {
+        static let setTitle = "backup passphrase"
+        static let changeTitle = "change passphrase"
+        static let warning =
+            "write this down somewhere safe. without it, your backups can't be opened, not even by us."
+        static let current = "current passphrase"
+        static let new = "new passphrase"
+        static let confirm = "type it again"
+        static let save = "save passphrase"
+        static let cancel = "cancel"
+        static let tooShort = "use at least 8 characters."
+        static let mismatch = "those two don't match."
+        static let wrongCurrent = "that isn't your current passphrase."
+        static let saveFailed = "couldn't save the passphrase on this phone. try again in a moment."
+        static let reauthReason = "confirm it's you to change your backup passphrase."
+    }
+
+    enum Export {
+        static let working = "gathering your journal…"
+        static let reauthFailed = "couldn't confirm it's you, so nothing was exported."
+        static let failed = "couldn't make the backup. nothing was changed, try again in a moment."
+        static let storageFull =
+            "there isn't enough space on this phone to make the backup. free some up and try again."
+        static let saved = "backup saved."
+        static func skipped(_ photos: Int) -> String {
+            photos == 1 ? "1 photo couldn't be included." : "\(photos) photos couldn't be included."
+        }
+        static let exporterError = "couldn't save the backup there. try another place."
+    }
+
+    enum Restore {
+        static let title = "restore"
+        static let enterPassphrase = "enter the passphrase for this backup."
+        static let passphraseField = "passphrase"
+        static let open = "open backup"
+        static let cancel = "cancel"
+        static let opening = "opening your backup…"
+        static let previewTitle = "this backup"
+        static let previewIntro = "it holds"
+        static func days(_ n: Int) -> String { n == 1 ? "1 day written" : "\(n) days written" }
+        static func photos(_ n: Int) -> String { n == 1 ? "1 photo" : "\(n) photos" }
+        static func tags(_ n: Int) -> String { n == 1 ? "1 tag" : "\(n) tags" }
+        static func plans(_ n: Int) -> String { n == 1 ? "1 sunday plan" : "\(n) sunday plans" }
+        static func range(first: String, last: String) -> String { "from \(first) to \(last)" }
+        static let replace = "replace everything on this phone with this backup"
+        static let confirmTitle = "replace everything on this phone with this backup?"
+        static let confirmAction = "replace"
+        static let confirmMessage =
+            "what's here now will be saved as a safety copy first, and you can undo for 7 days."
+        static let reauthReason = "confirm it's you to restore from a backup."
+        static let reauthFailed = "couldn't confirm it's you, so nothing was changed."
+        static let restoring = "restoring your journal…"
+        static let undoing = "going back…"
+        static let tryAgain = "try again"
+        static let close = "close"
+        static func doneNote(entries: Int) -> String {
+            entries == 0
+                ? "restored from your backup."
+                : entries == 1 ? "restored. 1 day is back." : "restored. \(entries) days are back."
+        }
+        static let undoneNote = "back to what was here before the restore."
+        static let undoConfirmTitle = "go back to what was here before the last restore?"
+        static let undoConfirmMessage =
+            "anything you've written since the restore will be saved as a safety copy, then replaced."
+        static let undoAction = "go back"
+        static let dismiss = "dismiss"
+
+        static func warningLine(_ code: String, count: Int) -> String? {
+            code == ArchiveWarning.missingAttachment ? Export.skipped(count) : nil
+        }
+
+        static func failure(_ failure: RestoreFailure) -> String {
+            switch failure {
+            case .wrongPassphrase:
+                "that passphrase didn't open this backup. check it and try again, nothing was changed."
+            case .notABackup: "that file isn't a be reyt backup. nothing was changed."
+            case .newerVersion:
+                "this backup was made by a newer version of be reyt. update the app and try again."
+            case .damaged: "this backup looks damaged and can't be restored. nothing was changed."
+            case .noPassphrase:
+                "set a backup passphrase first, so what's on this phone can be saved before it's replaced."
+            case .safetyCopyFailed:
+                "couldn't save a safety copy of what's here, so nothing was changed. try again in a moment."
+            case .switchFailed: "something went wrong, so nothing was changed. try again in a moment."
+            case .busy: "a restore is already running."
+            case .nothingToUndo: "there's nothing to go back to."
             }
         }
     }

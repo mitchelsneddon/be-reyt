@@ -20,6 +20,9 @@ public struct Paths: Sendable {
     public var currentPointer: URL { dataRoot.appending(path: "current", directoryHint: .notDirectory) }
     public var deviceRoot: URL { base.appending(path: "Device", directoryHint: .isDirectory) }
 
+    /// Device-local record of the generation kept for "undo last restore". Never archived.
+    public var recoveryFile: URL { deviceRoot.appending(path: "recovery.json", directoryHint: .notDirectory) }
+
     public func generation(_ id: String) -> URL {
         dataRoot.appending(path: id, directoryHint: .isDirectory)
     }

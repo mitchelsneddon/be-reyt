@@ -53,6 +53,7 @@ public enum ArchiveValidator {
             }
         }
 
+        warnings.append(contentsOf: manifest.warnings ?? [])
         let computed = data.dateRange
         if computed != manifest.dateRange { warnings.append("date range in manifest differs from the data") }
         return ValidatedArchive(
