@@ -114,6 +114,78 @@ public struct GenerationSwitcher: Sendable {
         }
     }
 
+    // MARK: Delete all data
+
+    /// What `removeAllGenerations` could and could not delete.
+    public struct RemovalReport: Sendable, Equatable {
+        public var removed: [String] = []
+        public var failed: [String] = []
+    }
+
+    /// Makes a new, empty, verified generation beside the current one without touching the pointer.
+    public func createEmpty() throws -> BuiltGeneration {
+        let fm = FileManager.default
+        let id = nextGenerationID()
+        guard Paths.isValidGenerationID(id) else { throw PathError.invalidGenerationID }
+        let directory = paths.generation(id)
+        try fm.createDirectory(at: paths.dataRoot, withIntermediateDirectories: true)
+        guard !fm.fileExists(atPath: directory.path) else { throw ArchiveError.destinationNotEmpty }
+        do {
+            try fm.createDirectory(at: directory, withIntermediateDirectories: false)
+            try fm.createDirectory(at: paths.attachments(in: directory), withIntermediateDirectories: true)
+            try hook?(.directoryCreated)
+            let container = try Self.openContainer(at: paths.store(in: directory))
+            let context = ModelContext(container)
+            try context.save()
+            try paths.applyCompleteProtection(toGeneration: directory)
+            try Paths.applyCompleteProtection(toDirectory: paths.attachments(in: directory))
+            try hook?(.verified)
+        } catch {
+            try? fm.removeItem(at: directory)
+            throw error
+        }
+        return BuiltGeneration(id: id, directory: directory)
+    }
+
+    /// Delete-all, step one: creates an empty generation and points `current` at it. On any failure the new
+    /// directory is removed and the pointer is left as it was, so the old journal is untouched.
+    public func createEmptyAndFlip() throws -> BuiltGeneration {
+        let built = try createEmpty()
+        do {
+            try flip(to: built.id)
+        } catch {
+            try? abandon(built.id)
+            throw error
+        }
+        return built
+    }
+
+    /// Delete-all, step two: removes every generation directory except `keep`, plus the restore-recovery record
+    /// and any staged pointer files. Deliberately ignores the recovery window: this is a deliberate delete.
+    /// Does nothing unless `keep` is the current generation, so it can never delete the live journal.
+    public func removeAllGenerations(except keep: String) -> RemovalReport {
+        var report = RemovalReport()
+        guard paths.currentGenerationID() == keep else { return report }
+        let fm = FileManager.default
+        for name in (try? fm.contentsOfDirectory(atPath: paths.dataRoot.path)) ?? [] {
+            if name.hasPrefix(".current-") {
+                try? fm.removeItem(at: paths.dataRoot.appending(path: name))
+                continue
+            }
+            guard Paths.isValidGenerationID(name), name != keep, name != "current" else { continue }
+            do {
+                try fm.removeItem(at: paths.generation(name))
+                report.removed.append(name)
+            } catch {
+                report.failed.append(name)
+            }
+        }
+        RecoveryRecord.clear(from: paths)
+        report.removed.sort()
+        report.failed.sort()
+        return report
+    }
+
     // MARK: Flip
 
     /// Atomically points `Data/current` at `id`: the new value is staged in a temp file next to the pointer, then

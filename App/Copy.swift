@@ -580,4 +580,45 @@ enum Copy {
         static let noAccess = "be reyt couldn't open that folder, so nothing was changed. try choosing it again."
         static let busy = "an import is already running."
     }
+
+    enum DeleteAll {
+        static let row = "delete all data"
+        static let rowHint = "removes everything be reyt keeps on this phone"
+        static let title = "delete all data"
+        static let removesHeader = "this removes, from this phone"
+        static let removes = [
+            "every entry, photo, reflection and plan",
+            "your tags and settings",
+            "the backup passphrase stored on this phone",
+            "scheduled reminders",
+        ]
+        static let keepsHeader = "this does not remove"
+        static let keeps = [
+            "backup files you've saved, or that were saved to your backup folder. delete those yourself in the files app.",
+            "apple health data. be reyt only ever reads it, and never changes it.",
+        ]
+        static let irreversible = "this can't be undone. be reyt will be empty, as if you'd just installed it."
+        static let reauthReason = "confirm it's you to delete all data."
+        static let reauthFailed = "couldn't confirm it's you, so nothing was deleted."
+        static let continueAction = "continue"
+        static let confirmPrompt = "type delete to confirm."
+        static let confirmWord = "delete"
+        static let confirmField = "type delete"
+        static let action = "delete everything"
+        static let working = "deleting…"
+        static let failed = "something went wrong, so nothing was deleted. try again in a moment."
+        static let done = "everything has been deleted from this phone."
+        static func partial(_ leftovers: [String]) -> String {
+            "your journal is empty, but this couldn't be removed: \(leftovers.joined(separator: ", ")). you can run delete all data again to retry."
+        }
+        static let dismiss = "dismiss"
+
+        // Names of what device-local owners wipe, used only to say what couldn't be removed.
+        static let wiperPassphrase = "the backup passphrase"
+        static let wiperHealthAnchor = "health sync position"
+        static let wiperReminders = "scheduled reminders"
+        static let wiperDeviceFiles = "saved restore copies"
+        static let leftoverOldData = "an older copy of your journal"
+        static let leftoverCaches = "cached photo previews"
+    }
 }

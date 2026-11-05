@@ -49,6 +49,7 @@ struct ExportImportView: View {
             } footer: {
                 Text(Copy.ReadableExport.notEncrypted)
             }
+            DeleteAllSection()
         }
         .scrollContentBackground(.hidden)
         .background(Color("paper"))
