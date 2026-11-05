@@ -23,11 +23,17 @@ struct HistoryView: View {
         let model = HistoryModel(store: store)
         var initialMode = Mode.calendar
         var presented = false
+        var initialPath: [DateKey] = []
         #if DEBUG
             // Simulator-only: `-openHistory calendar|list`, `-historySearch <text>` for screenshots.
             let args = CommandLine.arguments
             if let i = args.firstIndex(of: "-openHistory"), args.indices.contains(i + 1) {
                 initialMode = args[i + 1] == "list" ? .list : .calendar
+            }
+            if let i = args.firstIndex(of: "-openHistoryDay"), args.indices.contains(i + 1),
+                let key = DateKey(args[i + 1])
+            {
+                initialPath = [key]
             }
             if let i = args.firstIndex(of: "-historySearch"), args.indices.contains(i + 1) {
                 model.searchText = args[i + 1]
@@ -36,6 +42,7 @@ struct HistoryView: View {
         #endif
         _model = State(initialValue: model)
         _mode = State(initialValue: initialMode)
+        _path = State(initialValue: initialPath)
         _searchPresented = State(initialValue: presented)
     }
 

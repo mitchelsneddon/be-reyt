@@ -588,7 +588,7 @@ public actor JournalStore {
         }
     }
 
-    private func contentFlags(_ days: Set<DateKey>) throws -> [DateKey: Bool] {
+    func contentFlags(_ days: Set<DateKey>) throws -> [DateKey: Bool] {
         var flags: [DateKey: Bool] = [:]
         for d in days { flags[d] = try dayContent(d).hasUserContent }
         return flags
@@ -601,7 +601,7 @@ public actor JournalStore {
                 .compactMap { DateKey($0.dateKey) })
     }
 
-    private func fetchEntry(_ key: DateKey) throws -> DailyEntry? {
+    func fetchEntry(_ key: DateKey) throws -> DailyEntry? {
         let s = key.string
         var d = FetchDescriptor<DailyEntry>(predicate: #Predicate { $0.dateKey == s })
         d.fetchLimit = 1
