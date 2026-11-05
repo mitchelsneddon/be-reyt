@@ -5,7 +5,11 @@ import SwiftUI
 struct BeReytApp: App {
     var body: some Scene {
         WindowGroup {
-            RootPlaceholderView()
+            #if DEBUG
+                SpikeView()
+            #else
+                RootPlaceholderView()
+            #endif
         }
     }
 }
