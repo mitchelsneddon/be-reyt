@@ -15,6 +15,9 @@ final class DayPageModel: DraftFlushing {
     private(set) var text = ""
     private(set) var score: DayScore?
     private(set) var moodIDs: [String] = []
+    /// The moods the day carried when the page loaded or was last reloaded from outside. The mood grid keeps a
+    /// retired mood's tile for this set, so deselecting it during the session does not make it vanish.
+    private(set) var loadedMoodIDs: [String] = []
     private(set) var tagIDs: [UUID] = []
     private(set) var smileAnswer = ""
     private(set) var rotatingAnswer = ""
@@ -139,6 +142,7 @@ final class DayPageModel: DraftFlushing {
         if writesIdle {
             score = content.dayScore.flatMap { DayScore($0) }
             moodIDs = content.moodIDs
+            loadedMoodIDs = content.moodIDs
             tagIDs = content.tagIDs
         }
         if !onlyClean || smileAnswer == savedSmile {

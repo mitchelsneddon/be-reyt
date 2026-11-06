@@ -45,10 +45,7 @@ struct DayPageView: View {
     private var page: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text(Copy.Day.heading(for: model.dateKey))
-                    .font(.system(.largeTitle, design: .serif))
-                    .foregroundStyle(Palette.ink)
-                    .accessibilityAddTraits(.isHeader)
+                header
 
                 if model.loadFailed {
                     Button(Copy.Day.loadFailed) { Task { await model.load() } }
@@ -60,13 +57,14 @@ struct DayPageView: View {
                         PlanThisWeekCard(plan: plan, today: today, onOpenSunday: go)
                     }
                     DayScoreControl(score: model.score, onChange: model.setScore)
-                    moods
-                    TagEditor()
+                    MoodTileGrid(
+                        selected: model.moodIDs, loadedIDs: model.loadedMoodIDs, onToggle: model.toggleMood)
                     editor
                     reflections
                     planLifecycle
-                    PhotoStrip(model: photos).id(DayPageView.photosAnchor)
+                    TagEditor()
                     WorkoutSection(dateKey: model.dateKey)
+                    PhotoStrip(model: photos).id(DayPageView.photosAnchor)
                 }
             }
             .padding(.horizontal, 20)
@@ -117,14 +115,14 @@ struct DayPageView: View {
         onNavigate(key)
     }
 
-    private var moods: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(Copy.Day.moodsTitle).font(.footnote).foregroundStyle(Palette.ink2)
-            ChipGroup(
-                items: MoodCatalog.offered(including: model.moodIDs).map { ChipItem(id: $0.id, label: $0.label) },
-                selection: Binding(get: { Set(model.moodIDs) }, set: { _ in }),
-                onToggle: { model.toggleMood($0) })
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(Copy.Day.eyebrow(for: model.dateKey)).brFont(.eyebrow).foregroundStyle(Palette.ink2)
+            Text(Copy.Day.dateTitle(for: model.dateKey)).brFont(.largeTitle).foregroundStyle(Palette.ink)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Copy.Day.headerLabel(for: model.dateKey))
+        .accessibilityAddTraits(.isHeader)
     }
 
     @ViewBuilder private var reflections: some View {

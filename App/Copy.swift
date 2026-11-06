@@ -64,11 +64,11 @@ enum Copy {
     enum Day {
         static let editorPlaceholder = "a little space for your day."
         static let editorLabel = "journal entry"
-        static let scorePrompt = "how was your day?"
+        static let scoreTitle = "how was your day?"
+        static let feelTitle = "how did you feel today?"
         static let scoreLabel = "day score"
         static let scoreNotSet = "not set"
         static let scoreClear = "clear score"
-        static let moodsTitle = "moods"
         static let tagsTitle = "tags"
         static let previousDay = "previous day"
         static let nextDay = "next day"
@@ -76,11 +76,21 @@ enum Copy {
 
         static func scoreName(_ score: DayScore) -> String { score.label }
 
-        /// "tuesday, 4 november 2026", lowercase, from the civil day.
-        static func heading(for key: DateKey, calendar: Calendar = .current) -> String {
-            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone)
-                .weekday(.wide).day().month(.wide).year()
-            return key.date(in: calendar).formatted(style).lowercased()
+        /// "thursday · week 45", lowercase, from the civil day.
+        static func eyebrow(for key: DateKey, calendar: Calendar = .current) -> String {
+            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).weekday(.wide)
+            return "\(key.date(in: calendar).formatted(style).lowercased()) · week \(key.isoWeek)"
+        }
+
+        /// "5 november", lowercase.
+        static func dateTitle(for key: DateKey, calendar: Calendar = .current) -> String {
+            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).month(.wide)
+            return "\(key.day) \(key.date(in: calendar).formatted(style).lowercased())"
+        }
+
+        /// The spoken version of the header.
+        static func headerLabel(for key: DateKey, calendar: Calendar = .current) -> String {
+            "\(eyebrow(for: key, calendar: calendar)), \(dateTitle(for: key, calendar: calendar))"
         }
     }
 

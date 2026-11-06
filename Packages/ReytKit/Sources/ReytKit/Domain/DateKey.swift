@@ -73,6 +73,14 @@ public struct DateKey: Hashable, Comparable, Codable, Sendable, CustomStringConv
     /// 0 = Sunday ... 6 = Saturday. 1970-01-01 was a Thursday.
     public var weekday: Int { DateKey.floorMod(epochDay + 4, 7) }
 
+    /// ISO 8601 week number (1...53): weeks start on Monday and week 1 holds the year's first Thursday.
+    public var isoWeek: Int {
+        let isoWeekday = weekday == 0 ? 7 : weekday
+        let thursday = adding(days: 4 - isoWeekday)
+        guard let firstOfYear = DateKey(year: thursday.year, month: 1, day: 1) else { return 1 }
+        return thursday.days(from: firstOfYear) / 7 + 1
+    }
+
     public func adding(days: Int) -> DateKey { DateKey(epochDay: epochDay + days) }
 
     /// Whole days from `other` to self (self - other).

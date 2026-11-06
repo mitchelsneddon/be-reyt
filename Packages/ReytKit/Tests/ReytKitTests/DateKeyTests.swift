@@ -11,6 +11,16 @@ private func calendar(_ tz: String) -> Calendar {
 
 @Suite("DateKey")
 struct DateKeyTests {
+    @Test(
+        "ISO week number",
+        arguments: [
+            ("2026-11-05", 45), ("2026-01-01", 1), ("2025-12-29", 1), ("2021-01-03", 53),
+            ("2020-12-31", 53), ("2024-12-30", 1), ("2026-11-08", 45), ("2026-11-09", 46),
+        ])
+    func isoWeek(_ string: String, _ week: Int) throws {
+        #expect(try #require(DateKey(string)).isoWeek == week)
+    }
+
     @Test("string round trip")
     func roundTrip() throws {
         let k = try #require(DateKey("2026-11-08"))
