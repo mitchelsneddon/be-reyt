@@ -48,10 +48,24 @@ struct DayPageView: View {
                 header
 
                 if model.loadFailed {
-                    Button(Copy.Day.loadFailed) { Task { await model.load() } }
-                        .font(.footnote)
-                        .foregroundStyle(Palette.accent)
-                        .frame(minHeight: 44)
+                    Button {
+                        Task { await model.load() }
+                    } label: {
+                        VStack(spacing: 12) {
+                            SymbolGlyph(systemName: "arrow.clockwise").foregroundStyle(Palette.accent)
+                            Text(Copy.Day.loadFailed)
+                                .brFont(.body)
+                                .foregroundStyle(Palette.ink2)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: 300, minHeight: 44)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 48)
+                    .accessibilityLabel(Copy.Day.loadFailed)
                 } else {
                     if let plan = model.coveringPlan {
                         PlanThisWeekCard(plan: plan, today: today, onOpenSunday: go)
@@ -127,7 +141,7 @@ struct DayPageView: View {
 
     @ViewBuilder private var reflections: some View {
         ReflectionCard(
-            question: Copy.Reflection.smileQuestion, helper: Copy.Reflection.smileHelper,
+            question: Copy.Reflection.smileQuestion,
             answerLabel: Copy.Reflection.smileAnswerLabel,
             answer: Binding(get: { model.smileAnswer }, set: { model.setSmileAnswer($0) }),
             isEnabled: model.isLoaded, onFocusChange: { model.setFocus(.smile, $0) }
@@ -135,38 +149,24 @@ struct DayPageView: View {
         .id(DayPageView.reflectionsAnchor)
         if let prompt = model.prompt {
             ReflectionCard(
-                question: prompt.text, helper: Copy.Reflection.promptHelper,
+                question: prompt.text,
                 answerLabel: Copy.Reflection.promptAnswerLabel(prompt.text),
                 answer: Binding(get: { model.rotatingAnswer }, set: { model.setRotatingAnswer($0) }),
                 isEnabled: model.isLoaded, onFocusChange: { model.setFocus(.rotating, $0) },
-                action: {
-                    if model.canRerollPrompt {
-                        Button(Copy.Reflection.anotherPrompt) { Task { await model.rerollPrompt() } }
-                            .font(.footnote)
-                            .foregroundStyle(Palette.accent)
-                            .frame(minHeight: 44)
-                            .accessibilityHint(Copy.Reflection.anotherPromptHint)
-                    }
-                })
+                refresh: model.canRerollPrompt ? { Task { await model.rerollPrompt() } } : nil)
         }
     }
 
     private var editor: some View {
-        TextField(
-            Copy.Day.editorPlaceholder,
-            text: Binding(get: { model.text }, set: { model.setText($0) }),
-            axis: .vertical
-        )
-        .font(.body)
-        .foregroundStyle(Palette.ink)
-        .lineLimit(8...)
-        .focused($editorFocused)
-        .disabled(!model.isLoaded)
-        .padding(16)
-        .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
-        .accessibilityLabel(Copy.Day.editorLabel)
+        TextField("", text: Binding(get: { model.text }, set: { model.setText($0) }), axis: .vertical)
+            .brFont(.body)
+            .foregroundStyle(Palette.ink)
+            .lineLimit(3...)
+            .focused($editorFocused)
+            .disabled(!model.isLoaded)
+            .frame(maxWidth: .infinity, minHeight: 90, alignment: .topLeading)
+            .brPlaceholder(Copy.Day.editorPlaceholder, show: model.text.isEmpty)
+            .accessibilityLabel(Copy.Day.editorLabel)
     }
 }
 
@@ -179,19 +179,28 @@ private struct SavedIndicator: View {
         case .idle:
             EmptyView()
         case .saving:
-            label(Copy.Save.saving)
+            ProgressRing(size: 18, lineWidth: 2)
+                .frame(width: 30, height: 44)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(Copy.Save.indicatorLabel), \(Copy.Save.saving)")
         case .saved:
-            label(Copy.Save.saved)
+            SymbolGlyph(systemName: "checkmark.circle")
+                .foregroundStyle(Palette.ink2)
+                .frame(width: 30, height: 44)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(Copy.Save.indicatorLabel), \(Copy.Save.saved)")
         case .failed:
             Button(action: retry) {
-                Text(Copy.Save.failed).font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
+                HStack(spacing: 5) {
+                    SymbolGlyph(systemName: "exclamationmark.arrow.circlepath")
+                    Text(Copy.Save.failed).brFont(.label)
+                }
+                .foregroundStyle(Palette.danger)
+                .frame(minHeight: 44)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Copy.Save.failed)
             .accessibilityHint(Copy.Save.retryHint)
         }
-    }
-
-    private func label(_ text: String) -> some View {
-        Text(text).font(.footnote).foregroundStyle(Palette.ink2)
-            .accessibilityLabel("\(Copy.Save.indicatorLabel), \(text)")
     }
 }

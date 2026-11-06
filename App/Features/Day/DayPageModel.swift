@@ -104,6 +104,10 @@ final class DayPageModel: DraftFlushing {
             apply(snapshot, onlyClean: false)
             loadFailed = false
             isLoaded = true
+            #if DEBUG
+                // Simulator-only: `-forceSaveFailure` makes one write fail straight away so the failed state shows.
+                if DebugSaveFailure.isRequested { write(.score) }
+            #endif
         } catch {
             loadFailed = true
             return
@@ -385,6 +389,9 @@ final class DayPageModel: DraftFlushing {
             return
         }
         do {
+            #if DEBUG
+                if DebugSaveFailure.consume() { throw DebugSaveFailure.Failure() }
+            #endif
             let effect = try await store.updateEntry(dateKey, change)
             finishWrite(field, effect)
             if let sentText { savedText = sentText }

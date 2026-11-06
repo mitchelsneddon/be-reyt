@@ -19,10 +19,11 @@ struct WorkoutSection: View {
     var body: some View {
         let groups = groups
         if !groups.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(Copy.Workouts.title).font(.footnote).foregroundStyle(Palette.ink2)
-                    .accessibilityAddTraits(.isHeader)
-                ForEach(groups) { WorkoutCard(workout: $0.representative) }
+            VStack(alignment: .leading, spacing: 14) {
+                SectionTitle(Copy.Workouts.activitiesTitle)
+                VStack(spacing: 10) {
+                    ForEach(groups) { WorkoutCard(workout: $0.representative) }
+                }
             }
         }
     }
@@ -38,25 +39,29 @@ struct WorkoutCard: View {
         return Copy.Workouts.distance(meters: meters, swimming: activity == .swimming)
     }
 
+    @ScaledMetric(relativeTo: .body) private var tileSide: CGFloat = 42
+    @ScaledMetric(relativeTo: .body) private var glyphSide: CGFloat = 22
+
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             Image(systemName: Self.symbol(for: activity))
-                .font(.title3)
+                .resizable().scaledToFit()
+                .frame(width: min(glyphSide, 34), height: min(glyphSide, 34))
                 .foregroundStyle(Palette.accent)
-                .frame(width: 32)
+                .frame(width: min(tileSide, 64), height: min(tileSide, 64))
+                .background(Palette.accentSoft, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text(activity.displayName).font(.body).foregroundStyle(Palette.ink)
+                Text(activity.displayName).brFont(.cardTitle).foregroundStyle(Palette.ink)
                 Text([Optional(duration), distance].compactMap { $0 }.joined(separator: " · "))
-                    .font(.footnote).foregroundStyle(Palette.ink2)
+                    .brFont(.label).foregroundStyle(Palette.ink2)
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(Copy.Workouts.startTime(workout.start))
+                .brFont(.captionItalic).foregroundStyle(Palette.ink2)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
+        .padding(.horizontal, 2)
+        .cardSurface(padding: 14)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Copy.Workouts.cardLabel(name: activity.displayName, duration: duration, distance: distance))
     }

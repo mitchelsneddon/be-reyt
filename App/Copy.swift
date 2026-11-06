@@ -69,7 +69,6 @@ enum Copy {
         static let scoreLabel = "day score"
         static let scoreNotSet = "not set"
         static let scoreClear = "clear score"
-        static let tagsTitle = "tags"
         static let previousDay = "previous day"
         static let nextDay = "next day"
         static let loadFailed = "couldn't open this day. tap to try again."
@@ -203,12 +202,10 @@ enum Copy {
 
     enum Reflection {
         static let smileQuestion = "what made me smile today?"
-        static let smileHelper = "a highlight, a small win, or just something you appreciated. small counts."
         static let smileAnswerLabel = "answer to what made me smile today"
         static let answerPlaceholder = "write here, or leave it blank."
         static let anotherPrompt = "another prompt"
         static let anotherPromptHint = "swaps today's reflection question for a different one"
-        static let promptHelper = "optional. answer it only if it fits your day."
         static func promptAnswerLabel(_ question: String) -> String { "answer to \(question)" }
     }
 
@@ -246,7 +243,7 @@ enum Copy {
     }
 
     enum Tags {
-        static let recentTitle = "recent"
+        static let addAffordance = "+ add a tag"
         static let addPlaceholder = "add a tag"
         static let addLabel = "add tag"
         static let addFailed = "couldn't add that tag. try again in a moment."
@@ -281,6 +278,8 @@ enum Copy {
     enum Photos {
         static let title = "photos"
         static let add = "add photos"
+        static let addShort = "add"
+        static let beingAdded = "photo being added"
         static let addHint = "choose photos from your library"
         static func thumbnailLabel(_ index: Int, of count: Int) -> String { "photo \(index) of \(count)" }
         static let thumbnailHint = "opens the photo full screen"
@@ -305,6 +304,12 @@ enum Copy {
 
     enum Workouts {
         static let title = "workouts"
+        static let activitiesTitle = "activities"
+
+        /// "17:40", the start time shown on a card.
+        static func startTime(_ date: Date) -> String {
+            date.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
+        }
 
         /// "1 h 16 min", "45 min", "2 h".
         static func duration(seconds: Double) -> String {

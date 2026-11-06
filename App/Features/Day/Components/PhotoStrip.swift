@@ -4,9 +4,17 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-private let photoSide: CGFloat = 72
+/// Polaroid geometry from the board: 148 wide with 8 / 8 / 0 padding, a 124 pt image and a 36 pt caption strip.
+private enum Polaroid {
+    static let width: CGFloat = 148
+    static let imageHeight: CGFloat = 124
+    static let captionHeight: CGFloat = 36
+    static let rotations: [Double] = [-3, 2.5, -2]
+    static let tapeRotations: [Double] = [4, -5, 3]
+    static let tapeInsets: [CGFloat] = [44, 40, 46]
+}
 
-/// The day's photos: a horizontal strip of 72 pt thumbnails and an add button. Empty days show only the button.
+/// The day's photos as polaroids, two to a row. Empty days show only the title and the add button.
 struct PhotoStrip: View {
     let model: PhotosModel
     @Query private var records: [Attachment]
@@ -24,38 +32,59 @@ struct PhotoStrip: View {
     private var refs: [PhotoRef] { records.map { PhotoRef(id: $0.id, relativePath: $0.relativePath) } }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(Copy.Photos.title).font(.footnote).foregroundStyle(Palette.ink2)
-                .accessibilityAddTraits(.isHeader)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+        let refs = refs
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                SectionTitle(Copy.Photos.title)
+                Spacer()
+                addButton
+            }
+            .padding(.bottom, 4)
+            if !refs.isEmpty || model.isImporting {
+                FlowLayout(spacing: 18) {
                     ForEach(Array(refs.enumerated()), id: \.element.id) { index, ref in
                         Button {
                             viewing = ref
                         } label: {
-                            PhotoThumbnail(model: model, photo: ref, side: photoSide)
+                            PolaroidFrame(index: index) { PhotoImage(model: model, photo: ref) }
                         }
                         .buttonStyle(.plain)
+                        .padding(.top, index % 2 == 1 ? 14 : 0)
                         .accessibilityLabel(Copy.Photos.thumbnailLabel(index + 1, of: refs.count))
                         .accessibilityHint(Copy.Photos.thumbnailHint)
                     }
-                    addButton
+                    if model.isImporting {
+                        PolaroidFrame(index: refs.count) {
+                            ZStack {
+                                Palette.chip
+                                ProgressRing(size: 30, lineWidth: 2.6)
+                            }
+                        }
+                        .padding(.top, refs.count % 2 == 1 ? 14 : 0)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Copy.Photos.beingAdded)
+                    }
                 }
-                .padding(.vertical, 2)
+                .padding(.horizontal, 4)
+                .padding(.top, 12)
             }
             if let progress = model.progress {
-                HStack(spacing: 8) {
-                    ProgressView()
-                    Text(Copy.Photos.importing(progress.current, of: progress.total))
-                        .font(.footnote).foregroundStyle(Palette.ink2)
-                }
-                .accessibilityElement(children: .combine)
+                Text(Copy.Photos.importing(progress.current, of: progress.total))
+                    .brFont(.banner).foregroundStyle(Palette.ink2)
+                    .padding(.top, 28)
+                    .accessibilityAddTraits(.updatesFrequently)
             }
             if let message = model.message {
                 Button(action: model.dismissMessage) {
-                    Text(message).font(.footnote).foregroundStyle(Palette.accent)
-                        .multilineTextAlignment(.leading).frame(minHeight: 44, alignment: .leading)
+                    HStack(alignment: .top, spacing: 10) {
+                        SymbolGlyph(systemName: "exclamationmark.circle").foregroundStyle(Palette.danger)
+                        Text(message).brFont(.banner).foregroundStyle(Palette.ink)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 }
+                .buttonStyle(.plain)
+                .padding(.top, 26)
             }
         }
         .fullScreenCover(item: $viewing) { photo in
@@ -65,13 +94,9 @@ struct PhotoStrip: View {
 
     private var addButton: some View {
         PhotosPicker(selection: $picked, matching: .images, photoLibrary: .shared()) {
-            Image(systemName: "plus")
-                .font(.title3)
-                .foregroundStyle(Palette.accent)
-                .frame(width: photoSide, height: photoSide)
-                .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
+            AddLabel()
         }
+        .padding(.trailing, -8)
         .disabled(model.isImporting)
         .accessibilityLabel(Copy.Photos.add)
         .accessibilityHint(Copy.Photos.addHint)
@@ -83,22 +108,62 @@ struct PhotoStrip: View {
     }
 }
 
-private struct PhotoThumbnail: View {
+private struct AddLabel: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            SymbolGlyph(systemName: "plus")
+            Text(Copy.Photos.addShort).brFont(.chip)
+        }
+        .foregroundStyle(Palette.accent)
+        .padding(.horizontal, 8)
+        .frame(minHeight: 44)
+    }
+}
+
+/// One taped, slightly turned polaroid. `index` picks the rotation and tape from the board's repeating pattern.
+/// Photos carry no caption in the model, so the caption strip stays blank.
+private struct PolaroidFrame<Content: View>: View {
+    let index: Int
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        let slot = index % Polaroid.rotations.count
+        VStack(spacing: 0) {
+            content()
+                .frame(width: Polaroid.width - 16, height: Polaroid.imageHeight)
+                .clipped()
+            Color.clear.frame(height: Polaroid.captionHeight)
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 8)
+        .frame(width: Polaroid.width)
+        .background(Palette.polaroid, in: RoundedRectangle(cornerRadius: 2))
+        .polaroidShadow()
+        .overlay(alignment: .topLeading) {
+            Rectangle().fill(Palette.tape)
+                .frame(width: 60, height: 20)
+                .rotationEffect(.degrees(Polaroid.tapeRotations[slot]))
+                .offset(x: Polaroid.tapeInsets[slot], y: -10)
+                .accessibilityHidden(true)
+        }
+        .rotationEffect(.degrees(Polaroid.rotations[slot]))
+    }
+}
+
+private struct PhotoImage: View {
     let model: PhotosModel
     let photo: PhotoRef
-    let side: CGFloat
     @State private var image: UIImage?
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 14).fill(Palette.card)
+            Palette.chip
             if let image {
                 Image(uiImage: image).resizable().scaledToFill()
             }
         }
-        .frame(width: side, height: side)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
+        .frame(width: Polaroid.width - 16, height: Polaroid.imageHeight)
+        .clipped()
         .task(id: photo.id) {
             if let data = await model.thumbnailData(for: photo) { image = UIImage(data: data) }
         }
@@ -121,7 +186,7 @@ private struct PhotoViewer: View {
                 Image(uiImage: image).resizable().scaledToFit().ignoresSafeArea(edges: .bottom)
                     .accessibilityLabel(Copy.Photos.viewerLabel)
             } else if failed {
-                Text(Copy.Photos.loadFailed).font(.footnote).foregroundStyle(.white)
+                Text(Copy.Photos.loadFailed).brFont(.label).foregroundStyle(.white)
             } else {
                 ProgressView().tint(.white)
             }

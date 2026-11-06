@@ -15,6 +15,8 @@ struct TagEditor: View {
     @State private var newName = ""
     @State private var addFailed = false
     @State private var showManage = false
+    @State private var adding = false
+    @FocusState private var addFocused: Bool
 
     private var dayTags: [Tag] { tags.filter { model.tagIDs.contains($0.id) } }
 
@@ -38,42 +40,53 @@ struct TagEditor: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(Copy.Day.tagsTitle).font(.footnote).foregroundStyle(Palette.ink2)
-            if !dayTags.isEmpty {
-                ChipGroup(
-                    items: dayTags.map { chip($0, selected: true) },
-                    selection: Binding(get: { Set(model.tagIDs) }, set: { _ in }),
-                    onToggle: { model.toggleTag($0) })
+        VStack(alignment: .leading, spacing: 4) {
+            FlowLayout(spacing: 8) {
+                ForEach(dayTags) { tag in
+                    Button {
+                        model.toggleTag(tag.id)
+                    } label: {
+                        Text("# \(tag.name)")
+                            .brFont(.chip)
+                            .foregroundStyle(Palette.accentText)
+                            .padding(.vertical, 7)
+                            .padding(.horizontal, 13)
+                            .background(Palette.accentSoft, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Copy.Tags.chipLabel(tag.name, selected: true))
+                    .accessibilityAddTraits(.isSelected)
+                }
+                addPill
             }
             let suggested = suggestions
             if !suggested.isEmpty {
-                Text(Copy.Tags.recentTitle).font(.footnote).foregroundStyle(Palette.ink2)
-                ChipGroup(
-                    items: suggested.map { chip($0, selected: false) },
-                    selection: Binding(get: { [] }, set: { _ in }),
-                    onToggle: { model.toggleTag($0) })
-            }
-            HStack(spacing: 8) {
-                TextField(Copy.Tags.addPlaceholder, text: $newName)
-                    .font(.subheadline)
-                    .textInputAutocapitalization(.never)
-                    .submitLabel(.done)
-                    .onSubmit(add)
-                    .accessibilityLabel(Copy.Tags.addLabel)
-                    .frame(minHeight: 44)
-                Button(action: add) {
-                    Image(systemName: "plus").frame(minWidth: 44, minHeight: 44)
+                FlowLayout(spacing: 8) {
+                    ForEach(suggested) { tag in
+                        Button {
+                            model.toggleTag(tag.id)
+                        } label: {
+                            Text(tag.name)
+                                .brFont(.chip)
+                                .foregroundStyle(Palette.ink)
+                                .padding(.vertical, 7)
+                                .padding(.horizontal, 13)
+                                .background(Palette.chip, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Copy.Tags.chipLabel(tag.name, selected: false))
+                    }
                 }
-                .foregroundStyle(Palette.accent)
-                .accessibilityLabel(Copy.Tags.addLabel)
-                .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             if addFailed {
-                Text(Copy.Tags.addFailed).font(.footnote).foregroundStyle(Palette.ink2)
+                Text(Copy.Tags.addFailed).brFont(.label).foregroundStyle(Palette.ink2)
             }
             Button(Copy.Tags.manageLink) { showManage = true }
-                .font(.footnote)
+                .brFont(.label)
                 .foregroundStyle(Palette.accent)
                 .frame(minHeight: 44)
         }
@@ -88,8 +101,43 @@ struct TagEditor: View {
         }
     }
 
-    private func chip(_ tag: Tag, selected: Bool) -> ChipItem<UUID> {
-        ChipItem(id: tag.id, label: tag.name, accessibilityLabel: Copy.Tags.chipLabel(tag.name, selected: selected))
+    /// The dashed "+ add a tag" pill; tapping it turns it into the text field (same add flow as before).
+    @ViewBuilder private var addPill: some View {
+        let dashed = RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .strokeBorder(Palette.ink3, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+        if adding {
+            TextField(Copy.Tags.addPlaceholder, text: $newName)
+                .brFont(.chip)
+                .foregroundStyle(Palette.ink)
+                .textInputAutocapitalization(.never)
+                .submitLabel(.done)
+                .focused($addFocused)
+                .onSubmit(add)
+                .onChange(of: addFocused) { _, focused in
+                    if !focused, newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { adding = false }
+                }
+                .accessibilityLabel(Copy.Tags.addLabel)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .frame(minWidth: 140, minHeight: 44)
+                .overlay(dashed.frame(minHeight: 32))
+        } else {
+            Button {
+                adding = true
+                addFocused = true
+            } label: {
+                Text(Copy.Tags.addAffordance)
+                    .brFont(.chip)
+                    .foregroundStyle(Palette.ink2)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .overlay(dashed)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Copy.Tags.addLabel)
+        }
     }
 
     private func add() {
@@ -99,6 +147,7 @@ struct TagEditor: View {
             case .added:
                 newName = ""
                 addFailed = false
+                adding = false
             case .blank: break
             case .failed: addFailed = true
             }

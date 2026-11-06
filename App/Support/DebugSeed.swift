@@ -5,6 +5,21 @@
 
     /// Simulator-only: `-seedDemoDay` fills today through `JournalStore`, `-seedLateTag` adds a tag a few
     /// seconds after launch (proves `@Query` refreshes from an actor save). Never compiled into release.
+    /// Simulator-only: `-forceSaveFailure` makes the next day-page write throw once (App layer, not ReytKit).
+    @MainActor enum DebugSaveFailure {
+        struct Failure: Error {}
+
+        static var isRequested: Bool { CommandLine.arguments.contains("-forceSaveFailure") }
+        private static var spent = false
+
+        /// True exactly once when the flag is set.
+        static func consume() -> Bool {
+            guard isRequested, !spent else { return false }
+            spent = true
+            return true
+        }
+    }
+
     enum DebugSeed {
         static func runIfRequested(_ store: JournalStore, attachments: AttachmentStore) async {
             let args = CommandLine.arguments
