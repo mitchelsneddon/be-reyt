@@ -29,6 +29,7 @@ final class PrivacyCoverWindow {
         let controller = UIHostingController(rootView: PrivacyCover())
         controller.view.backgroundColor = Palette.UI.paper
         window.rootViewController = controller
+        AppearanceWindows.apply(to: window)
         return window
     }
 }

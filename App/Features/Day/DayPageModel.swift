@@ -23,6 +23,8 @@ final class DayPageModel: DraftFlushing {
     private(set) var rotatingAnswer = ""
     /// The persisted assignment for this day; the displayed wording always comes from here.
     private(set) var prompt: PromptChoice?
+    /// Rotating prompts are retired: the card shows only on days answered before, so that writing stays visible.
+    private(set) var showsRotatingPrompt = false
     private(set) var isLoaded = false
     private(set) var loadFailed = false
     /// Which text fields currently hold focus; the midnight roll treats any of them as "busy".
@@ -85,9 +87,6 @@ final class DayPageModel: DraftFlushing {
         !isEditingFollowUp && (followUpSkipped || !followUpNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 
-    /// "another prompt" shows only while the rotating answer is blank and a prompt is assigned.
-    var canRerollPrompt: Bool { prompt != nil && rotatingAnswer.isEmpty }
-
     var saveState: SaveState {
         if !failedFields.isEmpty { return .failed }
         if hasUnsavedDrafts || inFlight > 0 { return .saving }
@@ -104,6 +103,7 @@ final class DayPageModel: DraftFlushing {
         do {
             let snapshot = try await fetchSnapshot()
             apply(snapshot, onlyClean: false)
+            showsRotatingPrompt = !rotatingAnswer.isEmpty
             loadFailed = false
             isLoaded = true
             #if DEBUG
@@ -114,7 +114,8 @@ final class DayPageModel: DraftFlushing {
             loadFailed = true
             return
         }
-        await assignPrompt()
+        // No new prompt is assigned; a day answered before gets back its stored one.
+        if showsRotatingPrompt { await assignPrompt() }
     }
 
     /// The store changed (an import, a restore, another screen): refresh every field that has no unsaved local edit
@@ -198,21 +199,6 @@ final class DayPageModel: DraftFlushing {
             prompt = result.choice
         } catch {
             prompt = nil
-        }
-    }
-
-    /// "another prompt": refused by the store once the answer is nonblank, so a written answer is never orphaned.
-    func rerollPrompt() async {
-        guard isLoaded, canRerollPrompt else { return }
-        let selector = selector
-        do {
-            let result = try await store.rerollPrompt(dateKey) { key, current, history in
-                selector.reroll(for: key, current: current, history: history)
-            }
-            events.receive(result.effect)
-            prompt = result.choice
-        } catch {
-            // Answered meanwhile or store unavailable: keep the current prompt.
         }
     }
 

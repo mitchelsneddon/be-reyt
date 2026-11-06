@@ -7,7 +7,8 @@ struct DayPageView: View {
     let photos: PhotosModel
     /// The latest civil day; the next-day arrow stops here (no future days).
     let today: DateKey
-    let onNavigate: (DateKey) -> Void
+    /// Jumps the pager to another day (the plan card's "edit plan" opens its Sunday).
+    let onOpenDay: (DateKey) -> Void
 
     static let reflectionsAnchor = "reflections"
     static let planAnchor = "plan"
@@ -20,7 +21,7 @@ struct DayPageView: View {
     var body: some View {
         ScrollViewReader { proxy in
             page
-                .task(id: model.prompt?.id) { await scrollToReflectionsIfRequested(proxy) }
+                .task(id: model.isLoaded) { await scrollToReflectionsIfRequested(proxy) }
         }
     }
 
@@ -32,7 +33,7 @@ struct DayPageView: View {
             guard
                 args.contains("-scrollToReflections") || args.contains("-scrollToPlan")
                     || args.contains("-scrollToPhotos"),
-                model.prompt != nil
+                model.isLoaded
             else { return }
             try? await Task.sleep(for: .milliseconds(400))
             let anchor =
@@ -68,7 +69,7 @@ struct DayPageView: View {
                     .accessibilityLabel(Copy.Day.loadFailed)
                 } else {
                     if let plan = model.coveringPlan {
-                        PlanThisWeekCard(plan: plan, today: today, onOpenSunday: go)
+                        PlanThisWeekCard(plan: plan, today: today, onOpenSunday: onOpenDay)
                     }
                     DayScoreControl(score: model.score, onChange: model.setScore)
                     MoodTileGrid(
@@ -94,26 +95,6 @@ struct DayPageView: View {
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.flush() } }
         .onChange(of: model.contentRevision) { _, _ in Task { await model.reloadClean() } }
         .onDisappear { model.flush() }
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarLeading) {
-                Button {
-                    go(model.dateKey.adding(days: -1))
-                } label: {
-                    Image(systemName: "chevron.left").frame(minWidth: 44, minHeight: 44)
-                }
-                .accessibilityLabel(Copy.Day.previousDay)
-                Button {
-                    go(model.dateKey.adding(days: 1))
-                } label: {
-                    Image(systemName: "chevron.right").frame(minWidth: 44, minHeight: 44)
-                }
-                .disabled(model.dateKey >= today)
-                .accessibilityLabel(Copy.Day.nextDay)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                SavedIndicator(state: model.saveState, retry: model.retry)
-            }
-        }
     }
 
     @ViewBuilder private var planLifecycle: some View {
@@ -122,11 +103,6 @@ struct DayPageView: View {
             if model.isSunday { SundayPlanSection() }
         }
         .id(DayPageView.planAnchor)
-    }
-
-    private func go(_ key: DateKey) {
-        model.flush()
-        onNavigate(key)
     }
 
     private var header: some View {
@@ -147,13 +123,12 @@ struct DayPageView: View {
             isEnabled: model.isLoaded, onFocusChange: { model.setFocus(.smile, $0) }
         )
         .id(DayPageView.reflectionsAnchor)
-        if let prompt = model.prompt {
+        if model.showsRotatingPrompt, let prompt = model.prompt {
             ReflectionCard(
                 question: prompt.text,
                 answerLabel: Copy.Reflection.promptAnswerLabel(prompt.text),
                 answer: Binding(get: { model.rotatingAnswer }, set: { model.setRotatingAnswer($0) }),
-                isEnabled: model.isLoaded, onFocusChange: { model.setFocus(.rotating, $0) },
-                refresh: model.canRerollPrompt ? { Task { await model.rerollPrompt() } } : nil)
+                isEnabled: model.isLoaded, onFocusChange: { model.setFocus(.rotating, $0) })
         }
     }
 
@@ -170,7 +145,7 @@ struct DayPageView: View {
     }
 }
 
-private struct SavedIndicator: View {
+struct SavedIndicator: View {
     let state: DayPageModel.SaveState
     let retry: () -> Void
 

@@ -9,6 +9,8 @@ struct ScoreGlyph: View {
     var size: CGFloat = 34
     /// Outline width in viewBox units.
     var strokeUnits: CGFloat = 2.6
+    /// False draws the outline only, so an unpicked option never looks rated.
+    var filled = true
 
     fileprivate nonisolated static let viewBox: CGFloat = 40
     fileprivate nonisolated static let centre = CGPoint(x: 20, y: 21)
@@ -22,6 +24,7 @@ struct ScoreGlyph: View {
         let fillTop = (Self.bottom - CGFloat(score.rawValue) / 5 * span) * scale
         ZStack {
             StarShape().fill(.foreground)
+                .opacity(filled ? 1 : 0)
                 .mask(alignment: .topLeading) {
                     Rectangle()
                         .frame(width: size, height: size - fillTop)

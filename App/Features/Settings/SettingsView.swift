@@ -75,6 +75,7 @@ struct SettingsView: View {
     private var list: some View {
         List {
             ReminderSection()
+            AppearanceSection()
             Section {
                 NavigationLink {
                     TagsView(model: tags)
@@ -357,5 +358,27 @@ struct SettingsNote: View {
         }
         .padding(.vertical, 6)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Light, dark or follow the system. The change reaches every window at once (see `AppearanceWindows`).
+struct AppearanceSection: View {
+    @AppStorage(AppearancePreference.storageKey) private var appearance = AppearancePreference.system
+
+    var body: some View {
+        Section {
+            Picker(selection: $appearance) {
+                ForEach(AppearancePreference.allCases) { Text($0.title).tag($0) }
+            } label: {
+                SettingsRowLabel(title: Copy.Settings.appearance, icon: "circle.lefthalf.filled")
+            }
+            .brFont(.row)
+            .tint(Palette.ink2)
+            .accessibilityLabel(Copy.Settings.appearance)
+            .accessibilityValue(appearance.title)
+        } header: {
+            SettingsHeader(Copy.Settings.displaySection)
+        }
+        .settingsRows()
     }
 }

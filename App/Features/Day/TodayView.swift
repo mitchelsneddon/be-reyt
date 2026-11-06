@@ -13,9 +13,9 @@ struct TodayView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var today: DateKey
-    @State private var model: DayPageModel
-    @State private var photos: PhotosModel
-    /// True while the open page is the live "today" (so a roll may move it), false after the user steps back.
+    @State private var current: DateKey
+    @State private var cache: DayPageCache
+    /// True while the open page is the live "today" (so a roll may move it), false after the user pages back.
     @State private var followsToday = true
 
     init(
@@ -28,14 +28,13 @@ struct TodayView: View {
         self.provisioning = provisioning
         let key = Self.currentDay()
         _today = State(initialValue: key)
-        _model = State(initialValue: DayPageModel(dateKey: key, store: store, events: events))
-        _photos = State(initialValue: PhotosModel(dateKey: key, attachments: attachments, events: events))
+        _current = State(initialValue: key)
+        _cache = State(initialValue: DayPageCache(store: store, events: events, attachments: attachments))
     }
 
     var body: some View {
         NavigationStack {
-            DayPageView(model: model, photos: photos, today: today, onNavigate: show)
-                .id(model.dateKey)
+            DayPager(cache: cache, current: $current, today: today)
                 .completionNotes()
                 .safeAreaInset(edge: .top, spacing: 0) {
                     if let days = provisioning.daysLeftIfExpiring(now: now()) {
@@ -46,21 +45,15 @@ struct TodayView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in rollIfIdle() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { rollIfIdle() } }
-        .onChange(of: model.isIdle) { _, _ in rollIfIdle() }
+        .onChange(of: cache.model(for: current).isIdle) { _, _ in rollIfIdle() }
+        .onChange(of: current) { _, key in followsToday = key == today }
     }
 
     private static func currentDay() -> DateKey { AppClock.today() }
 
-    private func show(_ key: DateKey) {
-        guard key <= today else { return }
-        followsToday = key == today
-        model = DayPageModel(dateKey: key, store: store, events: events)
-        photos = PhotosModel(dateKey: key, attachments: attachments, events: events)
-    }
-
     private func rollIfIdle() {
-        let current = Self.currentDay()
-        today = current
-        if followsToday, model.dateKey != current, model.isIdle { show(current) }
+        let latest = Self.currentDay()
+        today = latest
+        if followsToday, current != latest, cache.model(for: current).isIdle { current = latest }
     }
 }

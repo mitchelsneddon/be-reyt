@@ -15,11 +15,19 @@ struct BeReytApp: App {
     @State private var deleteAll: DeleteAllCoordinator
     @State private var autoBackup: BackupManager
     @State private var onboarding = OnboardingModel()
+    @AppStorage(AppearancePreference.storageKey) private var appearance = AppearancePreference.system
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
         #if DEBUG
             BRFont.assertAllFontsRegistered()
+            // Simulator-only: `-appearance light|dark|system` sets the stored preference at launch.
+            let args = CommandLine.arguments
+            if let i = args.firstIndex(of: "-appearance"), args.indices.contains(i + 1),
+                AppearancePreference(rawValue: args[i + 1]) != nil
+            {
+                UserDefaults.standard.set(args[i + 1], forKey: AppearancePreference.storageKey)
+            }
         #endif
         let host = ContainerHost()
         let events = JournalEvents()
@@ -53,6 +61,9 @@ struct BeReytApp: App {
     var body: some Scene {
         WindowGroup {
             content
+                .background(Palette.paper.ignoresSafeArea())
+                .onChange(of: appearance, initial: true) { _, new in AppearanceWindows.applyToAllWindows(new) }
+                .onChange(of: scenePhase) { _, _ in AppearanceWindows.applyToAllWindows(appearance) }
                 #if DEBUG
                     .task { await DebugBackup.runIfRequested(host: host, restore: restore) }
                     .task { await DebugReadableExport.runIfRequested(host: host) }

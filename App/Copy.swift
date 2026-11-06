@@ -480,6 +480,11 @@ enum Copy {
         static let restoreRow = "restore from a file"
         static let undoRow = "undo last restore"
         static let undoHint = "goes back to what was on this phone before the last restore"
+        static let displaySection = "display"
+        static let appearance = "appearance"
+        static let appearanceSystem = "system"
+        static let appearanceLight = "light"
+        static let appearanceDark = "dark"
     }
 
     enum Hub {
