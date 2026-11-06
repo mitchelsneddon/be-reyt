@@ -10,7 +10,7 @@ enum BRFont: CaseIterable, Sendable {
     case body, bodyItalic, bodyItalicTight, point, pointItalic, rowTitle, rowSnippet
     // DM Sans
     case navTitle, navAction, navActionBold, row, rowWrapping, cardTitle, sectionHeader
-    case eyebrow, label, labelBold, faceLabel, faceLabelBold, subhead, chip, pill
+    case eyebrow, label, labelBold, faceLabel, faceLabelBold, subhead, chip, pill, banner
 
     // PostScript names, verified against the bundled TTFs.
     enum Face {
@@ -75,6 +75,7 @@ enum BRFont: CaseIterable, Sendable {
         case .subhead: Spec(name: Face.dmSemiBold, size: 13, line: 18, tracking: 0.4, style: .footnote)
         case .chip: Spec(name: Face.dmMedium, size: 14, line: nil, tracking: 0, style: .subheadline)
         case .pill: Spec(name: Face.dmSemiBold, size: 12, line: 16, tracking: 0, style: .caption)
+        case .banner: Spec(name: Face.dmRegular, size: 14, line: 20, tracking: 0, style: .subheadline)
         }
     }
 

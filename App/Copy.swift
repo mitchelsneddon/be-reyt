@@ -323,6 +323,10 @@ enum Copy {
         static let retryHint = "tries saving your changes again"
     }
 
+    enum Shared {
+        static let dismiss = "dismiss"
+    }
+
     enum Banner {
         static func expiry(daysLeft: Int) -> String {
             switch daysLeft {

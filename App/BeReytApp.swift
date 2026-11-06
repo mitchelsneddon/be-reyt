@@ -80,6 +80,18 @@ struct BeReytApp: App {
     }
 
     @ViewBuilder private var content: some View {
+        #if DEBUG
+            if CommandLine.arguments.contains("-designGallery") {
+                DesignGallery()
+            } else {
+                appContent
+            }
+        #else
+            appContent
+        #endif
+    }
+
+    @ViewBuilder private var appContent: some View {
         if let store = host.store, let attachments = host.attachments, let container = host.container,
             let generation = host.generationID
         {
