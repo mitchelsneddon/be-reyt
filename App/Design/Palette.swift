@@ -22,6 +22,8 @@ enum Palette {
     static let faceInk = Color("faceInk")
     static let polaroid = Color("polaroid")
     static let tape = Color("tape")
+    /// The gold dot in the onboarding wordmark. The same in light and dark, so it is not an asset.
+    static let wordmarkDot = Color(red: 0xD9 / 255, green: 0xA5 / 255, blue: 0x4A / 255)
     static let score1 = Color("score1")
     static let score2 = Color("score2")
     static let score3 = Color("score3")

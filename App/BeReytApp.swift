@@ -177,7 +177,11 @@ extension BeReytApp {
             .id(generation)
             .task { await onboarding.evaluate(store: store) }
             .fullScreenCover(isPresented: $onboarding.isPresented) {
-                OnboardingView().environment(onboarding)
+                OnboardingView(backup: backup)
+                    .environment(onboarding)
+                    .environment(health)
+                    .environment(reminders)
+                    .environment(autoBackup)
             }
     }
 }

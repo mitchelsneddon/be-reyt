@@ -10,6 +10,20 @@ final class OnboardingModel {
     var isPresented = false
     private var evaluated = false
 
+    init() {
+        #if DEBUG
+            // Simulator-only: `-onboardingStep 1|2|3` opens at that step (use with `-showOnboarding`).
+            let args = CommandLine.arguments
+            if let i = args.firstIndex(of: "-onboardingStep"), args.indices.contains(i + 1) {
+                switch args[i + 1] {
+                case "2": step = .workouts
+                case "3": step = .backups
+                default: break
+                }
+            }
+        #endif
+    }
+
     /// Once per process, after the first unlock. A failed read decides nothing, so a later unlock may retry.
     func evaluate(store: JournalStore) async {
         guard !evaluated else { return }

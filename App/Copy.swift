@@ -724,10 +724,34 @@ enum Copy {
     }
 
     enum Onboarding {
+        static let wordmarkStart = "be"
+        static let wordmarkEnd = "reyt"
+        static let wordmark = "be reyt"
+        static func stepLabel(_ step: Int) -> String { "step \(step) of 3" }
         static let continueButton = "continue"
-        static let stepReminder = "reminder"
-        static let stepWorkouts = "workouts"
-        static let stepBackups = "backups"
+        static let notNow = "not now"
+
+        static let reminderTitle = "a reminder in the evening?"
+        static let workoutsTitle = "your workouts, beside your day?"
+        static let backupsTitle = "keep a backup?"
+
+        static let allowWorkouts = "allow access to workouts"
+        static let previewName = "yoga"
+        static let previewDuration = "25 min"
+        static let previewTime = "07:15"
+        static let previewLabel = "an example of a workout card"
+
+        static let chooseFolder = "choose a backup folder"
+        static let folderRow = "backup folder"
+        static let notSetUp = "not set up"
+        static let passphraseRow = "backup passphrase"
+        static let notSetYet = "not set yet"
+        static let isSet = "set"
+        static let chooseFolderHint = "opens the files picker so you can pick a folder, ideally in icloud drive"
+        static let passphraseHint = "opens a sheet to choose a backup passphrase"
+        static let phoneOnly = "without a backup, your journal lives only on this phone."
+        static let startWriting = "start writing"
+        static let later = "later"
     }
 
     enum DeleteAll {
