@@ -100,6 +100,7 @@ struct ReviewView: View {
                 .frame(maxWidth: .infinity)
                 .multilineTextAlignment(.center)
                 .padding(.top, -8)
+            activitiesSection(stats.workouts)
         } else {
             ReflectionSection(model: reflection).id("reflection")
             smileSection
@@ -199,6 +200,7 @@ struct ReviewView: View {
     @ViewBuilder private func feelingsSection(_ stats: WeeklyStats) -> some View {
         let counts = Dictionary(uniqueKeysWithValues: stats.moodFrequency.map { ($0.moodID, $0.dayCount) })
         let moods = MoodCatalog.offered(including: counts.filter { $0.value > 0 }.map(\.key))
+        let unknown = stats.moodFrequency.filter { $0.dayCount > 0 && MoodCatalog.label(for: $0.moodID) == nil }
         if !stats.noMoods {
             VStack(alignment: .leading, spacing: 14) {
                 SectionTitle(Copy.Reviews.feelingsTitle)
@@ -207,6 +209,9 @@ struct ReviewView: View {
                 ) {
                     ForEach(moods, id: \.id) { mood in
                         FeelingTile(id: mood.id, label: mood.label, count: counts[mood.id] ?? 0)
+                    }
+                    ForEach(unknown, id: \.moodID) { item in
+                        FeelingTile(id: item.moodID, label: item.moodID, count: item.dayCount)
                     }
                 }
             }

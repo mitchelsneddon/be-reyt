@@ -111,15 +111,16 @@ enum Copy {
             return "\(key.date(in: calendar).formatted(style).lowercased()) · week \(key.isoWeek)"
         }
 
-        /// "5 november", lowercase.
-        static func dateTitle(for key: DateKey, calendar: Calendar = .current) -> String {
-            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).month(.wide)
-            return "\(key.day) \(key.date(in: calendar).formatted(style).lowercased())"
+        /// "5 november", lowercase; "5 november 2024" when the day is not in the current year.
+        static func dateTitle(
+            for key: DateKey, currentYear: Int = AppClock.today().year, calendar: Calendar = .current
+        ) -> String {
+            Dates.format(key, year: key.year != currentYear, calendar: calendar)
         }
 
-        /// The spoken version of the header.
+        /// The spoken version of the header, always with the year.
         static func headerLabel(for key: DateKey, calendar: Calendar = .current) -> String {
-            "\(eyebrow(for: key, calendar: calendar)), \(dateTitle(for: key, calendar: calendar))"
+            "\(eyebrow(for: key, calendar: calendar)), \(Dates.format(key, year: true, calendar: calendar))"
         }
     }
 
