@@ -44,13 +44,13 @@ struct ScoreChart: View {
                 LineMark(
                     x: .value("day", p.label), y: .value("score", p.score), series: .value("run", p.run)
                 )
-                .foregroundStyle(Color("accent"))
+                .foregroundStyle(Palette.accent)
                 .lineStyle(StrokeStyle(lineWidth: 2))
                 .accessibilityHidden(true)
             }
             ForEach(data) { p in
                 PointMark(x: .value("day", p.label), y: .value("score", p.score))
-                    .foregroundStyle(Color("accent"))
+                    .foregroundStyle(Palette.accent)
                     .symbolSize(70)
                     .accessibilityLabel(
                         Copy.Reviews.pointLabel(
@@ -61,17 +61,17 @@ struct ScoreChart: View {
         .chartYScale(domain: 1...5)
         .chartXAxis {
             AxisMarks(values: Copy.Reviews.weekdayShort) { _ in
-                AxisValueLabel().foregroundStyle(Color("inkSecondary"))
+                AxisValueLabel().foregroundStyle(Palette.ink2)
             }
         }
         .chartYAxis {
             AxisMarks(values: [1, 2, 3, 4, 5]) { value in
-                AxisGridLine().foregroundStyle(Color("hairline"))
+                AxisGridLine().foregroundStyle(Palette.border)
                 // At accessibility sizes the end labels would take most of the width, so only the grid remains.
                 if !typeSize.isAccessibilitySize, let v = value.as(Int.self), v == 1 || v == 5,
                     let score = DayScore(v)
                 {
-                    AxisValueLabel { Text(score.label).font(.caption2).foregroundStyle(Color("inkSecondary")) }
+                    AxisValueLabel { Text(score.label).font(.caption2).foregroundStyle(Palette.ink2) }
                 }
             }
         }

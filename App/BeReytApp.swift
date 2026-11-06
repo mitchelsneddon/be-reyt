@@ -17,6 +17,9 @@ struct BeReytApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        #if DEBUG
+            BRFont.assertAllFontsRegistered()
+        #endif
         let host = ContainerHost()
         let events = JournalEvents()
         _host = State(initialValue: host)
@@ -152,10 +155,10 @@ private struct WaitingView: View {
     var body: some View {
         Text(failed ? Copy.Host.openFailed : Copy.Host.unlockPhone)
             .font(.body)
-            .foregroundStyle(Color("inkSecondary"))
+            .foregroundStyle(Palette.ink2)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color("paper"))
+            .background(Palette.paper)
     }
 }

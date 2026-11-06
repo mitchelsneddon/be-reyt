@@ -16,7 +16,7 @@ struct RestoreFlowView: View {
             content
                 .padding(.horizontal, 20)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .background(Color("paper"))
+                .background(Palette.paper)
                 .navigationTitle(Copy.Restore.title)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -26,7 +26,7 @@ struct RestoreFlowView: View {
                 }
         }
         .interactiveDismissDisabled(isBusy)
-        .tint(Color("accent"))
+        .tint(Palette.accent)
     }
 
     private var isBusy: Bool {
@@ -51,11 +51,11 @@ struct RestoreFlowView: View {
     private func passphraseForm(_ input: RestoreInput) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(isSnapshot(input) ? Copy.RestoreBrowser.enterPassphrase : Copy.Restore.enterPassphrase)
-                .font(.body).foregroundStyle(Color("ink"))
+                .font(.body).foregroundStyle(Palette.ink)
             SecureField(Copy.Restore.passphraseField, text: $passphrase)
                 .textContentType(.password)
                 .padding(12)
-                .background(Color("inkSecondary").opacity(0.12), in: .rect(cornerRadius: 10))
+                .background(Palette.ink2.opacity(0.12), in: .rect(cornerRadius: 10))
                 .frame(minHeight: 44)
             Button(Copy.Restore.open) {
                 let entered = passphrase
@@ -77,7 +77,7 @@ struct RestoreFlowView: View {
     private func progress(_ text: String) -> some View {
         VStack(spacing: 16) {
             ProgressView()
-            Text(text).font(.body).foregroundStyle(Color("inkSecondary"))
+            Text(text).font(.body).foregroundStyle(Palette.ink2)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -85,9 +85,9 @@ struct RestoreFlowView: View {
     @ViewBuilder private var previewView: some View {
         if let preview = restore.preview {
             VStack(alignment: .leading, spacing: 12) {
-                Text(Copy.Restore.previewTitle).font(.system(.title2, design: .serif)).foregroundStyle(Color("ink"))
+                Text(Copy.Restore.previewTitle).font(.system(.title2, design: .serif)).foregroundStyle(Palette.ink)
                     .accessibilityAddTraits(.isHeader)
-                Text(Copy.Restore.previewIntro).font(.footnote).foregroundStyle(Color("inkSecondary"))
+                Text(Copy.Restore.previewIntro).font(.footnote).foregroundStyle(Palette.ink2)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(Copy.Restore.days(preview.counts.entries))
                     Text(Copy.Restore.photos(preview.counts.attachments))
@@ -95,15 +95,15 @@ struct RestoreFlowView: View {
                     Text(Copy.Restore.plans(preview.counts.intentions))
                     if let range = preview.dateRange {
                         Text(Copy.Restore.range(first: range.first, last: range.last))
-                            .foregroundStyle(Color("inkSecondary"))
+                            .foregroundStyle(Palette.ink2)
                     }
                 }
-                .font(.body).foregroundStyle(Color("ink"))
+                .font(.body).foregroundStyle(Palette.ink)
                 if preview.skippedPhotos > 0 {
                     Text(Copy.Export.skipped(preview.skippedPhotos)).font(.footnote)
-                        .foregroundStyle(Color("inkSecondary"))
+                        .foregroundStyle(Palette.ink2)
                 }
-                if let authMessage { Text(authMessage).font(.footnote).foregroundStyle(Color("ink")) }
+                if let authMessage { Text(authMessage).font(.footnote).foregroundStyle(Palette.ink) }
                 Spacer(minLength: 24)
                 Button(Copy.Restore.replace) {
                     Task {
@@ -129,7 +129,7 @@ struct RestoreFlowView: View {
 
     private func failureView(_ failure: RestoreFailure, retry: RestoreInput?) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(Copy.Restore.failure(failure)).font(.body).foregroundStyle(Color("ink"))
+            Text(Copy.Restore.failure(failure)).font(.body).foregroundStyle(Palette.ink)
             if let retry {
                 Button(Copy.Restore.tryAgain) { restore.retry(retry) }.frame(minHeight: 44)
             }

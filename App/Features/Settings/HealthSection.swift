@@ -29,7 +29,7 @@ struct HealthSection: View {
             case .asked:
                 Text(Copy.Health.asked)
                 if health.hasSynced, sample.isEmpty {
-                    Text(Copy.Health.nothingFound).foregroundStyle(Color("inkSecondary"))
+                    Text(Copy.Health.nothingFound).foregroundStyle(Palette.ink2)
                 }
             }
         } header: {

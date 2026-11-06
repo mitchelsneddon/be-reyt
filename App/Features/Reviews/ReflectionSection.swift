@@ -17,7 +17,7 @@ struct ReflectionSection: View {
             case .generating:
                 HStack(spacing: 12) {
                     ProgressView()
-                    Text(Copy.WeekReflection.generating).font(.body).foregroundStyle(Color("inkSecondary"))
+                    Text(Copy.WeekReflection.generating).font(.body).foregroundStyle(Palette.ink2)
                 }
                 .accessibilityElement(children: .combine)
             case .ready(let content, let newer):
@@ -25,7 +25,7 @@ struct ReflectionSection: View {
             case .unavailable(let reason):
                 note(Copy.WeekReflection.failure(reason))
                 Button(Copy.WeekReflection.tryAgain) { Task { await model.recheck() } }
-                    .font(.footnote).foregroundStyle(Color("accent")).frame(minHeight: 44)
+                    .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
             case .failed(let reason):
                 note(Copy.WeekReflection.failure(reason))
                 if reason != .noEntries { writeButton }
@@ -36,17 +36,17 @@ struct ReflectionSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color("card")))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color("hairline"), lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
         .animation(.default, value: model.state)
     }
 
     private var intro: some View {
-        Text(Copy.WeekReflection.intro).font(.footnote).foregroundStyle(Color("inkSecondary"))
+        Text(Copy.WeekReflection.intro).font(.footnote).foregroundStyle(Palette.ink2)
     }
 
     private func note(_ text: String) -> some View {
-        Text(text).font(.body).foregroundStyle(Color("inkSecondary"))
+        Text(text).font(.body).foregroundStyle(Palette.ink2)
     }
 
     private var writeButton: some View {
@@ -55,7 +55,7 @@ struct ReflectionSection: View {
         } label: {
             Text(Copy.WeekReflection.write)
                 .font(.body.weight(.medium))
-                .foregroundStyle(Color("accent"))
+                .foregroundStyle(Palette.accent)
                 .frame(minHeight: 44, alignment: .leading)
         }
         .accessibilityHint(Copy.WeekReflection.writeHint)
@@ -66,7 +66,7 @@ struct ReflectionSection: View {
     @ViewBuilder private func ready(_ content: WeeklyReflectionContent, newerPromptAvailable: Bool) -> some View {
         Text(content.overview)
             .font(.system(.body, design: .serif))
-            .foregroundStyle(Color("ink"))
+            .foregroundStyle(Palette.ink)
             .fixedSize(horizontal: false, vertical: true)
         points(title: Copy.WeekReflection.highlights, content.highlights)
         points(title: Copy.WeekReflection.difficult, content.difficult)
@@ -75,8 +75,8 @@ struct ReflectionSection: View {
                 heading(Copy.WeekReflection.themes)
                 ForEach(Array(content.themes.enumerated()), id: \.offset) { _, theme in
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(theme.title).font(.subheadline.weight(.semibold)).foregroundStyle(Color("ink"))
-                        Text(theme.summary).font(.body).foregroundStyle(Color("ink"))
+                        Text(theme.title).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.ink)
+                        Text(theme.summary).font(.body).foregroundStyle(Palette.ink)
                             .fixedSize(horizontal: false, vertical: true)
                         DateChips(dates: theme.dateKeys)
                     }
@@ -87,15 +87,15 @@ struct ReflectionSection: View {
             VStack(alignment: .leading, spacing: 8) {
                 heading(Copy.WeekReflection.questions)
                 ForEach(Array(content.questions.enumerated()), id: \.offset) { _, q in
-                    Text(q).font(.system(.body, design: .serif).italic()).foregroundStyle(Color("inkSecondary"))
+                    Text(q).font(.system(.body, design: .serif).italic()).foregroundStyle(Palette.ink2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
-        Text(Copy.WeekReflection.footnote).font(.caption).foregroundStyle(Color("inkSecondary"))
+        Text(Copy.WeekReflection.footnote).font(.caption).foregroundStyle(Palette.ink2)
         if newerPromptAvailable {
             Button(Copy.WeekReflection.regenerate) { Task { await model.generate() } }
-                .font(.footnote).foregroundStyle(Color("accent")).frame(minHeight: 44)
+                .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
                 .accessibilityHint(Copy.WeekReflection.regenerateHint)
         }
     }
@@ -106,7 +106,7 @@ struct ReflectionSection: View {
                 heading(title)
                 ForEach(Array(points.enumerated()), id: \.offset) { _, p in
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(p.text).font(.body).foregroundStyle(Color("ink"))
+                        Text(p.text).font(.body).foregroundStyle(Palette.ink)
                             .fixedSize(horizontal: false, vertical: true)
                         DateChips(dates: p.dateKeys)
                     }
@@ -116,7 +116,7 @@ struct ReflectionSection: View {
     }
 
     private func heading(_ text: String) -> some View {
-        Text(text).font(.headline).foregroundStyle(Color("ink")).accessibilityAddTraits(.isHeader)
+        Text(text).font(.headline).foregroundStyle(Palette.ink).accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -131,10 +131,10 @@ private struct DateChips: View {
                     NavigationLink(value: ReviewRoute.day(key)) {
                         Text(Copy.History.rowDate(key))
                             .font(.caption)
-                            .foregroundStyle(Color("accent"))
+                            .foregroundStyle(Palette.accent)
                             .padding(.vertical, 4)
                             .padding(.horizontal, 10)
-                            .background(Capsule().strokeBorder(Color("hairline"), lineWidth: 1))
+                            .background(Capsule().strokeBorder(Palette.border, lineWidth: 1))
                             .frame(minHeight: 44)
                             .contentShape(Rectangle())
                     }

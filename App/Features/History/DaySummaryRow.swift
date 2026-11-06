@@ -10,11 +10,11 @@ struct DaySummaryRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(Copy.History.rowDate(summary.dateKey))
                 .font(.footnote)
-                .foregroundStyle(Color("inkSecondary"))
+                .foregroundStyle(Palette.ink2)
             if !summary.preview.isEmpty {
                 Text(summary.preview)
                     .font(.body)
-                    .foregroundStyle(Color("ink"))
+                    .foregroundStyle(Palette.ink)
                     .lineLimit(2)
             }
             indicators
@@ -37,7 +37,7 @@ struct DaySummaryRow: View {
                 if moods > 0 { indicator("face.smiling", "\(moods)") }
             }
             .font(.caption)
-            .foregroundStyle(Color("inkSecondary"))
+            .foregroundStyle(Palette.ink2)
         }
     }
 

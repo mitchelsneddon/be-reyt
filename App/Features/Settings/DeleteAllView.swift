@@ -35,7 +35,7 @@ struct DeleteAllView: View {
                 ForEach(Copy.DeleteAll.keeps, id: \.self) { Text($0) }
             }
             Section {
-                Text(Copy.DeleteAll.irreversible).foregroundStyle(Color("ink"))
+                Text(Copy.DeleteAll.irreversible).foregroundStyle(Palette.ink)
                 if !authenticated {
                     Button(Copy.DeleteAll.continueAction) { authenticate() }.frame(minHeight: 44)
                 } else {
@@ -61,11 +61,11 @@ struct DeleteAllView: View {
                     .frame(minHeight: 44)
                 }
             } footer: {
-                if let message = footerMessage { Text(message).foregroundStyle(Color("ink")) }
+                if let message = footerMessage { Text(message).foregroundStyle(Palette.ink) }
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color("paper"))
+        .background(Palette.paper)
         .navigationTitle(Copy.DeleteAll.title)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { coordinator.resetFailure() }
@@ -98,12 +98,12 @@ struct DeleteAllNoteBanner: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(text).font(.footnote).foregroundStyle(Color("ink"))
+            Text(text).font(.footnote).foregroundStyle(Palette.ink)
             Spacer()
             Button(Copy.DeleteAll.dismiss, action: dismiss).font(.footnote).frame(minWidth: 44, minHeight: 44)
         }
         .padding(.horizontal, 20)
-        .background(Color("paper"))
+        .background(Palette.paper)
         .accessibilityElement(children: .contain)
     }
 }

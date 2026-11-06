@@ -11,9 +11,9 @@ struct FollowUpCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(Copy.Plan.followUpTitle)
-                .font(.headline).foregroundStyle(Color("ink"))
+                .font(.headline).foregroundStyle(Palette.ink)
                 .accessibilityAddTraits(.isHeader)
-            Text(Copy.Plan.followUpQuote(plan.text)).font(.footnote).foregroundStyle(Color("inkSecondary"))
+            Text(Copy.Plan.followUpQuote(plan.text)).font(.footnote).foregroundStyle(Palette.ink2)
             if model.followUpIsCollapsed { collapsed } else { editing }
         }
     }
@@ -21,10 +21,10 @@ struct FollowUpCard: View {
     private var collapsed: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(model.followUpSkipped ? Copy.Plan.skipped : model.followUpNote)
-                .font(.body).foregroundStyle(Color("ink"))
+                .font(.body).foregroundStyle(Palette.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button(Copy.Plan.edit) { model.editFollowUp() }
-                .font(.footnote).foregroundStyle(Color("accent")).frame(minHeight: 44)
+                .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
         }
     }
 
@@ -34,14 +34,14 @@ struct FollowUpCard: View {
                 Copy.Plan.followUpPlaceholder,
                 text: Binding(get: { model.followUpNote }, set: { model.setFollowUpNote($0) }), axis: .vertical
             )
-            .font(.body).foregroundStyle(Color("ink"))
+            .font(.body).foregroundStyle(Palette.ink)
             .lineLimit(1...4)
             .focused($focused)
             .onChange(of: focused) { _, isFocused in model.setFocus(.followUp, isFocused) }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(RoundedRectangle(cornerRadius: 14).fill(Color("card")))
-            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color("hairline"), lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
+            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
             .accessibilityLabel(Copy.Plan.followUpNoteLabel)
             HStack {
                 Button(Copy.Plan.skip) { model.skipFollowUp() }
@@ -51,7 +51,7 @@ struct FollowUpCard: View {
                     Button(Copy.Plan.done) { model.finishEditingFollowUp() }
                 }
             }
-            .font(.footnote).foregroundStyle(Color("accent")).frame(minHeight: 44)
+            .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
         }
     }
 }

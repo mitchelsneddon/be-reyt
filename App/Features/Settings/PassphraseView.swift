@@ -15,7 +15,7 @@ struct PassphraseView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text(Copy.Passphrase.warning).font(.body).foregroundStyle(Color("ink"))
+                    Text(Copy.Passphrase.warning).font(.body).foregroundStyle(Palette.ink)
                 }
                 Section {
                     if isChange {
@@ -30,14 +30,14 @@ struct PassphraseView: View {
                         .textContentType(.newPassword)
                         .frame(minHeight: 44)
                 } footer: {
-                    if let message { Text(message).foregroundStyle(Color("ink")) }
+                    if let message { Text(message).foregroundStyle(Palette.ink) }
                 }
                 Section {
                     Button(Copy.Passphrase.save, action: save).frame(minHeight: 44)
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Color("paper"))
+            .background(Palette.paper)
             .navigationTitle(isChange ? Copy.Passphrase.changeTitle : Copy.Passphrase.setTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -46,7 +46,7 @@ struct PassphraseView: View {
                 }
             }
         }
-        .tint(Color("accent"))
+        .tint(Palette.accent)
     }
 
     private func save() {

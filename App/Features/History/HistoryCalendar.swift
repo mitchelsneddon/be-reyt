@@ -26,7 +26,7 @@ struct HistoryCalendar: UIViewRepresentable {
         let view = UICalendarView()
         view.calendar = Self.gregorian
         view.delegate = context.coordinator
-        view.tintColor = UIColor(named: "accent")
+        view.tintColor = Palette.UI.accent
         view.fontDesign = .default
         view.accessibilityLabel = Copy.History.calendarLabel
         let selection = UICalendarSelectionSingleDate(delegate: context.coordinator)
@@ -84,7 +84,7 @@ struct HistoryCalendar: UIViewRepresentable {
             // A custom view rather than the stock dot so the dot can carry a spoken label.
             return .customView {
                 let dot = UIView(frame: CGRect(x: 0, y: 0, width: 8, height: 8))
-                dot.backgroundColor = UIColor(named: "accent")
+                dot.backgroundColor = Palette.UI.accent
                 dot.layer.cornerRadius = 4
                 dot.isAccessibilityElement = true
                 dot.accessibilityLabel = Copy.History.hasEntry

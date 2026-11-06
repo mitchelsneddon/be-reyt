@@ -45,7 +45,7 @@ struct ReviewsListView: View {
     var body: some View {
         NavigationStack(path: $path) {
             content
-                .background(Color("paper"))
+                .background(Palette.paper)
                 .navigationTitle(Copy.Reviews.title)
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationDestination(for: ReviewRoute.self) { route in
@@ -68,17 +68,17 @@ struct ReviewsListView: View {
     @ViewBuilder private var content: some View {
         if model.loadFailed {
             Button(Copy.Reviews.loadFailed) { Task { await model.refresh(today: today) } }
-                .font(.footnote).foregroundStyle(Color("accent")).frame(minHeight: 44)
+                .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if !model.isLoaded {
-            Color("paper")
+            Palette.paper
         } else if model.rows.isEmpty {
             Text(
                 Copy.Reviews.emptyList(
                     opensOn: WeekCalendar.unlockKey(forWeekStart: WeekCalendar.reviewWeekStart(containing: today)))
             )
             .font(.body)
-            .foregroundStyle(Color("inkSecondary"))
+            .foregroundStyle(Palette.ink2)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -87,8 +87,8 @@ struct ReviewsListView: View {
                 NavigationLink(value: ReviewRoute.week(row.weekStart)) {
                     ReviewRowView(row: row, isLatest: row.weekStart == model.latestWeek, today: today)
                 }
-                .listRowBackground(Color("paper"))
-                .listRowSeparatorTint(Color("hairline"))
+                .listRowBackground(Palette.paper)
+                .listRowSeparatorTint(Palette.border)
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
@@ -109,12 +109,12 @@ private struct ReviewRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if isLatest {
-                Text(Copy.Reviews.thisWeeksReview).font(.footnote).foregroundStyle(Color("accent"))
+                Text(Copy.Reviews.thisWeeksReview).font(.footnote).foregroundStyle(Palette.accent)
             }
             Text(week)
                 .font(isLatest ? .system(.title3, design: .serif) : .body)
-                .foregroundStyle(Color("ink"))
-            Text(Copy.Reviews.coverage(row.recordedDays)).font(.footnote).foregroundStyle(Color("inkSecondary"))
+                .foregroundStyle(Palette.ink)
+            Text(Copy.Reviews.coverage(row.recordedDays)).font(.footnote).foregroundStyle(Palette.ink2)
         }
         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         .padding(.vertical, isLatest ? 8 : 4)

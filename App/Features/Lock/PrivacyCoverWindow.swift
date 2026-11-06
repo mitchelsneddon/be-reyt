@@ -27,7 +27,7 @@ final class PrivacyCoverWindow {
         let window = UIWindow(windowScene: scene)
         window.windowLevel = UIWindow.Level.alert + 100
         let controller = UIHostingController(rootView: PrivacyCover())
-        controller.view.backgroundColor = UIColor(named: "paper")
+        controller.view.backgroundColor = Palette.UI.paper
         window.rootViewController = controller
         return window
     }

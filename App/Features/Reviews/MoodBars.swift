@@ -12,7 +12,7 @@ struct MoodBars: View {
                 let text = Copy.Reviews.moodRow(
                     label: MoodCatalog.label(for: mood.moodID) ?? mood.moodID, count: mood.dayCount, of: mood.of)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(text).font(.body).foregroundStyle(Color("ink"))
+                    Text(text).font(.body).foregroundStyle(Palette.ink)
                     bar(fraction: mood.of > 0 ? Double(mood.dayCount) / Double(mood.of) : 0)
                 }
                 .accessibilityElement(children: .ignore)
@@ -23,11 +23,11 @@ struct MoodBars: View {
 
     private func bar(fraction: Double) -> some View {
         Capsule()
-            .fill(Color("hairline"))
+            .fill(Palette.border)
             .frame(height: 10)
             .overlay(alignment: .leading) {
                 GeometryReader { proxy in
-                    Capsule().fill(Color("inkSecondary")).frame(width: proxy.size.width * fraction)
+                    Capsule().fill(Palette.ink2).frame(width: proxy.size.width * fraction)
                 }
             }
     }

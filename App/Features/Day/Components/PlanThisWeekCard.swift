@@ -15,22 +15,22 @@ struct PlanThisWeekCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.footnote).foregroundStyle(Color("inkSecondary"))
+            Text(title).font(.footnote).foregroundStyle(Palette.ink2)
                 .accessibilityAddTraits(.isHeader)
-            Text(plan.text).font(.body).foregroundStyle(Color("ink"))
+            Text(plan.text).font(.body).foregroundStyle(Palette.ink)
             if let category = plan.category, !category.isEmpty {
-                Text(Copy.Plan.categoryLabel(for: category)).font(.footnote).foregroundStyle(Color("inkSecondary"))
+                Text(Copy.Plan.categoryLabel(for: category)).font(.footnote).foregroundStyle(Palette.ink2)
             }
             Button(Copy.Plan.editPlan) { onOpenSunday(plan.sourceSunday) }
                 .font(.footnote)
-                .foregroundStyle(Color("accent"))
+                .foregroundStyle(Palette.accent)
                 .frame(minHeight: 44)
                 .accessibilityHint(Copy.Plan.editPlanHint)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color("card")))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color("hairline"), lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
         .accessibilityElement(children: .contain)
     }
 }

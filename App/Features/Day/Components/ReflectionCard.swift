@@ -19,22 +19,22 @@ struct ReflectionCard<Action: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(question)
                 .font(.headline)
-                .foregroundStyle(Color("ink"))
+                .foregroundStyle(Palette.ink)
                 .accessibilityAddTraits(.isHeader)
             if let helper {
-                Text(helper).font(.footnote).foregroundStyle(Color("inkSecondary"))
+                Text(helper).font(.footnote).foregroundStyle(Palette.ink2)
             }
             TextField(Copy.Reflection.answerPlaceholder, text: $answer, axis: .vertical)
                 .font(.body)
-                .foregroundStyle(Color("ink"))
+                .foregroundStyle(Palette.ink)
                 .lineLimit(lineLimits)
                 .focused($focused)
                 .onChange(of: focused) { _, isFocused in onFocusChange(isFocused) }
                 .disabled(!isEnabled)
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
-                .background(RoundedRectangle(cornerRadius: 14).fill(Color("card")))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color("hairline"), lineWidth: 1))
+                .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
                 .accessibilityLabel(answerLabel)
             action()
         }

@@ -35,13 +35,13 @@ struct HistoryList: View {
                 Section {
                     ForEach(month.days) { day in
                         NavigationLink(value: day.dateKey) { DaySummaryRow(summary: day) }
-                            .listRowBackground(Color("paper"))
-                            .listRowSeparatorTint(Color("hairline"))
+                            .listRowBackground(Palette.paper)
+                            .listRowSeparatorTint(Palette.border)
                     }
                 } header: {
                     Text(month.header)
                         .font(.system(.title3, design: .serif))
-                        .foregroundStyle(Color("ink"))
+                        .foregroundStyle(Palette.ink)
                         .textCase(nil)
                         .accessibilityAddTraits(.isHeader)
                 }
@@ -49,6 +49,6 @@ struct HistoryList: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color("paper"))
+        .background(Palette.paper)
     }
 }

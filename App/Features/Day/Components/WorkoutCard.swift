@@ -20,7 +20,7 @@ struct WorkoutSection: View {
         let groups = groups
         if !groups.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                Text(Copy.Workouts.title).font(.footnote).foregroundStyle(Color("inkSecondary"))
+                Text(Copy.Workouts.title).font(.footnote).foregroundStyle(Palette.ink2)
                     .accessibilityAddTraits(.isHeader)
                 ForEach(groups) { WorkoutCard(workout: $0.representative) }
             }
@@ -42,21 +42,21 @@ struct WorkoutCard: View {
         HStack(spacing: 12) {
             Image(systemName: Self.symbol(for: activity))
                 .font(.title3)
-                .foregroundStyle(Color("accent"))
+                .foregroundStyle(Palette.accent)
                 .frame(width: 32)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text(activity.displayName).font(.body).foregroundStyle(Color("ink"))
+                Text(activity.displayName).font(.body).foregroundStyle(Palette.ink)
                 Text([Optional(duration), distance].compactMap { $0 }.joined(separator: " · "))
-                    .font(.footnote).foregroundStyle(Color("inkSecondary"))
+                    .font(.footnote).foregroundStyle(Palette.ink2)
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color("card")))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color("hairline"), lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Copy.Workouts.cardLabel(name: activity.displayName, duration: duration, distance: distance))
     }

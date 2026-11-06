@@ -29,12 +29,12 @@ struct ImportPreviewView: View {
                     }
                 }
         }
-        .tint(Color("accent"))
+        .tint(Palette.accent)
     }
 
     @ViewBuilder private var content: some View {
         switch importer.phase {
-        case .idle: Color("paper")
+        case .idle: Palette.paper
         case .reading(let done, let total):
             busy(Copy.Import.readingTitle, detail: total > 0 ? Copy.Import.progress(done: done, total: total) : nil)
         case .importing: busy(Copy.Import.importingTitle, detail: nil)
@@ -49,40 +49,40 @@ struct ImportPreviewView: View {
     private func busy(_ title: String, detail: String?) -> some View {
         VStack(spacing: 12) {
             ProgressView()
-            Text(title).font(.body).foregroundStyle(Color("ink"))
-            if let detail { Text(detail).font(.footnote).foregroundStyle(Color("inkSecondary")) }
+            Text(title).font(.body).foregroundStyle(Palette.ink)
+            if let detail { Text(detail).font(.footnote).foregroundStyle(Palette.ink2) }
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("paper"))
+        .background(Palette.paper)
         .accessibilityElement(children: .combine)
     }
 
     private func notice(_ text: String) -> some View {
         VStack(spacing: 16) {
-            Text(text).font(.body).foregroundStyle(Color("ink")).multilineTextAlignment(.center)
+            Text(text).font(.body).foregroundStyle(Palette.ink).multilineTextAlignment(.center)
             Button(Copy.Import.close) { importer.dismiss() }.frame(minHeight: 44)
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("paper"))
+        .background(Palette.paper)
     }
 
     @ViewBuilder private var finished: some View {
         if let result = importer.result {
             VStack(spacing: 12) {
-                Text(Copy.Import.resultTitle).font(.headline).foregroundStyle(Color("ink"))
+                Text(Copy.Import.resultTitle).font(.headline).foregroundStyle(Palette.ink)
                 Text(Copy.Import.resultLine(entries: result.entries, days: result.days))
-                    .foregroundStyle(Color("ink"))
+                    .foregroundStyle(Palette.ink)
                 if let photos = Copy.Import.photosResult(imported: result.photosImported, failed: result.photosFailed) {
-                    Text(photos).foregroundStyle(Color("inkSecondary"))
+                    Text(photos).foregroundStyle(Palette.ink2)
                 }
                 Button(Copy.Import.done) { importer.dismiss() }.frame(minHeight: 44)
             }
             .multilineTextAlignment(.center)
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color("paper"))
+            .background(Palette.paper)
         }
     }
 }
@@ -96,17 +96,17 @@ private struct PreviewList: View {
             if plan.isEmpty {
                 Section {
                     Text(plan.duplicates.isEmpty ? Copy.Import.nothingNew : Copy.Import.nothingNewDetail)
-                        .foregroundStyle(Color("ink"))
+                        .foregroundStyle(Palette.ink)
                 }
             } else {
                 Section {
                     Text(
                         Copy.Import.summary(entries: plan.entries.count, days: plan.days.count, photos: plan.photoCount)
                     )
-                    .foregroundStyle(Color("ink"))
+                    .foregroundStyle(Palette.ink)
                     if let range = plan.dateRange {
                         Text("\(dayLabel(range.lowerBound)) – \(dayLabel(range.upperBound))")
-                            .foregroundStyle(Color("inkSecondary"))
+                            .foregroundStyle(Palette.ink2)
                     }
                 } header: {
                     Text(Copy.Import.willImportSection)
@@ -144,8 +144,8 @@ private struct PreviewList: View {
                 Section {
                     ForEach(Array(plan.unsupported.enumerated()), id: \.offset) { _, item in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(item.description).foregroundStyle(Color("ink"))
-                            Text(fileLabel(item.entryPath)).font(.footnote).foregroundStyle(Color("inkSecondary"))
+                            Text(item.description).foregroundStyle(Palette.ink)
+                            Text(fileLabel(item.entryPath)).font(.footnote).foregroundStyle(Palette.ink2)
                         }
                         .accessibilityElement(children: .combine)
                     }
@@ -159,9 +159,9 @@ private struct PreviewList: View {
                 Section {
                     ForEach(plan.failures, id: \.path) { failure in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(fileLabel(failure.path)).foregroundStyle(Color("ink"))
+                            Text(fileLabel(failure.path)).foregroundStyle(Palette.ink)
                             Text(Copy.Import.failure(failure.reason)).font(.footnote)
-                                .foregroundStyle(Color("inkSecondary"))
+                                .foregroundStyle(Palette.ink2)
                         }
                         .accessibilityElement(children: .combine)
                     }
@@ -180,7 +180,7 @@ private struct PreviewList: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color("paper"))
+        .background(Palette.paper)
     }
 
     private func dayLabel(_ day: DateKey) -> String {

@@ -30,11 +30,11 @@ struct ReviewView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     Text(Copy.Reviews.weekOf(range))
                         .font(.system(.largeTitle, design: .serif))
-                        .foregroundStyle(Color("ink"))
+                        .foregroundStyle(Palette.ink)
                         .accessibilityAddTraits(.isHeader)
                     if model.loadFailed {
                         Button(Copy.Reviews.loadFailed) { Task { await model.refresh() } }
-                            .font(.footnote).foregroundStyle(Color("accent")).frame(minHeight: 44)
+                            .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
                     } else if let stats = model.stats {
                         sections(stats)
                     }
@@ -47,7 +47,7 @@ struct ReviewView: View {
             .scrollDismissesKeyboard(.interactively)
             .task(id: model.isLoaded) { await scrollToEndIfRequested(proxy) }
         }
-        .background(Color("paper"))
+        .background(Palette.paper)
         .navigationBarTitleDisplayMode(.inline)
         .task(id: events.contentRevision) {
             await model.refresh()
@@ -87,7 +87,7 @@ struct ReviewView: View {
 
     @ViewBuilder private func sections(_ stats: WeeklyStats) -> some View {
         if stats.recordedDays == 0 {
-            Text(Copy.Reviews.emptyWeek).font(.body).foregroundStyle(Color("inkSecondary"))
+            Text(Copy.Reviews.emptyWeek).font(.body).foregroundStyle(Palette.ink2)
         } else {
             ReflectionSection(model: reflection)
             scoreSection(stats)
@@ -104,14 +104,14 @@ struct ReviewView: View {
     private func scoreSection(_ stats: WeeklyStats) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             heading(Copy.Reviews.scoresTitle)
-            Text(Copy.Reviews.coverage(stats.recordedDays)).font(.footnote).foregroundStyle(Color("inkSecondary"))
+            Text(Copy.Reviews.coverage(stats.recordedDays)).font(.footnote).foregroundStyle(Palette.ink2)
             if let average = stats.averageScoreDisplay {
                 Text(Copy.Reviews.average(average, scoredDays: stats.scoredDays))
-                    .font(.body).foregroundStyle(Color("ink"))
+                    .font(.body).foregroundStyle(Palette.ink)
                 ScoreChart(points: stats.chart, scoredDays: stats.scoredDays, today: today)
                     .padding(.top, 8)
             } else {
-                Text(Copy.Reviews.noScores).font(.body).foregroundStyle(Color("inkSecondary"))
+                Text(Copy.Reviews.noScores).font(.body).foregroundStyle(Palette.ink2)
             }
         }
     }
@@ -122,7 +122,7 @@ struct ReviewView: View {
         VStack(alignment: .leading, spacing: 12) {
             heading(Copy.Reviews.moodsTitle)
             if stats.noMoods {
-                Text(Copy.Reviews.noMoods).font(.body).foregroundStyle(Color("inkSecondary"))
+                Text(Copy.Reviews.noMoods).font(.body).foregroundStyle(Palette.ink2)
             } else {
                 MoodBars(moods: stats.moodFrequency)
             }
@@ -144,7 +144,7 @@ struct ReviewView: View {
                             lastAverage: WeeklyStats.display(tenths: score.previousAverageTenths),
                             lastDays: score.previousScoredDays)
                     )
-                    .font(.body).foregroundStyle(Color("ink"))
+                    .font(.body).foregroundStyle(Palette.ink)
                 }
                 if let moods {
                     ForEach(moods, id: \.moodID) { m in
@@ -153,7 +153,7 @@ struct ReviewView: View {
                                 label: MoodCatalog.label(for: m.moodID) ?? m.moodID, count: m.thisCount, of: m.thisOf,
                                 lastCount: m.previousCount, lastOf: m.previousOf)
                         )
-                        .font(.body).foregroundStyle(Color("ink"))
+                        .font(.body).foregroundStyle(Palette.ink)
                     }
                 }
             }
@@ -184,7 +184,7 @@ struct ReviewView: View {
                     NavigationLink(value: ReviewRoute.day(day)) {
                         HStack {
                             Text([Copy.History.rowDate(day), score?.label].compactMap { $0 }.joined(separator: ", "))
-                                .font(.body).foregroundStyle(Color("accent"))
+                                .font(.body).foregroundStyle(Palette.accent)
                             Spacer(minLength: 0)
                         }
                         .frame(minHeight: 44)
@@ -206,14 +206,14 @@ struct ReviewView: View {
                     Copy.Reviews.workoutSummary(
                         count: workouts.count, duration: Copy.Workouts.duration(seconds: workouts.totalDurationSeconds))
                 )
-                .font(.body).foregroundStyle(Color("ink"))
+                .font(.body).foregroundStyle(Palette.ink)
                 ForEach(workouts.distances, id: \.kind) { total in
                     Text(
                         Copy.Reviews.distanceLine(
                             distance: Copy.Workouts.distance(meters: total.meters, swimming: total.kind == .swimming),
                             kind: total.kind)
                     )
-                    .font(.footnote).foregroundStyle(Color("inkSecondary"))
+                    .font(.footnote).foregroundStyle(Palette.ink2)
                 }
             }
         }
@@ -222,7 +222,7 @@ struct ReviewView: View {
     private func heading(_ text: String) -> some View {
         Text(text)
             .font(.headline)
-            .foregroundStyle(Color("ink"))
+            .foregroundStyle(Palette.ink)
             .accessibilityAddTraits(.isHeader)
     }
 }

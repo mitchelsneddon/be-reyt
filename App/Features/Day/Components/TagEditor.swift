@@ -39,7 +39,7 @@ struct TagEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(Copy.Day.tagsTitle).font(.footnote).foregroundStyle(Color("inkSecondary"))
+            Text(Copy.Day.tagsTitle).font(.footnote).foregroundStyle(Palette.ink2)
             if !dayTags.isEmpty {
                 ChipGroup(
                     items: dayTags.map { chip($0, selected: true) },
@@ -48,7 +48,7 @@ struct TagEditor: View {
             }
             let suggested = suggestions
             if !suggested.isEmpty {
-                Text(Copy.Tags.recentTitle).font(.footnote).foregroundStyle(Color("inkSecondary"))
+                Text(Copy.Tags.recentTitle).font(.footnote).foregroundStyle(Palette.ink2)
                 ChipGroup(
                     items: suggested.map { chip($0, selected: false) },
                     selection: Binding(get: { [] }, set: { _ in }),
@@ -65,16 +65,16 @@ struct TagEditor: View {
                 Button(action: add) {
                     Image(systemName: "plus").frame(minWidth: 44, minHeight: 44)
                 }
-                .foregroundStyle(Color("accent"))
+                .foregroundStyle(Palette.accent)
                 .accessibilityLabel(Copy.Tags.addLabel)
                 .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             if addFailed {
-                Text(Copy.Tags.addFailed).font(.footnote).foregroundStyle(Color("inkSecondary"))
+                Text(Copy.Tags.addFailed).font(.footnote).foregroundStyle(Palette.ink2)
             }
             Button(Copy.Tags.manageLink) { showManage = true }
                 .font(.footnote)
-                .foregroundStyle(Color("accent"))
+                .foregroundStyle(Palette.accent)
                 .frame(minHeight: 44)
         }
         .sheet(isPresented: $showManage) {
@@ -84,7 +84,7 @@ struct TagEditor: View {
                         ToolbarItem(placement: .cancellationAction) { Button(Copy.Tags.done) { showManage = false } }
                     }
             }
-            .tint(Color("accent"))
+            .tint(Palette.accent)
         }
     }
 

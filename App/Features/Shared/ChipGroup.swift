@@ -46,11 +46,11 @@ private struct Chip: View {
                 if isSelected { Image(systemName: "checkmark").font(.caption.weight(.semibold)) }
                 Text(label).font(.subheadline)
             }
-            .foregroundStyle(Color("ink"))
+            .foregroundStyle(Palette.ink)
             .padding(.vertical, 6)
             .padding(.horizontal, 14)
-            .background(Capsule().fill(isSelected ? Color("accent").opacity(0.18) : Color("card")))
-            .overlay(Capsule().strokeBorder(isSelected ? Color("accent") : Color("hairline"), lineWidth: 1.5))
+            .background(Capsule().fill(isSelected ? Palette.accent.opacity(0.18) : Palette.card))
+            .overlay(Capsule().strokeBorder(isSelected ? Palette.accent : Palette.border, lineWidth: 1.5))
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }

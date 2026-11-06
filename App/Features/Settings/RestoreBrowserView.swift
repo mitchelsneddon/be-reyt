@@ -21,16 +21,16 @@ struct RestoreBrowserView: View {
             case .loading:
                 HStack(spacing: 12) {
                     ProgressView()
-                    Text(Copy.RestoreBrowser.loading).foregroundStyle(Color("inkSecondary"))
+                    Text(Copy.RestoreBrowser.loading).foregroundStyle(Palette.ink2)
                 }
                 .frame(minHeight: 44)
             case .failed:
-                Text(Copy.RestoreBrowser.loadFailed).foregroundStyle(Color("ink"))
+                Text(Copy.RestoreBrowser.loadFailed).foregroundStyle(Palette.ink)
                 Button(Copy.RestoreBrowser.retry) { Task { await reload() } }.frame(minHeight: 44)
             case .loaded(let rows):
                 Section {
                     if rows.isEmpty {
-                        Text(Copy.RestoreBrowser.empty).foregroundStyle(Color("inkSecondary"))
+                        Text(Copy.RestoreBrowser.empty).foregroundStyle(Palette.ink2)
                     }
                     ForEach(rows) { row in
                         Button {
@@ -47,8 +47,8 @@ struct RestoreBrowserView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color("paper"))
-        .tint(Color("accent"))
+        .background(Palette.paper)
+        .tint(Palette.accent)
         .navigationTitle(Copy.RestoreBrowser.title)
         .navigationBarTitleDisplayMode(.inline)
         .task { await reload() }
@@ -57,16 +57,16 @@ struct RestoreBrowserView: View {
     private func rowLabel(_ row: SnapshotListing) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
-                Text(Copy.RestoreBrowser.day(row.day)).foregroundStyle(Color("ink"))
+                Text(Copy.RestoreBrowser.day(row.day)).foregroundStyle(Palette.ink)
                 Spacer()
                 if let size = Copy.RestoreBrowser.size(row.bytes) {
-                    Text(size).font(.subheadline).foregroundStyle(Color("inkSecondary"))
+                    Text(size).font(.subheadline).foregroundStyle(Palette.ink2)
                 }
             }
             if row.isPreRestore {
-                Text(Copy.RestoreBrowser.savedBeforeRestore).font(.footnote).foregroundStyle(Color("ink"))
+                Text(Copy.RestoreBrowser.savedBeforeRestore).font(.footnote).foregroundStyle(Palette.ink)
             }
-            Text(location(row)).font(.footnote).foregroundStyle(Color("inkSecondary"))
+            Text(location(row)).font(.footnote).foregroundStyle(Palette.ink2)
         }
     }
 

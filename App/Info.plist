@@ -24,6 +24,18 @@
 	<string>be reyt uses face id to keep your journal private. nothing leaves your phone.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>be reyt reads your workouts from apple health so they can sit quietly beside your day. nothing leaves your phone.</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>PlayfairDisplay-Medium.ttf</string>
+		<string>PlayfairDisplay-Italic.ttf</string>
+		<string>PlayfairDisplay-MediumItalic.ttf</string>
+		<string>Lora-Regular.ttf</string>
+		<string>Lora-Medium.ttf</string>
+		<string>Lora-Italic.ttf</string>
+		<string>DMSans-Regular.ttf</string>
+		<string>DMSans-Medium.ttf</string>
+		<string>DMSans-SemiBold.ttf</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

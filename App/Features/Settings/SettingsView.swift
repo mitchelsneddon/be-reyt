@@ -66,7 +66,7 @@ struct SettingsView: View {
             } footer: {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(Copy.Settings.backupFooter)
-                    if let note = statusNote { Text(note).foregroundStyle(Color("ink")) }
+                    if let note = statusNote { Text(note).foregroundStyle(Palette.ink) }
                 }
             }
             Section {
@@ -84,8 +84,8 @@ struct SettingsView: View {
             DeleteAllSection().id("bottom")
         }
         .scrollContentBackground(.hidden)
-        .background(Color("paper"))
-        .tint(Color("accent"))
+        .background(Palette.paper)
+        .tint(Palette.accent)
         .onAppear {
             backup.refresh()
             restore.refreshUndoAvailability()
@@ -142,7 +142,7 @@ struct SettingsView: View {
                 Text(Copy.Settings.passphraseRow)
                 Spacer()
                 Text(backup.hasPassphrase ? Copy.Settings.passphraseSet : Copy.Settings.passphraseNotSet)
-                    .foregroundStyle(Color("inkSecondary"))
+                    .foregroundStyle(Palette.ink2)
             }
         }
         .frame(minHeight: 44)
@@ -163,7 +163,7 @@ struct SettingsView: View {
                 if backup.exportState == .working {
                     ProgressView()
                 } else if !backup.hasPassphrase {
-                    Text(Copy.Settings.exportRowNeedsPassphrase).font(.footnote).foregroundStyle(Color("inkSecondary"))
+                    Text(Copy.Settings.exportRowNeedsPassphrase).font(.footnote).foregroundStyle(Palette.ink2)
                 }
             }
         }
@@ -205,7 +205,7 @@ struct AppLockSection: View {
         } footer: {
             VStack(alignment: .leading, spacing: 8) {
                 Text(Copy.Hub.lockFooter)
-                if !hasPasscode { Text(Copy.Hub.lockNoPasscode).foregroundStyle(Color("ink")) }
+                if !hasPasscode { Text(Copy.Hub.lockNoPasscode).foregroundStyle(Palette.ink) }
             }
         }
         .onChange(of: scenePhase) { _, phase in

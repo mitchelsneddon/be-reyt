@@ -38,7 +38,7 @@ struct ReminderSection: View {
                 .accessibilityHint(Copy.Reminder.allowHint)
                 .frame(minHeight: 44, alignment: .leading)
         case .denied:
-            Text(Copy.Reminder.denied).foregroundStyle(Color("inkSecondary"))
+            Text(Copy.Reminder.denied).foregroundStyle(Palette.ink2)
             Button(Copy.Reminder.openSettings) { reminders.openSystemSettings() }
                 .accessibilityHint(Copy.Reminder.openSettingsHint)
                 .frame(minHeight: 44, alignment: .leading)

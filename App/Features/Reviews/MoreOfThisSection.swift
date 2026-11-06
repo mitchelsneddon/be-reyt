@@ -17,11 +17,11 @@ struct MoreOfThisSection: View {
                 !model.moreOfThisText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             {
                 Text(Copy.Reviews.moreOfThisTarget(DateRangeFormat.string(from: start, to: end, today: today)))
-                    .font(.footnote).foregroundStyle(Color("inkSecondary"))
+                    .font(.footnote).foregroundStyle(Palette.ink2)
             }
             if model.saveState == .failed {
                 Button(Copy.Save.failed) { model.retry() }
-                    .font(.footnote).foregroundStyle(Color("accent")).frame(minHeight: 44)
+                    .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
                     .accessibilityHint(Copy.Save.retryHint)
             }
         }

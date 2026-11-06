@@ -11,21 +11,21 @@ struct LockScreenView: View {
         VStack(spacing: 12) {
             Text(Copy.Lock.appName)
                 .font(.system(.largeTitle, design: .serif))
-                .foregroundStyle(Color("ink"))
+                .foregroundStyle(Palette.ink)
                 .accessibilityAddTraits(.isHeader)
             Text(Copy.Lock.tagline)
                 .font(.body)
-                .foregroundStyle(Color("inkSecondary"))
+                .foregroundStyle(Palette.ink2)
                 .multilineTextAlignment(.center)
             Button {
                 Task { await lock.authenticate() }
             } label: {
                 Text(Copy.Lock.unlock)
                     .font(.headline)
-                    .foregroundStyle(Color("paper"))
+                    .foregroundStyle(Palette.paper)
                     .padding(.horizontal, 28)
                     .frame(minHeight: 44)
-                    .background(Capsule().fill(Color("accent")))
+                    .background(Capsule().fill(Palette.accent))
             }
             .buttonStyle(.plain)
             .padding(.top, 20)
@@ -34,7 +34,7 @@ struct LockScreenView: View {
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("paper"))
+        .background(Palette.paper)
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active { lock.authenticateOnceIfNeeded() }
         }
@@ -47,9 +47,9 @@ struct PrivacyCover: View {
     var body: some View {
         Text(Copy.Lock.appName)
             .font(.system(.largeTitle, design: .serif))
-            .foregroundStyle(Color("ink"))
+            .foregroundStyle(Palette.ink)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color("paper"))
+            .background(Palette.paper)
             .accessibilityHidden(true)
     }
 }
@@ -59,10 +59,10 @@ struct NoPasscodeBanner: View {
     var body: some View {
         Text(Copy.Lock.noPasscode)
             .font(.footnote)
-            .foregroundStyle(Color("ink"))
+            .foregroundStyle(Palette.ink)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .background(Color("card"))
+            .background(Palette.card)
     }
 }

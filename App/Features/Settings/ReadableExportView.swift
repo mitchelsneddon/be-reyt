@@ -44,17 +44,17 @@ struct ReadableExportView: View {
                 exportRow(Copy.ReadableExport.pdfRow, .pdf)
             } footer: {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(Copy.ReadableExport.notEncrypted).foregroundStyle(Color("ink"))
+                    Text(Copy.ReadableExport.notEncrypted).foregroundStyle(Palette.ink)
                     Text(Copy.ReadableExport.footer)
-                    if let message = statusNote { Text(message).foregroundStyle(Color("ink")) }
+                    if let message = statusNote { Text(message).foregroundStyle(Palette.ink) }
                 }
             }
         }
         .navigationTitle(Copy.ReadableExport.title)
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Color("paper"))
-        .tint(Color("accent"))
+        .background(Palette.paper)
+        .tint(Palette.accent)
         .task { await model.load() }
         .fileExporter(
             isPresented: $model.showExporter, item: model.file,

@@ -30,14 +30,14 @@ struct TagsView: View {
         Group {
             if tags.isEmpty {
                 Text(Copy.Tags.manageEmpty)
-                    .foregroundStyle(Color("inkSecondary"))
+                    .foregroundStyle(Palette.ink2)
                     .padding(20)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else {
                 list
             }
         }
-        .background(Color("paper"))
+        .background(Palette.paper)
         .navigationTitle(Copy.Tags.manageTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { if !tags.isEmpty { EditButton() } }
@@ -69,11 +69,11 @@ struct TagsView: View {
                     renaming = tag
                 } label: {
                     HStack {
-                        Text(tag.name).foregroundStyle(Color("ink"))
+                        Text(tag.name).foregroundStyle(Palette.ink)
                         Spacer()
                         Text(Copy.Tags.usedOn(counts[tag.id] ?? 0))
                             .font(.footnote)
-                            .foregroundStyle(Color("inkSecondary"))
+                            .foregroundStyle(Palette.ink2)
                     }
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
@@ -90,7 +90,7 @@ struct TagsView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .tint(Color("accent"))
+        .tint(Palette.accent)
     }
 }
 
@@ -129,7 +129,7 @@ private struct TagRenameSheet: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Color("paper"))
+            .background(Palette.paper)
             .navigationTitle(Copy.Tags.renameTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -141,7 +141,7 @@ private struct TagRenameSheet: View {
             .onChange(of: name) { message = nil }
             .onAppear { focused = true }
         }
-        .tint(Color("accent"))
+        .tint(Palette.accent)
         .presentationDetents([.medium])
     }
 

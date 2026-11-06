@@ -16,7 +16,7 @@ struct BackupStatusView: View {
                 ForEach(lines, id: \.self) { line in
                     Text(line)
                         .font(.subheadline)
-                        .foregroundStyle(Color("ink"))
+                        .foregroundStyle(Palette.ink)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityLabel(line)
                 }
@@ -39,7 +39,7 @@ struct BackupStatusView: View {
                     Text(Copy.AutoBackup.needsPassphrase)
                 }
                 if manager.hasDestination, manager.isUbiquitous == false {
-                    Text(Copy.AutoBackup.notInICloud).foregroundStyle(Color("ink"))
+                    Text(Copy.AutoBackup.notInICloud).foregroundStyle(Palette.ink)
                 }
                 Text(Copy.AutoBackup.footer)
             }
@@ -64,7 +64,7 @@ struct BackupStatusView: View {
                 Text(manager.hasDestination ? Copy.AutoBackup.folderRow : Copy.AutoBackup.chooseFolder)
                 Spacer()
                 Text(manager.hasDestination ? (manager.folderName ?? "") : Copy.AutoBackup.off)
-                    .foregroundStyle(Color("inkSecondary"))
+                    .foregroundStyle(Palette.ink2)
                     .lineLimit(1)
             }
         }

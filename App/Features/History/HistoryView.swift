@@ -62,7 +62,7 @@ struct HistoryView: View {
                 if searchPresented || !model.tagIDs.isEmpty, !tags.isEmpty { tagFilter }
                 content
             }
-            .background(Color("paper"))
+            .background(Palette.paper)
             .navigationTitle(Copy.Tab.history)
             .navigationBarTitleDisplayMode(.inline)
             .searchable(
@@ -114,10 +114,10 @@ struct HistoryView: View {
     @ViewBuilder private var content: some View {
         if model.loadFailed {
             Button(Copy.History.loadFailed) { Task { await model.refresh() } }
-                .font(.footnote).foregroundStyle(Color("accent")).frame(minHeight: 44)
+                .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if !model.isLoaded {
-            Color("paper")
+            Palette.paper
         } else if model.isFiltering {
             if model.results.isEmpty {
                 message(Copy.History.noMatches)
@@ -143,7 +143,7 @@ struct HistoryView: View {
     private func message(_ text: String) -> some View {
         Text(text)
             .font(.body)
-            .foregroundStyle(Color("inkSecondary"))
+            .foregroundStyle(Palette.ink2)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity)

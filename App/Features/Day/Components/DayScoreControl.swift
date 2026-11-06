@@ -17,10 +17,10 @@ struct DayScoreControl: View {
                         onChange(value == score ? nil : value)
                     } label: {
                         Circle()
-                            .fill(value == score ? Color("accent") : Color.clear)
+                            .fill(value == score ? Palette.accent : Color.clear)
                             .overlay(
                                 Circle().strokeBorder(
-                                    value == score ? Color("accent") : Color("inkSecondary"), lineWidth: 1.5)
+                                    value == score ? Palette.accent : Palette.ink2, lineWidth: 1.5)
                             )
                             .frame(width: min(dot, 44), height: min(dot, 44))  // five must fit a 375 pt width at AX5
                             .frame(minWidth: 44, minHeight: 44)
@@ -32,7 +32,7 @@ struct DayScoreControl: View {
             }
             Text(score.map(Copy.Day.scoreName) ?? Copy.Day.scorePrompt)
                 .font(.footnote)
-                .foregroundStyle(Color("inkSecondary"))
+                .foregroundStyle(Palette.ink2)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Copy.Day.scoreLabel)

@@ -25,7 +25,7 @@ struct PhotoStrip: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(Copy.Photos.title).font(.footnote).foregroundStyle(Color("inkSecondary"))
+            Text(Copy.Photos.title).font(.footnote).foregroundStyle(Palette.ink2)
                 .accessibilityAddTraits(.isHeader)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
@@ -47,13 +47,13 @@ struct PhotoStrip: View {
                 HStack(spacing: 8) {
                     ProgressView()
                     Text(Copy.Photos.importing(progress.current, of: progress.total))
-                        .font(.footnote).foregroundStyle(Color("inkSecondary"))
+                        .font(.footnote).foregroundStyle(Palette.ink2)
                 }
                 .accessibilityElement(children: .combine)
             }
             if let message = model.message {
                 Button(action: model.dismissMessage) {
-                    Text(message).font(.footnote).foregroundStyle(Color("accent"))
+                    Text(message).font(.footnote).foregroundStyle(Palette.accent)
                         .multilineTextAlignment(.leading).frame(minHeight: 44, alignment: .leading)
                 }
             }
@@ -67,10 +67,10 @@ struct PhotoStrip: View {
         PhotosPicker(selection: $picked, matching: .images, photoLibrary: .shared()) {
             Image(systemName: "plus")
                 .font(.title3)
-                .foregroundStyle(Color("accent"))
+                .foregroundStyle(Palette.accent)
                 .frame(width: photoSide, height: photoSide)
-                .background(RoundedRectangle(cornerRadius: 14).fill(Color("card")))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color("hairline"), lineWidth: 1))
+                .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
         }
         .disabled(model.isImporting)
         .accessibilityLabel(Copy.Photos.add)
@@ -91,14 +91,14 @@ private struct PhotoThumbnail: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 14).fill(Color("card"))
+            RoundedRectangle(cornerRadius: 14).fill(Palette.card)
             if let image {
                 Image(uiImage: image).resizable().scaledToFill()
             }
         }
         .frame(width: side, height: side)
         .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color("hairline"), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
         .task(id: photo.id) {
             if let data = await model.thumbnailData(for: photo) { image = UIImage(data: data) }
         }

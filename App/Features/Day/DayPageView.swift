@@ -47,13 +47,13 @@ struct DayPageView: View {
             VStack(alignment: .leading, spacing: 24) {
                 Text(Copy.Day.heading(for: model.dateKey))
                     .font(.system(.largeTitle, design: .serif))
-                    .foregroundStyle(Color("ink"))
+                    .foregroundStyle(Palette.ink)
                     .accessibilityAddTraits(.isHeader)
 
                 if model.loadFailed {
                     Button(Copy.Day.loadFailed) { Task { await model.load() } }
                         .font(.footnote)
-                        .foregroundStyle(Color("accent"))
+                        .foregroundStyle(Palette.accent)
                         .frame(minHeight: 44)
                 } else {
                     if let plan = model.coveringPlan {
@@ -74,7 +74,7 @@ struct DayPageView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollDismissesKeyboard(.interactively)
-        .background(Color("paper"))
+        .background(Palette.paper)
         .environment(model)
         .task { await model.load() }
         .task { await health.syncIfDue() }
@@ -119,7 +119,7 @@ struct DayPageView: View {
 
     private var moods: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(Copy.Day.moodsTitle).font(.footnote).foregroundStyle(Color("inkSecondary"))
+            Text(Copy.Day.moodsTitle).font(.footnote).foregroundStyle(Palette.ink2)
             ChipGroup(
                 items: MoodCatalog.all.map { ChipItem(id: $0.id, label: $0.label) },
                 selection: Binding(get: { Set(model.moodIDs) }, set: { _ in }),
@@ -145,7 +145,7 @@ struct DayPageView: View {
                     if model.canRerollPrompt {
                         Button(Copy.Reflection.anotherPrompt) { Task { await model.rerollPrompt() } }
                             .font(.footnote)
-                            .foregroundStyle(Color("accent"))
+                            .foregroundStyle(Palette.accent)
                             .frame(minHeight: 44)
                             .accessibilityHint(Copy.Reflection.anotherPromptHint)
                     }
@@ -160,14 +160,14 @@ struct DayPageView: View {
             axis: .vertical
         )
         .font(.body)
-        .foregroundStyle(Color("ink"))
+        .foregroundStyle(Palette.ink)
         .lineLimit(8...)
         .focused($editorFocused)
         .disabled(!model.isLoaded)
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color("card")))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color("hairline"), lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
         .accessibilityLabel(Copy.Day.editorLabel)
     }
 }
@@ -186,14 +186,14 @@ private struct SavedIndicator: View {
             label(Copy.Save.saved)
         case .failed:
             Button(action: retry) {
-                Text(Copy.Save.failed).font(.footnote).foregroundStyle(Color("accent")).frame(minHeight: 44)
+                Text(Copy.Save.failed).font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
             }
             .accessibilityHint(Copy.Save.retryHint)
         }
     }
 
     private func label(_ text: String) -> some View {
-        Text(text).font(.footnote).foregroundStyle(Color("inkSecondary"))
+        Text(text).font(.footnote).foregroundStyle(Palette.ink2)
             .accessibilityLabel("\(Copy.Save.indicatorLabel), \(text)")
     }
 }

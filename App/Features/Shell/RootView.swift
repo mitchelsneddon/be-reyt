@@ -38,7 +38,7 @@ struct RootView: View {
                 SettingsView(backup: backup, restore: restore, tags: TagsModel(store: store, events: events))
             }
         }
-        .tint(Color("accent"))
+        .tint(Palette.accent)
         .modifier(PassphraseQuestionAlerts(restore: restore))
         .safeAreaInset(edge: .top, spacing: 0) {
             if let note = restore.completionNote {
@@ -55,12 +55,12 @@ private struct RestoreNoteBanner: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(text).font(.footnote).foregroundStyle(Color("ink"))
+            Text(text).font(.footnote).foregroundStyle(Palette.ink)
             Spacer()
             Button(Copy.Restore.dismiss, action: dismiss).font(.footnote).frame(minWidth: 44, minHeight: 44)
         }
         .padding(.horizontal, 20)
-        .background(Color("paper"))
+        .background(Palette.paper)
         .accessibilityElement(children: .contain)
     }
 }

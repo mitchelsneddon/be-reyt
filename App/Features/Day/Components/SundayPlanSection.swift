@@ -12,7 +12,7 @@ struct SundayPlanSection: View {
             onFocusChange: { model.setFocus(.intention, $0) },
             action: {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(Copy.Plan.categoriesLabel).font(.footnote).foregroundStyle(Color("inkSecondary"))
+                    Text(Copy.Plan.categoriesLabel).font(.footnote).foregroundStyle(Palette.ink2)
                     ChipGroup(
                         items: Copy.Plan.categories.map { ChipItem(id: $0.id, label: $0.label) },
                         selection: Binding(
