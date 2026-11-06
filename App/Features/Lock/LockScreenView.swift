@@ -25,10 +25,10 @@ struct LockScreenView: View {
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "faceid")
-                        .font(.system(size: 24, weight: .regular))
+                        .symbolSize(24)
                         .accessibilityHidden(true)
                     Text(Copy.Lock.unlock)
-                        .font(.system(size: 17, weight: .semibold))
+                        .brFont(.navTitle)
                 }
                 .foregroundStyle(Palette.onAccent)
                 .padding(.leading, 22)

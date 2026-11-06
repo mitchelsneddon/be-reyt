@@ -58,7 +58,7 @@ struct DaySummaryRow: View {
         let photos = summary.content.attachmentCount
         if photos > 0 {
             HStack(spacing: 4) {
-                Image(systemName: "photo")
+                Image(systemName: "photo").accessibilityHidden(true)
                 Text("\(photos)")
             }
             .brFont(.label)

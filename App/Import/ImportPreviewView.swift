@@ -206,7 +206,7 @@ private struct PreviewList: View {
                 Text(Copy.Import.photos(plan.photoCount)).brFont(.row).foregroundStyle(Palette.ink)
             }
             if let range = plan.dateRange {
-                Text(Copy.Import.range(first: dayLabel(range.lowerBound), last: dayLabel(range.upperBound)))
+                Text(Copy.Import.range(first: rangeLabel(range.lowerBound), last: rangeLabel(range.upperBound)))
                     .brFont(.rowWrapping).foregroundStyle(Palette.ink2)
             }
             if plan.fallbackDateCount > 0 {
@@ -277,8 +277,12 @@ private struct PreviewList: View {
         .accessibilityAddTraits(on ? .isSelected : [])
     }
 
+    /// "26 oct 2026".
+    private func rangeLabel(_ day: DateKey) -> String { Copy.Dates.format(day, month: .abbreviated, year: true) }
+
+    /// "mon 26 oct 2026".
     private func dayLabel(_ day: DateKey) -> String {
-        day.date(in: .current).formatted(.dateTime.day().month(.abbreviated).year()).lowercased()
+        Copy.Dates.format(day, weekday: .abbreviated, month: .abbreviated, year: true)
     }
 
     private func fileLabel(_ path: String) -> String { String(path.split(separator: "/").last ?? "") }

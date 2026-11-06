@@ -3,6 +3,32 @@ import ReytKit
 
 /// All user-facing copy (A5). Lowercase, understated, no streaks or celebration.
 enum Copy {
+    /// The one day-first, lowercase date formatter: "mon 26 oct 2026", "5 november", "wed 4 nov". Month and weekday
+    /// names come from the calendar's locale, the order never does.
+    enum Dates {
+        enum Width { case abbreviated, wide }
+
+        static func format(
+            _ date: Date, weekday: Width? = nil, month: Width = .wide, year: Bool = false, calendar: Calendar = .current
+        ) -> String {
+            func part(_ style: Date.FormatStyle) -> String { date.formatted(style).lowercased() }
+            let base = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone)
+            var parts: [String] = []
+            if let weekday { parts.append(part(base.weekday(weekday == .wide ? .wide : .abbreviated))) }
+            parts.append(String(calendar.component(.day, from: date)))
+            parts.append(part(base.month(month == .wide ? .wide : .abbreviated)))
+            if year { parts.append(String(calendar.component(.year, from: date))) }
+            return parts.joined(separator: " ")
+        }
+
+        static func format(
+            _ key: DateKey, weekday: Width? = nil, month: Width = .wide, year: Bool = false,
+            calendar: Calendar = .current
+        ) -> String {
+            format(key.date(in: calendar), weekday: weekday, month: month, year: year, calendar: calendar)
+        }
+    }
+
     enum Tab {
         static let today = "today"
         static let history = "history"
@@ -23,8 +49,6 @@ enum Copy {
         static let hasEntry = "has an entry"
         static let clearSearch = "clear search"
         static let scoreKey = "day score key"
-        static let photosUnit = "photos"
-        static let moodsUnit = "moods"
 
         /// "november 2026", lowercase.
         static func monthHeader(year: Int, month: Int, calendar: Calendar = .current) -> String {
@@ -35,9 +59,7 @@ enum Copy {
 
         /// "wed 4 nov", lowercase.
         static func rowDate(_ key: DateKey, calendar: Calendar = .current) -> String {
-            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone)
-                .weekday(.abbreviated).day().month(.abbreviated)
-            return key.date(in: calendar).formatted(style).lowercased()
+            Dates.format(key, weekday: .abbreviated, month: .abbreviated, calendar: calendar)
         }
 
         /// "thu", lowercase.
@@ -110,8 +132,7 @@ enum Copy {
         static func weekOf(_ range: String) -> String { "week of \(range)" }
         /// "week of 1 nov", from the week's Sunday.
         static func weekOfStart(_ key: DateKey, calendar: Calendar = .current) -> String {
-            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).month(.abbreviated)
-            return weekOf("\(key.day) \(key.date(in: calendar).formatted(style).lowercased())")
+            weekOf(Dates.format(key, month: .abbreviated, calendar: calendar))
         }
         static func coverage(_ recorded: Int) -> String { "\(recorded) of 7 days recorded" }
         static func rowLabel(week: String, coverage: String, isLatest: Bool) -> String {
@@ -120,13 +141,7 @@ enum Copy {
 
         /// "your first review opens on sunday 8 nov."
         static func emptyList(opensOn key: DateKey, calendar: Calendar = .current) -> String {
-            let date = key.date(in: calendar)
-            let weekday = date.formatted(
-                Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).weekday(.wide))
-            let month = date.formatted(
-                Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).month(.abbreviated))
-            return "your first review opens on \(weekday) \(key.day) \(month)."
-                .lowercased()
+            "your first review opens on \(Dates.format(key, weekday: .wide, month: .abbreviated, calendar: calendar))."
         }
 
         static let emptyWeek = "nothing was written this week."
@@ -290,13 +305,9 @@ enum Copy {
         static func counter(_ index: Int, of count: Int) -> String { "\(index) of \(count)" }
         /// "thursday 5 november", lowercase, under the photo.
         static func viewerDate(_ key: DateKey, calendar: Calendar = .current) -> String {
-            let weekday = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).weekday(.wide)
-            let month = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).month(.wide)
-            let date = key.date(in: calendar)
-            return "\(date.formatted(weekday)) \(key.day) \(date.formatted(month))".lowercased()
+            Dates.format(key, weekday: .wide, calendar: calendar)
         }
         static let thumbnailHint = "opens the photo full screen"
-        static let viewerLabel = "photo"
         static let close = "close"
         static let remove = "remove photo"
         static let removeConfirm = "remove this photo from the day?"
@@ -488,7 +499,6 @@ enum Copy {
         static let aboutSection = "about"
         static let version = "version"
         static let signedUntil = "signed until"
-        static let signedUntilNone = "not limited"
         static func versionValue(version: String, build: String) -> String { "\(version) (\(build))" }
     }
 
@@ -551,9 +561,7 @@ enum Copy {
         static func tags(_ n: Int) -> String { n == 1 ? "1 tag" : "\(n) tags" }
         static func plans(_ n: Int) -> String { n == 1 ? "1 sunday plan" : "\(n) sunday plans" }
         static func range(first: String, last: String) -> String { "from \(first) to \(last)" }
-        static func fileDate(_ date: Date) -> String {
-            date.formatted(.dateTime.day().month(.wide).year()).lowercased()
-        }
+        static func fileDate(_ date: Date) -> String { Dates.format(date, year: true) }
         static let replace = "replace everything on this phone with this backup"
         static let confirmTitle = "replace everything on this phone with this backup?"
         static let confirmAction = "replace"
@@ -739,7 +747,6 @@ enum Copy {
         static let previewName = "yoga"
         static let previewDuration = "25 min"
         static let previewTime = "07:15"
-        static let previewLabel = "an example of a workout card"
 
         static let chooseFolder = "choose a backup folder"
         static let folderRow = "backup folder"
@@ -803,7 +810,6 @@ extension Copy {
         static let title = "automatic backups"
         static let off = "not set up"
         static let chooseFolder = "choose a backup folder"
-        static let chooseAnother = "choose a different folder"
         static let chooseHint = "pick a folder, ideally in icloud drive. be reyt keeps its backups inside it."
         static let backUpNow = "back up now"
         static let backingUp = "backing up…"
@@ -830,10 +836,7 @@ extension Copy {
             {
                 return "yesterday \(time)"
             }
-            let day = when.formatted(
-                Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).weekday(.abbreviated).day().month(
-                    .abbreviated))
-            return "\(day.lowercased()) \(time)"
+            return "\(Dates.format(when, weekday: .abbreviated, month: .abbreviated, calendar: calendar)) \(time)"
         }
 
         static func error(_ code: BackupErrorCode) -> String {

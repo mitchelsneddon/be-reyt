@@ -282,9 +282,7 @@ struct AboutSection: View {
             if let expiry = provisioning.expirationDate {
                 SettingsRowLabel(
                     title: Copy.Hub.signedUntil, icon: "calendar",
-                    value: expiry.formatted(
-                        .dateTime.day().month(.abbreviated).year().locale(Locale(identifier: "en_GB"))
-                    ).lowercased())
+                    value: Copy.Dates.format(expiry, month: .abbreviated, year: true))
             }
         } header: {
             SettingsHeader(Copy.Hub.aboutSection)

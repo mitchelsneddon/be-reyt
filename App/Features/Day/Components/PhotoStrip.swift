@@ -243,7 +243,7 @@ private struct PhotoViewer: View {
     private func circleButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 20, weight: .medium))
+                .symbolSize(20, weight: .medium, maxPoints: 24)
                 .foregroundStyle(Palette.PhotoViewer.text)
                 .frame(width: 44, height: 44)
                 .background(Palette.PhotoViewer.circleButton, in: Circle())

@@ -284,7 +284,7 @@ private struct TickDisc: View {
 
     var body: some View {
         Image(systemName: "checkmark")
-            .font(.system(size: 11, weight: .heavy))
+            .symbolSize(11, weight: .heavy, relativeTo: .footnote, maxPoints: 18)
             .foregroundStyle(Palette.paper)
             .frame(width: min(side, 36), height: min(side, 36))
             .background(Palette.accent, in: Circle())
@@ -306,7 +306,7 @@ private struct ActivitiesCard: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 14) {
                 Image(systemName: "figure.walk")
-                    .font(.system(size: 22, weight: .regular))
+                    .symbolSize(22, maxPoints: 32)
                     .foregroundStyle(Palette.accent)
                     .frame(width: min(tile, 64), height: min(tile, 64))
                     .background(Palette.accentSoft, in: RoundedRectangle(cornerRadius: 15, style: .continuous))

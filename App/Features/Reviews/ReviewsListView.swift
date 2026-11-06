@@ -81,7 +81,7 @@ struct ReviewsListView: View {
             } label: {
                 VStack(spacing: 14) {
                     Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 26, weight: .regular))
+                        .symbolSize(26, maxPoints: 40)
                         .foregroundStyle(Palette.accent)
                         .frame(width: 56, height: 56)
                         .background(Palette.accentSoft, in: Circle())
@@ -104,7 +104,7 @@ struct ReviewsListView: View {
         } else if model.rows.isEmpty {
             VStack(spacing: 22) {
                 Image(systemName: "star")
-                    .font(.system(size: 34, weight: .light))
+                    .symbolSize(34, weight: .light, maxPoints: 48)
                     .foregroundStyle(Palette.accent)
                     .frame(width: 76, height: 76)
                     .background(Palette.accentSoft, in: Circle())
@@ -182,7 +182,7 @@ private struct WeekDots: View {
 private struct Chevron: View {
     var body: some View {
         Image(systemName: "chevron.right")
-            .font(.system(size: 13, weight: .bold))
+            .symbolSize(13, weight: .bold, relativeTo: .footnote)
             .accessibilityHidden(true)
     }
 }

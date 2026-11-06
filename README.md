@@ -46,6 +46,12 @@ scripts/privacy-check.sh
 ## Dev notes
 
 - Debug builds accept `-skipLock`, which bypasses the app lock (the simulator has no Face ID enrolled by default). Release builds ignore it.
+- Other debug-only launch args (simulator screenshots; Release builds ignore them):
+  - `-designGallery` shows the design gallery; `-showOnboarding` / `-skipOnboarding` force or skip onboarding, `-onboardingStep <n>` jumps to a step.
+  - `-reflectionState <state>` sets the review reflection state; `-forceSaveFailure` fails the next save.
+  - `-forceWaiting` / `-forceOpenFailed` / `-showPrivacyCover` show the lock screen's other states.
+  - `-openReviews`, `-openTags`, `-openReadableExport`, `-openDeleteAll`, `-openRestoreBrowser`, `-openPassphrase`, `-openPhotoViewer` open that screen directly.
+  - `-showRestoreNote` / `-showDeleteAllNote` show the result banners.
 
 ## Device checklist
 

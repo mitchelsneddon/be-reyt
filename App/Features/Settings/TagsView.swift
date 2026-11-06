@@ -110,7 +110,7 @@ struct TagsView: View {
                             Text(Copy.Tags.usedOn(counts[tag.id] ?? 0))
                                 .brFont(.rowWrapping).foregroundStyle(Palette.ink2)
                             Image(systemName: "chevron.right")
-                                .font(.footnote.weight(.semibold))
+                                .symbolSize(13, weight: .semibold, relativeTo: .footnote)
                                 .foregroundStyle(Palette.ink3)
                                 .accessibilityHidden(true)
                         }

@@ -100,7 +100,7 @@ struct HistoryView: View {
     private var searchField: some View {
         @Bindable var model = model
         return HStack(spacing: 10) {
-            HistorySymbol("magnifyingglass", size: 18)
+            Image(systemName: "magnifyingglass").symbolSize(18, maxPoints: 40).accessibilityHidden(true)
                 .foregroundStyle(Palette.ink2)
             TextField(
                 "", text: $model.searchText, prompt: Text(Copy.History.searchPrompt).foregroundStyle(Palette.ink2)
@@ -153,7 +153,7 @@ struct HistoryView: View {
                 Task { await model.refresh() }
             } label: {
                 VStack(spacing: 14) {
-                    HistorySymbol("arrow.clockwise", size: 24)
+                    Image(systemName: "arrow.clockwise").symbolSize(24, maxPoints: 40).accessibilityHidden(true)
                         .foregroundStyle(Palette.accent)
                         .frame(width: 56, height: 56)
                         .background(Palette.accentSoft, in: Circle())
@@ -197,7 +197,7 @@ struct HistoryView: View {
 
     private func message(_ text: String, symbol: String) -> some View {
         VStack(spacing: 22) {
-            HistorySymbol(symbol, size: 34)
+            Image(systemName: symbol).symbolSize(34, maxPoints: 40).accessibilityHidden(true)
                 .foregroundStyle(Palette.accent)
                 .frame(width: 76, height: 76)
                 .background(Palette.accentSoft, in: Circle())
@@ -244,22 +244,5 @@ private struct ScoreLegend: View {
         .padding(.horizontal, 4)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Copy.History.scoreKey)
-    }
-}
-
-/// An SF Symbol that scales with Dynamic Type (capped so the discs and the field stay tidy). Hidden from VoiceOver.
-private struct HistorySymbol: View {
-    let name: String
-    @ScaledMetric private var side: CGFloat
-
-    init(_ name: String, size: CGFloat) {
-        self.name = name
-        _side = ScaledMetric(wrappedValue: size, relativeTo: .body)
-    }
-
-    var body: some View {
-        Image(systemName: name).resizable().scaledToFit()
-            .frame(width: min(side, 40), height: min(side, 40))
-            .accessibilityHidden(true)
     }
 }
