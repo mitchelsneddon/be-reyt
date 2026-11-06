@@ -105,6 +105,46 @@ enum Copy {
 
         static let emptyWeek = "nothing was written this week."
 
+        static let feltTitle = "how the week felt"
+        static let smileTitle = "what made you smile"
+        static let followUpTitle = "how did that go?"
+        static let activitiesTitle = "activities"
+        static let feelingsTitle = "feelings this week"
+        static let nextWeekTitle = "next week"
+        static func youPlanned(_ text: String) -> String { "you planned: “\(text)”" }
+
+        /// "mostly good days. happy came up four times. a little brighter than last week."
+        static func weekFeel(_ feel: WeekFeel, moodLabel: (String) -> String) -> String {
+            var parts: [String] = []
+            if let band = feel.band {
+                switch band {
+                case .difficult: parts.append("mostly difficult days.")
+                case .mixed: parts.append("a mixed week.")
+                case .okay: parts.append("mostly okay days.")
+                case .good: parts.append("mostly good days.")
+                case .great: parts.append("a really good week.")
+                }
+            }
+            if let top = feel.topMood {
+                let words = ["one", "two", "three", "four", "five", "six", "seven"]
+                let label = moodLabel(top.id)
+                if top.dayCount == 1 {
+                    parts.append("\(label) came up once.")
+                } else {
+                    let n = (2...7).contains(top.dayCount) ? words[top.dayCount - 1] : "\(top.dayCount)"
+                    parts.append("\(label) came up \(n) times.")
+                }
+            }
+            if let direction = feel.direction {
+                switch direction {
+                case .brighter: parts.append("a little brighter than last week.")
+                case .similar: parts.append("much like last week.")
+                case .harder: parts.append("a little harder than last week.")
+                }
+            }
+            return parts.joined(separator: " ")
+        }
+
         static let scoresTitle = "day scores"
         static func average(_ display: String, scoredDays: Int) -> String {
             "\(display) average across \(scoredDays) scored \(scoredDays == 1 ? "day" : "days")"

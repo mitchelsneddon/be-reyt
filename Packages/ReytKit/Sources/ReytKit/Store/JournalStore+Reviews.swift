@@ -55,6 +55,17 @@ extension JournalStore {
         return WeekInput(days: days, workouts: workouts)
     }
 
+    /// The non-blank "what made you smile" answers for the review week containing `weekStart`, trimmed, by day.
+    public func smileAnswers(weekStart: DateKey) throws -> [DaySmile] {
+        let start = WeekCalendar.reviewWeekStart(containing: weekStart)
+        return try (0..<7).compactMap { offset in
+            let key = start.adding(days: offset)
+            guard let raw = try fetchEntry(key)?.smileAnswer else { return nil }
+            let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            return text.isEmpty ? nil : DaySmile(dateKey: key, text: text)
+        }
+    }
+
     /// Saves the user's "a little more of next week" answer for a review. The target week (the Sunday to Saturday
     /// week containing `savedOn`) is stored on the first nonblank save and never moves afterwards. A blank value
     /// clears the text only. This is the user's own text, never model input, so no narrative is purged. A review
@@ -98,6 +109,11 @@ extension JournalStore {
             text: row.moreOfThisText ?? "", targetStart: row.moreOfThisTargetStartKey.flatMap { DateKey($0) },
             targetEnd: row.moreOfThisTargetEndKey.flatMap { DateKey($0) })
     }
+}
+
+public struct DaySmile: Sendable, Equatable {
+    public let dateKey: DateKey
+    public let text: String
 }
 
 public struct MoreOfThis: Sendable, Equatable {
