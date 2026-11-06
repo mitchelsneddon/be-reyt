@@ -33,6 +33,7 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSFaceIDUsageDescription: be reyt uses face id to keep your journal private. nothing leaves your phone.
         NSHealthShareUsageDescription: be reyt reads your workouts from apple health so they can sit quietly beside your day. nothing leaves your phone.
+        NSHealthUpdateUsageDescription: be reyt never writes to apple health. it only reads your workouts to show them beside your day.
         UIAppFonts:
           - PlayfairDisplay-Medium.ttf
           - PlayfairDisplay-Italic.ttf
