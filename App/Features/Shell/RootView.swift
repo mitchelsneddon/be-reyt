@@ -39,6 +39,7 @@ struct RootView: View {
             }
         }
         .tint(Color("accent"))
+        .modifier(PassphraseQuestionAlerts(restore: restore))
         .safeAreaInset(edge: .top, spacing: 0) {
             if let note = restore.completionNote {
                 RestoreNoteBanner(text: note, dismiss: restore.dismissCompletionNote)
@@ -61,5 +62,48 @@ private struct RestoreNoteBanner: View {
         .padding(.horizontal, 20)
         .background(Color("paper"))
         .accessibilityElement(children: .contain)
+    }
+}
+
+/// The one-time question after a restore: what to do about the backup passphrase on this phone.
+private struct PassphraseQuestionAlerts: ViewModifier {
+    let restore: RestoreCoordinator
+
+    func body(content: Content) -> some View {
+        content
+            .alert(
+                restore.passphraseQuestion == .keepOrSwitch
+                    ? Copy.PassphraseQuestion.switchTitle : Copy.PassphraseQuestion.useTypedTitle,
+                isPresented: Binding(
+                    get: { restore.passphraseQuestion != nil },
+                    set: {
+                        if !$0, restore.passphraseQuestion != nil { restore.answerPassphraseQuestion(adopt: false) }
+                    }
+                )
+            ) {
+                if restore.passphraseQuestion == .keepOrSwitch {
+                    Button(Copy.PassphraseQuestion.keep, role: .cancel) {
+                        restore.answerPassphraseQuestion(adopt: false)
+                    }
+                    Button(Copy.PassphraseQuestion.switchTo) { restore.answerPassphraseQuestion(adopt: true) }
+                } else {
+                    Button(Copy.PassphraseQuestion.useTypedNo, role: .cancel) {
+                        restore.answerPassphraseQuestion(adopt: false)
+                    }
+                    Button(Copy.PassphraseQuestion.useTypedYes) { restore.answerPassphraseQuestion(adopt: true) }
+                }
+            } message: {
+                Text(
+                    restore.passphraseQuestion == .keepOrSwitch
+                        ? Copy.PassphraseQuestion.switchMessage : Copy.PassphraseQuestion.useTypedMessage)
+            }
+            .alert(
+                Copy.PassphraseQuestion.saveFailed,
+                isPresented: Binding(
+                    get: { restore.passphraseSaveFailed },
+                    set: { if !$0 { restore.dismissPassphraseSaveFailure() } })
+            ) {
+                Button(Copy.Restore.dismiss, role: .cancel) {}
+            }
     }
 }

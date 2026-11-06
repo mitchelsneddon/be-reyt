@@ -32,6 +32,7 @@ struct BeReytApp: App {
         events.onContentChange = { days in Task { await reminders.contentChanged(days: days) } }
         events.onDirty = { autoBackup.markDirty() }
         backupModel.onPassphraseChanged = { autoBackup.passphraseChanged() }
+        restore.adoptPassphrase = { [backupModel] in try backupModel.savePassphrase($0) }
         _autoBackup = State(initialValue: autoBackup)
         _reminders = State(initialValue: reminders)
         _journalImporter = State(initialValue: AppleJournalImporter(host: host, events: events))

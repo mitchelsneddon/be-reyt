@@ -77,8 +77,7 @@ final class ReadableExportModel {
             case .pdf:
                 result = try await PDFExporter.export(
                     journal: journal, paths: paths, generation: generation, today: day
-                ) {
-                    fraction in
+                ) { [weak self] fraction in
                     Task { @MainActor [weak self] in
                         if case .working = self?.state { self?.state = .working(fraction) }
                     }

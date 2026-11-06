@@ -262,7 +262,7 @@ enum Copy {
     }
 
     enum Health {
-        static let section = "health"
+        static let section = "apple health"
         static let unavailable = "health isn't available on this device."
         static let notAsked = "be reyt hasn't asked to read your workouts yet."
         static let asked = "be reyt has asked to read your workouts."
@@ -372,7 +372,7 @@ enum Copy {
         static let aiLanguage = "not available in this language"
         static let aiFooter =
             "reflections are written by apple's on-device model, on this phone. your journal is never sent anywhere."
-        static let backupSection = "backup"
+        static let backupSection = "backup passphrase & files"
         static let passphraseRow = "backup passphrase"
         static let passphraseSet = "set"
         static let passphraseNotSet = "not set yet"
@@ -383,6 +383,45 @@ enum Copy {
         static let undoHint = "goes back to what was on this phone before the last restore"
         static let backupFooter =
             "backups are encrypted with your passphrase and stay in the place you choose. nothing leaves your phone on its own."
+    }
+
+    enum Hub {
+        static let lockSection = "app lock"
+        static let lockRow = "locks when you leave"
+        static let lockOn = "on"
+        static let lockOff = "can't lock"
+        static let lockFooter = "be reyt locks every time you leave it, with face id or your passcode."
+        static let lockNoPasscode =
+            "this phone has no passcode, so be reyt can't lock. set one in ios settings to turn the lock on."
+        static let readableSection = "readable exports"
+        static let privacySection = "privacy"
+        static let privacyLines = [
+            "nothing leaves your phone except backups you choose.",
+            "there is no account and no analytics.",
+            "the reflection is written on this phone by apple's on-device model.",
+            "if you delete something, it can still be inside your backups for up to 30 days, until those backups are cleaned up.",
+        ]
+        static let aboutSection = "about"
+        static let version = "version"
+        static let signedUntil = "signed until"
+        static let signedUntilNone = "not limited"
+        static let reinstallNote =
+            "this build is signed for a limited time. when it runs out, reinstall be reyt from your mac. your journal stays on the phone."
+        static func versionValue(version: String, build: String) -> String { "\(version) (\(build))" }
+    }
+
+    enum PassphraseQuestion {
+        static let useTypedTitle = "use this passphrase for future backups?"
+        static let useTypedMessage =
+            "this phone doesn't have a backup passphrase yet. you can use the one you just typed, or set one later."
+        static let useTypedYes = "yes, use it"
+        static let useTypedNo = "no, leave it unset"
+        static let switchTitle = "keep your current backup passphrase?"
+        static let switchMessage =
+            "the one you just typed is different from the one this phone uses for backups. switching will start a fresh backup protected by the new one."
+        static let keep = "keep current"
+        static let switchTo = "switch to the one I typed"
+        static let saveFailed = "couldn't save the passphrase on this phone. you can set one in settings."
     }
 
     enum Passphrase {

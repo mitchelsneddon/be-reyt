@@ -144,6 +144,15 @@ final class RestoreCoordinator {
     private(set) var completionNote: String?
     private(set) var undoAvailable = false
 
+    /// Asked once after a successful restore; nil when there is nothing to ask.
+    enum PassphraseQuestion: Equatable { case useTyped, keepOrSwitch }
+    private(set) var passphraseQuestion: PassphraseQuestion?
+    private(set) var passphraseSaveFailed = false
+    /// Set by the app: saves a passphrase as the backup passphrase (and rotates the data key as for any change).
+    @ObservationIgnored var adoptPassphrase: @MainActor (String) throws -> Void = { _ in }
+    /// The restore passphrase, in memory only until the question is answered. Never persisted anywhere else.
+    @ObservationIgnored private var typedPassphrase: String?
+
     @ObservationIgnored private var isSwapping = false
     @ObservationIgnored private let host: ContainerHost
     @ObservationIgnored private let events: JournalEvents
@@ -270,7 +279,31 @@ final class RestoreCoordinator {
         ScratchSpace.remove(preview.scratch)
         self.preview = nil
         completionNote = Copy.Restore.doneNote(entries: preview.counts.entries)
+        askPassphraseQuestion(typed: preview.passphrase)
     }
+
+    private func askPassphraseQuestion(typed: String) {
+        let stored = passphrases.stored()
+        if stored == nil {
+            passphraseQuestion = .useTyped
+        } else if stored != typed {
+            passphraseQuestion = .keepOrSwitch
+        } else {
+            return
+        }
+        typedPassphrase = typed
+    }
+
+    /// `adopt` true saves the typed passphrase; false leaves things as they are. Either way the question ends.
+    func answerPassphraseQuestion(adopt: Bool) {
+        let typed = typedPassphrase
+        typedPassphrase = nil
+        passphraseQuestion = nil
+        guard adopt, let typed else { return }
+        do { try adoptPassphrase(typed) } catch { passphraseSaveFailed = true }
+    }
+
+    func dismissPassphraseSaveFailure() { passphraseSaveFailed = false }
 
     // MARK: Undo
 
