@@ -5,57 +5,83 @@ struct PassphraseView: View {
     let backup: BackupSettingsModel
     let isChange: Bool
 
+    private enum Field { case current, new, confirm }
+
     @Environment(\.dismiss) private var dismiss
     @State private var current = ""
     @State private var entry = ""
     @State private var confirmation = ""
     @State private var message: String?
+    @State private var invalid: Field?
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    Text(Copy.Passphrase.warning).font(.body).foregroundStyle(Palette.ink)
-                }
-                Section {
-                    if isChange {
-                        SecureField(Copy.Passphrase.current, text: $current)
-                            .textContentType(.password)
-                            .frame(minHeight: 44)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 26) {
+                    Text(Copy.Passphrase.warning).brFont(.body).foregroundStyle(Palette.ink)
+                    VStack(alignment: .leading, spacing: 18) {
+                        if isChange {
+                            BRSecureField(
+                                label: Copy.Passphrase.current, text: $current, contentType: .password,
+                                invalid: invalid == .current)
+                        }
+                        BRSecureField(
+                            label: Copy.Passphrase.new, text: $entry, contentType: .newPassword,
+                            invalid: invalid == .new)
+                        BRSecureField(
+                            label: Copy.Passphrase.confirm, text: $confirmation, contentType: .newPassword,
+                            invalid: invalid == .confirm)
+                        if let message { ProblemLine(text: message) }
                     }
-                    SecureField(Copy.Passphrase.new, text: $entry)
-                        .textContentType(.newPassword)
-                        .frame(minHeight: 44)
-                    SecureField(Copy.Passphrase.confirm, text: $confirmation)
-                        .textContentType(.newPassword)
-                        .frame(minHeight: 44)
-                } footer: {
-                    if let message { Text(message).foregroundStyle(Palette.ink) }
                 }
-                Section {
-                    Button(Copy.Passphrase.save, action: save).frame(minHeight: 44)
-                }
+                .padding(.horizontal, 24)
+                .padding(.top, 22)
+                .padding(.bottom, 24)
             }
-            .scrollContentBackground(.hidden)
+            .safeAreaInset(edge: .bottom) {
+                Button(Copy.Passphrase.save, action: save)
+                    .buttonStyle(.brPrimary)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 10)
+            }
             .background(Palette.paper)
             .navigationTitle(isChange ? Copy.Passphrase.changeTitle : Copy.Passphrase.setTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                FlowTitle(text: isChange ? Copy.Passphrase.changeTitle : Copy.Passphrase.setTitle)
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(Copy.Passphrase.cancel) { dismiss() }
+                    Button(Copy.Passphrase.cancel) { dismiss() }.brFont(.navAction)
                 }
             }
         }
         .tint(Palette.accent)
+        #if DEBUG
+            .task {
+                // Simulator-only: `-debugPassphraseError` fills the fields so the two new ones don't match.
+                guard CommandLine.arguments.contains("-debugPassphraseError") else { return }
+                current = backup.passphrases.stored() ?? ""
+                entry = "new passphrase"
+                confirmation = "new passphras"
+                try? await Task.sleep(for: .milliseconds(600))
+                save()
+            }
+        #endif
+    }
+
+    private func fail(_ field: Field, _ text: String) {
+        invalid = field
+        message = text
     }
 
     private func save() {
+        invalid = nil
+        message = nil
         if isChange, !backup.isCurrentPassphrase(current) {
-            message = Copy.Passphrase.wrongCurrent
+            fail(.current, Copy.Passphrase.wrongCurrent)
         } else if !PassphraseStore.isAcceptable(entry) {
-            message = Copy.Passphrase.tooShort
+            fail(.new, Copy.Passphrase.tooShort)
         } else if entry != confirmation {
-            message = Copy.Passphrase.mismatch
+            fail(.confirm, Copy.Passphrase.mismatch)
         } else {
             do {
                 try backup.savePassphrase(entry)

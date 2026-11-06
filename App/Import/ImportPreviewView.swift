@@ -19,71 +19,108 @@ struct ImportPreviewView: View {
     var body: some View {
         NavigationStack {
             content
+                .background(Palette.paper)
                 .navigationTitle(Copy.Import.title)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        if importer.phase != .importing && importer.phase != .finished {
-                            Button(Copy.Import.cancel) { importer.dismiss() }
-                        }
-                    }
+                    FlowTitle(text: Copy.Import.title)
+                    ToolbarItem(placement: .cancellationAction) { leading }
                 }
         }
         .tint(Palette.accent)
     }
 
+    /// Cancel while reading, previewing or after a failure; "done" when the preview found nothing new.
+    @ViewBuilder private var leading: some View {
+        switch importer.phase {
+        case .importing, .finished: EmptyView()
+        case .preview where importer.plan?.isEmpty == true:
+            Button(Copy.Import.done) { importer.dismiss() }.brFont(.navAction)
+        default:
+            Button(Copy.Import.cancel) { importer.dismiss() }.brFont(.navAction)
+        }
+    }
+
     @ViewBuilder private var content: some View {
         switch importer.phase {
         case .idle: Palette.paper
-        case .reading(let done, let total):
-            busy(Copy.Import.readingTitle, detail: total > 0 ? Copy.Import.progress(done: done, total: total) : nil)
-        case .importing: busy(Copy.Import.importingTitle, detail: nil)
+        case .reading(let done, let total): reading(done: done, total: total)
+        case .importing: FlowBusy(Copy.Import.importingTitle, serif: true)
         case .preview:
             if let plan = importer.plan { PreviewList(importer: importer, plan: plan) }
         case .finished: finished
         case .failed(let message):
-            notice(message)
+            FlowNotice(
+                icon: "exclamationmark.triangle", text: message, disc: Palette.chip, tint: Palette.ink2, side: 64,
+                prominent: true
+            ) {
+                EmptyView()
+            }
+            .safeAreaInset(edge: .bottom) {
+                bottomBar { Button(Copy.Import.close) { importer.dismiss() }.buttonStyle(.brOutline) }
+            }
         }
     }
 
-    private func busy(_ title: String, detail: String?) -> some View {
-        VStack(spacing: 12) {
-            ProgressView()
-            Text(title).font(.body).foregroundStyle(Palette.ink)
-            if let detail { Text(detail).font(.footnote).foregroundStyle(Palette.ink2) }
+    private func reading(done: Int, total: Int) -> some View {
+        FlowBusy(Copy.Import.readingTitle, serif: true) {
+            if total > 0 {
+                VStack(spacing: 10) {
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Palette.chip)
+                            Capsule().fill(Palette.accent)
+                                .frame(width: proxy.size.width * min(max(Double(done) / Double(total), 0), 1))
+                        }
+                    }
+                    .frame(width: 240, height: 4)
+                    .accessibilityHidden(true)
+                    Text(Copy.Import.progress(done: done, total: total)).brFont(.banner)
+                        .foregroundStyle(Palette.ink2)
+                }
+            }
         }
-        .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Palette.paper)
-        .accessibilityElement(children: .combine)
-    }
-
-    private func notice(_ text: String) -> some View {
-        VStack(spacing: 16) {
-            Text(text).font(.body).foregroundStyle(Palette.ink).multilineTextAlignment(.center)
-            Button(Copy.Import.close) { importer.dismiss() }.frame(minHeight: 44)
-        }
-        .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Palette.paper)
     }
 
     @ViewBuilder private var finished: some View {
         if let result = importer.result {
-            VStack(spacing: 12) {
-                Text(Copy.Import.resultTitle).font(.headline).foregroundStyle(Palette.ink)
-                Text(Copy.Import.resultLine(entries: result.entries, days: result.days))
-                    .foregroundStyle(Palette.ink)
-                if let photos = Copy.Import.photosResult(imported: result.photosImported, failed: result.photosFailed) {
-                    Text(photos).foregroundStyle(Palette.ink2)
+            VStack(spacing: 20) {
+                Image(systemName: "checkmark")
+                    .resizable().scaledToFit().frame(width: 26, height: 26)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Palette.ok)
+                    .frame(width: 64, height: 64)
+                    .background(Palette.accentSoft, in: Circle())
+                    .accessibilityHidden(true)
+                Text(Copy.Import.resultTitle).brFont(.onboardingTitle).foregroundStyle(Palette.ink)
+                    .multilineTextAlignment(.center).accessibilityAddTraits(.isHeader)
+                VStack(spacing: 6) {
+                    Text(Copy.Import.resultLine(entries: result.entries, days: result.days))
+                        .brFont(.navAction).foregroundStyle(Palette.ink)
+                    if let photos = Copy.Import.photosResult(
+                        imported: result.photosImported, failed: result.photosFailed)
+                    {
+                        Text(photos).brFont(.rowWrapping).foregroundStyle(Palette.ink2)
+                    }
                 }
-                Button(Copy.Import.done) { importer.dismiss() }.frame(minHeight: 44)
+                .multilineTextAlignment(.center)
             }
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 32)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Palette.paper)
+            .safeAreaInset(edge: .bottom) {
+                bottomBar { Button(Copy.Import.done) { importer.dismiss() }.buttonStyle(.brPrimary) }
+            }
         }
+    }
+
+    private func bottomBar<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
+            .padding(.horizontal, 24)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+            .frame(maxWidth: .infinity)
+            .background(Palette.paper)
+            .overlay(alignment: .top) { Palette.border.frame(height: 1) }
     }
 }
 
@@ -92,95 +129,152 @@ private struct PreviewList: View {
     let plan: AppleJournalImportPlan
 
     var body: some View {
-        List {
-            if plan.isEmpty {
-                Section {
-                    Text(plan.duplicates.isEmpty ? Copy.Import.nothingNew : Copy.Import.nothingNewDetail)
-                        .foregroundStyle(Palette.ink)
-                }
-            } else {
-                Section {
-                    Text(
-                        Copy.Import.summary(entries: plan.entries.count, days: plan.days.count, photos: plan.photoCount)
-                    )
-                    .foregroundStyle(Palette.ink)
-                    if let range = plan.dateRange {
-                        Text("\(dayLabel(range.lowerBound)) – \(dayLabel(range.upperBound))")
-                            .foregroundStyle(Palette.ink2)
-                    }
-                } header: {
-                    Text(Copy.Import.willImportSection)
-                } footer: {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(Copy.Import.noTimes)
-                        if plan.fallbackDateCount > 0 { Text(Copy.Import.fallbackNote) }
-                    }
-                }
-            }
-            if !plan.duplicates.isEmpty {
-                Section(Copy.Import.alreadyImportedSection) { Text(Copy.Import.alreadyImported(plan.duplicates.count)) }
-            }
-            if !plan.conflicts.isEmpty {
-                Section {
-                    ForEach(plan.conflicts, id: \.self) { day in
-                        Picker(
-                            dayLabel(day),
-                            selection: Binding(
-                                get: { importer.resolution(for: day) }, set: { importer.resolutions[day] = $0 })
-                        ) {
-                            Text(Copy.Import.append).tag(AppleJournalConflictResolution.append)
-                            Text(Copy.Import.skip).tag(AppleJournalConflictResolution.skip)
-                        }
-                        .accessibilityLabel(Copy.Import.conflictLabel(dayLabel(day)))
-                        .frame(minHeight: 44)
-                    }
-                } header: {
-                    Text(Copy.Import.conflictsSection)
-                } footer: {
-                    Text(Copy.Import.conflictsFooter)
-                }
-            }
-            if !plan.unsupported.isEmpty {
-                Section {
-                    ForEach(Array(plan.unsupported.enumerated()), id: \.offset) { _, item in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.description).foregroundStyle(Palette.ink)
-                            Text(fileLabel(item.entryPath)).font(.footnote).foregroundStyle(Palette.ink2)
-                        }
-                        .accessibilityElement(children: .combine)
-                    }
-                } header: {
-                    Text(Copy.Import.unsupportedSection)
-                } footer: {
-                    Text(Copy.Import.unsupportedFooter)
-                }
-            }
-            if !plan.failures.isEmpty {
-                Section {
-                    ForEach(plan.failures, id: \.path) { failure in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(fileLabel(failure.path)).foregroundStyle(Palette.ink)
-                            Text(Copy.Import.failure(failure.reason)).font(.footnote)
-                                .foregroundStyle(Palette.ink2)
-                        }
-                        .accessibilityElement(children: .combine)
-                    }
-                } header: {
-                    Text(Copy.Import.failuresSection)
-                } footer: {
-                    Text(Copy.Import.failuresFooter)
-                }
-            }
-            if !plan.isEmpty {
-                Section {
+        if plan.isEmpty {
+            FlowNotice(
+                icon: "checkmark",
+                text: plan.duplicates.isEmpty ? Copy.Import.nothingNew : Copy.Import.nothingNewDetail,
+                side: 64, prominent: true)
+        } else {
+            list
+                .safeAreaInset(edge: .bottom) {
                     Button(Copy.Import.importAction) { importer.confirm() }
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .buttonStyle(.brPrimary)
                         .accessibilityHint(Copy.Import.noTimes)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 14)
+                        .padding(.bottom, 10)
+                        .frame(maxWidth: .infinity)
+                        .background(Palette.paper)
+                        .overlay(alignment: .top) { Palette.border.frame(height: 1) }
                 }
+        }
+    }
+
+    private var list: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 26) {
+                if !plan.isEmpty { section(Copy.Import.willImportSection) { summaryCard } }
+                if !plan.duplicates.isEmpty {
+                    section(Copy.Import.alreadyImportedSection) {
+                        Text(Copy.Import.alreadyImported(plan.duplicates.count)).brFont(.row)
+                            .foregroundStyle(Palette.ink)
+                            .padding(.horizontal, 20).padding(.vertical, 14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                if !plan.conflicts.isEmpty {
+                    section(Copy.Import.conflictsSection) {
+                        rows(plan.conflicts.map { $0 }) { day in conflictRow(day) }
+                    }
+                }
+                if !plan.unsupported.isEmpty {
+                    section(Copy.Import.unsupportedSection) {
+                        rows(Array(plan.unsupported.enumerated()).map { $0 }) { pair in
+                            twoLine(pair.element.description, fileLabel(pair.element.entryPath))
+                        }
+                    }
+                }
+                if !plan.failures.isEmpty {
+                    section(Copy.Import.failuresSection) {
+                        rows(plan.failures.map { $0 }) { failure in
+                            twoLine(fileLabel(failure.path), Copy.Import.failure(failure.reason))
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 24)
+        }
+    }
+
+    private func section<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SettingsHeader(title).padding(.horizontal, 16).accessibilityAddTraits(.isHeader)
+            content()
+                .background(Palette.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
+        }
+    }
+
+    private var summaryCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(Copy.Import.summary(entries: plan.entries.count, days: plan.days.count))
+                .brFont(.stat).foregroundStyle(Palette.ink)
+            if plan.photoCount > 0 {
+                Text(Copy.Import.photos(plan.photoCount)).brFont(.row).foregroundStyle(Palette.ink)
+            }
+            if let range = plan.dateRange {
+                Text(Copy.Import.range(first: dayLabel(range.lowerBound), last: dayLabel(range.upperBound)))
+                    .brFont(.rowWrapping).foregroundStyle(Palette.ink2)
+            }
+            if plan.fallbackDateCount > 0 {
+                Text(Copy.Import.fallbackNote).brFont(.banner).foregroundStyle(Palette.ink2)
+            }
+            Text(Copy.Import.noTimes).brFont(.banner).foregroundStyle(Palette.ink2)
+                .padding(.top, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .top) { Palette.border.frame(height: 1) }
+                .padding(.top, 6)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Rows separated by hairlines inside a card.
+    private func rows<Item, Row: View>(_ items: [Item], @ViewBuilder row: @escaping (Item) -> Row) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                if index > 0 { Palette.border.frame(height: 1) }
+                row(item)
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(Palette.paper)
+    }
+
+    private func twoLine(_ title: String, _ detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).brFont(.row).foregroundStyle(Palette.ink)
+            Text(detail).brFont(.label).foregroundStyle(Palette.ink2)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func conflictRow(_ day: DateKey) -> some View {
+        let current = importer.resolution(for: day)
+        return HStack(spacing: 12) {
+            Text(dayLabel(day)).brFont(.row).foregroundStyle(Palette.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 2) {
+                segment(Copy.Import.append, on: current == .append) { importer.resolutions[day] = .append }
+                segment(Copy.Import.skip, on: current == .skip) { importer.resolutions[day] = .skip }
+            }
+            .padding(3)
+            .background(Palette.chip, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(Copy.Import.conflictLabel(dayLabel(day)))
+        }
+        .padding(.leading, 16).padding(.trailing, 12).padding(.vertical, 6)
+        .frame(minHeight: 56)
+    }
+
+    // shortcut: segments are 34 high as on the board; the hit area is stretched to 44 with a contentShape
+    private func segment(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).brFont(on ? .labelBold : .label)
+                .foregroundStyle(on ? Palette.onAccent : Palette.ink)
+                .padding(.horizontal, 12)
+                .frame(minWidth: 44, minHeight: 34)
+                .background(
+                    on ? Palette.accent : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                )
+                .contentShape(Rectangle().inset(by: -5))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 
     private func dayLabel(_ day: DateKey) -> String {

@@ -13,8 +13,14 @@ final class BackupSettingsModel {
 
     private(set) var hasPassphrase: Bool
     private(set) var exportState: ExportState = .idle
-    /// A calm note after an export: saved, and anything that couldn't be included.
-    private(set) var exportNote: String?
+    /// What the exporter saved: the file, its size, and how many photos couldn't be included.
+    struct SavedExport: Equatable {
+        var name: String
+        var bytes: Int?
+        var skippedPhotos: Int
+    }
+
+    private(set) var savedExport: SavedExport?
     var showExporter = false
     private(set) var file: ArchiveFile?
     private(set) var suggestedName = ""
@@ -22,7 +28,7 @@ final class BackupSettingsModel {
     @ObservationIgnored let host: ContainerHost
     @ObservationIgnored let passphrases: PassphraseStore
     @ObservationIgnored private var scratch: URL?
-    @ObservationIgnored private var pendingNote: String?
+    @ObservationIgnored private var pending: (bytes: Int?, skippedPhotos: Int)?
 
     init(host: ContainerHost, passphrases: PassphraseStore = PassphraseStore()) {
         self.host = host
@@ -52,7 +58,7 @@ final class BackupSettingsModel {
             let generation = host.generationURL
         else { return }
         exportState = .working
-        exportNote = nil
+        savedExport = nil
         do {
             let folder = try ScratchSpace.make()
             scratch = folder
@@ -62,7 +68,8 @@ final class BackupSettingsModel {
                     from: store, passphrase: passphrase, to: folder.appending(path: name, directoryHint: .notDirectory))
             file = ArchiveFile(url: result.url)
             suggestedName = String(name.dropLast(".aea".count))
-            pendingNote = result.skippedAttachments > 0 ? Copy.Export.skipped(result.skippedAttachments) : nil
+            let bytes = try? result.url.resourceValues(forKeys: [.fileSizeKey]).fileSize
+            pending = (bytes, result.skippedAttachments)
             exportState = .idle
             showExporter = true
         } catch {
@@ -74,23 +81,39 @@ final class BackupSettingsModel {
     func exporterFinished(_ result: Result<URL, Error>) {
         cleanUp()
         switch result {
-        case .success:
-            exportNote = [Copy.Export.saved, pendingNote].compactMap { $0 }.joined(separator: " ")
+        case .success(let url):
+            savedExport = SavedExport(
+                name: url.lastPathComponent, bytes: pending?.bytes, skippedPhotos: pending?.skippedPhotos ?? 0)
         case .failure:
             exportState = .failed(Copy.Export.exporterError)
         }
-        pendingNote = nil
+        pending = nil
     }
 
     func exporterCancelled() {
         cleanUp()
-        pendingNote = nil
+        pending = nil
     }
 
     func dismissExportMessage() {
         exportState = .idle
-        exportNote = nil
+        savedExport = nil
     }
+
+    #if DEBUG
+        /// Simulator-only: `-debugExportState working|saved|savedSkipped|failed` shows that inline status.
+        func debugShowExport(_ state: String) {
+            switch state {
+            case "working": exportState = .working
+            case "saved":
+                savedExport = SavedExport(name: "be reyt backup 2026-11-05.aea", bytes: 4_400_000, skippedPhotos: 0)
+            case "savedSkipped":
+                savedExport = SavedExport(name: "be reyt backup 2026-11-05.aea", bytes: 4_400_000, skippedPhotos: 1)
+            case "failed": exportState = .failed(Copy.Export.failed)
+            default: break
+            }
+        }
+    #endif
 
     private func cleanUp() {
         ScratchSpace.remove(scratch)

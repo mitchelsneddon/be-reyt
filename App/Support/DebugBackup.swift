@@ -4,7 +4,7 @@
     import ReytKit
 
     /// Simulator-only drivers for the backup flows, so they can be exercised without the system pickers:
-    /// `-debugPassphrase <p>`, `-exportTo <path>`, `-restoreFrom <path>`, `-restoreSnapshot <name>` (from `-backupFolder`; add `-autoConfirmRestore` to go through),
+    /// `-debugPassphrase <p>`, `-exportTo <path>`, `-restoreFrom <path>`, `-restoreBegin <path>` (sheet at the passphrase step), `-restoreSnapshot <name>` (from `-backupFolder`; add `-autoConfirmRestore` to go through),
     /// `-undoLastRestore`. Results (counts and outcomes, never journal text) go to the log and to
     /// `Documents/backup-debug.txt`.
     enum DebugBackup {
@@ -23,6 +23,7 @@
             let wants =
                 args.contains("-exportTo") || args.contains("-restoreFrom") || args.contains("-restoreSnapshot")
                 || args.contains("-undoLastRestore")
+                || args.contains("-restoreBegin")
                 || passphrase != nil
             guard wants else { return }
             if let passphrase {
@@ -47,6 +48,9 @@
                     log("export failed \(String(describing: error))")
                 }
             }
+
+            // `-restoreBegin <path>` stops at the passphrase step of the restore sheet.
+            if let path = value(after: "-restoreBegin") { restore.beginRestore(from: URL(fileURLWithPath: path)) }
 
             if let path = value(after: "-restoreFrom"), let passphrase {
                 let url = URL(fileURLWithPath: path)

@@ -534,6 +534,7 @@ enum Copy {
             photos == 1 ? "1 photo couldn't be included." : "\(photos) photos couldn't be included."
         }
         static let exporterError = "couldn't save the backup there. try another place."
+        static func fileSize(_ bytes: Int?) -> String? { RestoreBrowser.size(bytes) }
     }
 
     enum Restore {
@@ -550,6 +551,9 @@ enum Copy {
         static func tags(_ n: Int) -> String { n == 1 ? "1 tag" : "\(n) tags" }
         static func plans(_ n: Int) -> String { n == 1 ? "1 sunday plan" : "\(n) sunday plans" }
         static func range(first: String, last: String) -> String { "from \(first) to \(last)" }
+        static func fileDate(_ date: Date) -> String {
+            date.formatted(.dateTime.day().month(.wide).year()).lowercased()
+        }
         static let replace = "replace everything on this phone with this backup"
         static let confirmTitle = "replace everything on this phone with this backup?"
         static let confirmAction = "replace"
@@ -572,10 +576,6 @@ enum Copy {
             "anything you've written since the restore will be saved as a safety copy, then replaced."
         static let undoAction = "go back"
         static let dismiss = "dismiss"
-
-        static func warningLine(_ code: String, count: Int) -> String? {
-            code == ArchiveWarning.missingAttachment ? Export.skipped(count) : nil
-        }
 
         static func failure(_ failure: RestoreFailure) -> String {
             switch failure {
@@ -606,14 +606,13 @@ enum Copy {
         static let row = "restore from a backup"
         static let rowHint = "pick one of the backups in your backup folder"
         static let title = "restore from a backup"
-        static let intro = "pick a backup. nothing changes until you've seen what's in it and said yes."
         static let loading = "looking in your backup folder…"
         static let empty = "no backups in this folder yet."
         static let loadFailed = "couldn't read the backup folder. check it still exists and try again."
         static let retry = "try again"
         static let savedBeforeRestore = "saved before a restore"
         static let onThisPhone = "on this iphone"
-        static let inICloud = "in icloud (downloads when needed)"
+        static let inICloud = "in icloud"
         static let enterPassphrase =
             "enter the passphrase for this backup. an older backup may need the passphrase you had back then."
 
@@ -663,21 +662,19 @@ enum Copy {
         static let cancel = "cancel"
         static let importAction = "import"
         static let done = "done"
-        static let tryAgain = "choose another folder"
         static let readingTitle = "reading your export…"
         static func progress(done: Int, total: Int) -> String { "\(done) of \(total) entries" }
         static let importingTitle = "adding to your journal…"
-        static let noTimes = "the export has no times, so only dates and titles are kept."
+        static let noTimes = "dates and titles kept, times aren't in the export."
         static let nothingNew = "nothing new to import."
         static let nothingNewDetail = "every entry in this export is already in your journal."
         static func entries(_ n: Int) -> String { n == 1 ? "1 entry" : "\(n) entries" }
         static func days(_ n: Int) -> String { n == 1 ? "1 day" : "\(n) days" }
         static func photos(_ n: Int) -> String { n == 1 ? "1 photo" : "\(n) photos" }
-        static func summary(entries: Int, days: Int, photos: Int) -> String {
-            photos == 0
-                ? "\(Self.entries(entries)) on \(Self.days(days))"
-                : "\(Self.entries(entries)) on \(Self.days(days)), \(Self.photos(photos))"
+        static func summary(entries: Int, days: Int) -> String {
+            "\(Self.entries(entries)) on \(Self.days(days))"
         }
+        static func range(first: String, last: String) -> String { "\(first) to \(last)" }
         static let willImportSection = "will be added"
         static let alreadyImportedSection = "already imported"
         static func alreadyImported(_ n: Int) -> String {
@@ -686,11 +683,9 @@ enum Copy {
                 : "\(n) entries are already in your journal and will be skipped."
         }
         static let unsupportedSection = "left out"
-        static let unsupportedFooter = "these can't be brought in, the rest of the entry still can."
         static let fallbackNote =
             "some entries had no readable date, so the date in the file name was used (one day earlier, as the export names files)."
         static let conflictsSection = "days that already have writing"
-        static let conflictsFooter = "add puts the imported text after what you wrote. skip leaves that day alone."
         static let append = "add after mine"
         static let skip = "skip"
         static func conflictLabel(_ day: String) -> String { "choose for \(day)" }
@@ -704,7 +699,6 @@ enum Copy {
             case .noDate: "no date found"
             }
         }
-        static let failuresFooter = "these files were left alone. nothing already in your journal was changed."
         static let resultTitle = "import finished"
         static func resultLine(entries: Int, days: Int) -> String {
             "added \(Self.entries(entries)) across \(Self.days(days))."
@@ -727,7 +721,6 @@ enum Copy {
         }
         static let genericError = "something went wrong, so nothing was changed. try again in a moment."
         static let noAccess = "be reyt couldn't open that folder, so nothing was changed. try choosing it again."
-        static let busy = "an import is already running."
     }
 
     enum DeleteAll {

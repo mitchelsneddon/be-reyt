@@ -3,7 +3,7 @@
 
     /// Simulator-only drivers for the Apple Journal import, so it can run without the folder picker:
     /// `-importJournalFrom <folder>` opens the preview, `-autoConfirmImport` also confirms it (with every conflict
-    /// set to append) and closes the result after two seconds.
+    /// set to append) and closes the result after two seconds (`-importHold` keeps the result open).
     enum DebugImport {
         @MainActor
         static func runIfRequested(host: ContainerHost, importer: AppleJournalImporter) async {
@@ -26,6 +26,7 @@
                 try? await Task.sleep(for: .milliseconds(50))
                 waited += 1
             }
+            guard !args.contains("-importHold") else { return }
             try? await Task.sleep(for: .seconds(2))
             importer.dismiss()
         }

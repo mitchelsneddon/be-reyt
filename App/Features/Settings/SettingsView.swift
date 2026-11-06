@@ -24,6 +24,9 @@ struct SettingsView: View {
         @State private var debugTags =
             CommandLine.arguments.contains("-openTags") || CommandLine.arguments.contains("-openTagsRename")
         @State private var debugExport = CommandLine.arguments.contains("-openReadableExport")
+        // `-openRestoreBrowser` pushes the backup list; `-openPassphrase set|change` opens that sheet;
+        // `-debugExportState working|saved|savedSkipped|failed` shows the inline export status.
+        @State private var debugBrowser = CommandLine.arguments.contains("-openRestoreBrowser")
         @State private var debugDelete =
             CommandLine.arguments.contains("-openDeleteAll") || CommandLine.arguments.contains("-openDeleteAllConfirm")
     #endif
@@ -64,6 +67,7 @@ struct SettingsView: View {
                 .navigationDestination(isPresented: $debugTags) { TagsView(model: tags) }
                 .navigationDestination(isPresented: $debugExport) { ReadableExportView(host: backup.host) }
                 .navigationDestination(isPresented: $debugDelete) { DeleteAllView() }
+                .navigationDestination(isPresented: $debugBrowser) { RestoreBrowserView(restore: restore) }
             #endif
         }
     }
@@ -101,7 +105,7 @@ struct SettingsView: View {
                     }
                     .accessibilityHint(Copy.Settings.undoHint)
                 }
-                if let note = statusNote { SettingsNote(text: note, color: Palette.ink) }
+                ExportStatus(backup: backup, authMessage: authMessage)
             } header: {
                 SettingsHeader(Copy.Settings.backupSection)
             }
@@ -130,6 +134,15 @@ struct SettingsView: View {
         .onAppear {
             backup.refresh()
             restore.refreshUndoAvailability()
+            #if DEBUG
+                let args = CommandLine.arguments
+                if let i = args.firstIndex(of: "-openPassphrase"), args.indices.contains(i + 1) {
+                    passphraseSheet = args[i + 1] == "change" ? .change : .set
+                }
+                if let i = args.firstIndex(of: "-debugExportState"), args.indices.contains(i + 1) {
+                    backup.debugShowExport(args[i + 1])
+                }
+            #endif
         }
         .sheet(item: $passphraseSheet) { sheet in
             PassphraseView(backup: backup, isChange: sheet == .change)
@@ -203,12 +216,6 @@ struct SettingsView: View {
             }
         }
         .disabled(backup.exportState == .working)
-    }
-
-    private var statusNote: String? {
-        if backup.exportState == .working { return Copy.Export.working }
-        if case .failed(let message) = backup.exportState { return message }
-        return authMessage ?? backup.exportNote
     }
 
     private func undo() {
