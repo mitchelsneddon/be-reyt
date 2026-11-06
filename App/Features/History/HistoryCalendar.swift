@@ -2,10 +2,11 @@ import ReytKit
 import SwiftUI
 import UIKit
 
-/// `UICalendarView` wrapped for SwiftUI: Gregorian, selectable from the earliest day through today, a small accent
-/// dot on every day in `dotDays`. Selecting a day calls `onSelect`; the selection clears when no day is open.
+/// `UICalendarView` wrapped for SwiftUI: Gregorian, selectable from the earliest day through today, a filled
+/// dot on every day in `dayScores`, in that day's score colour. Selecting a day calls `onSelect`; the selection clears when no day is open.
 struct HistoryCalendar: UIViewRepresentable {
-    let dotDays: Set<DateKey>
+    /// Days with content; the value is the day's score, nil when unscored.
+    let dayScores: [DateKey: DayScore?]
     let earliest: DateKey
     let today: DateKey
     /// The day currently pushed from the calendar, if any.
@@ -28,6 +29,7 @@ struct HistoryCalendar: UIViewRepresentable {
         view.delegate = context.coordinator
         view.tintColor = Palette.UI.accent
         view.fontDesign = .default
+        view.backgroundColor = Palette.UI.paper
         view.accessibilityLabel = Copy.History.calendarLabel
         let selection = UICalendarSelectionSingleDate(delegate: context.coordinator)
         view.selectionBehavior = selection
@@ -47,8 +49,9 @@ struct HistoryCalendar: UIViewRepresentable {
         let end = today.adding(days: 1).date(in: calendar).addingTimeInterval(-1)
         view.availableDateRange = DateInterval(start: start, end: end)
 
-        let changed = coordinator.dots.symmetricDifference(dotDays)
-        coordinator.dots = dotDays
+        let previous = coordinator.dots
+        let changed = Set(previous.keys).union(dayScores.keys).filter { previous[$0] != dayScores[$0] }
+        coordinator.dots = dayScores
         if !changed.isEmpty {
             view.reloadDecorations(
                 forDateComponents: changed.map {
@@ -64,7 +67,7 @@ struct HistoryCalendar: UIViewRepresentable {
     final class Coordinator: NSObject, UICalendarViewDelegate, UICalendarSelectionSingleDateDelegate {
         var onSelect: (DateKey) -> Void
         var today: DateKey
-        var dots: Set<DateKey> = []
+        var dots: [DateKey: DayScore?] = [:]
         var selection: UICalendarSelectionSingleDate?
 
         init(onSelect: @escaping (DateKey) -> Void, today: DateKey) {
@@ -80,12 +83,13 @@ struct HistoryCalendar: UIViewRepresentable {
         func calendarView(_ calendarView: UICalendarView, decorationFor dateComponents: DateComponents)
             -> UICalendarView.Decoration?
         {
-            guard let key = key(dateComponents), dots.contains(key) else { return nil }
+            guard let key = key(dateComponents), let entry = dots[key] else { return nil }
+            let color = entry.map(Palette.UI.score) ?? Palette.UI.ink3
             // A custom view rather than the stock dot so the dot can carry a spoken label.
             return .customView {
-                let dot = UIView(frame: CGRect(x: 0, y: 0, width: 8, height: 8))
-                dot.backgroundColor = Palette.UI.accent
-                dot.layer.cornerRadius = 4
+                let dot = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 10))
+                dot.backgroundColor = color
+                dot.layer.cornerRadius = 5
                 dot.isAccessibilityElement = true
                 dot.accessibilityLabel = Copy.History.hasEntry
                 return dot

@@ -27,8 +27,11 @@ final class HistoryModel {
         if kept != tagIDs { tagIDs = kept }
     }
 
-    /// Days with content, for the calendar's dots.
-    var dotDays: Set<DateKey> { Set(days.map(\.dateKey)) }
+    /// Days with content mapped to their score (nil when unscored), for the calendar's coloured dots.
+    var dayScores: [DateKey: DayScore?] {
+        Dictionary(
+            uniqueKeysWithValues: days.map { ($0.dateKey, $0.content.dayScore.flatMap { DayScore(rawValue: $0) }) })
+    }
 
     /// Reloads the days, then the search results when a search is active.
     func refresh() async {

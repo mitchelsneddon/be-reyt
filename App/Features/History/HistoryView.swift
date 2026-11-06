@@ -13,7 +13,6 @@ struct HistoryView: View {
     @State private var model: HistoryModel
     @State private var mode: Mode = .calendar
     @State private var path: [DateKey] = []
-    @State private var searchPresented = false
     @Query(sort: \Tag.name) private var tags: [Tag]
 
     init(store: JournalStore, events: JournalEvents, attachments: AttachmentStore) {
@@ -22,7 +21,6 @@ struct HistoryView: View {
         self.attachments = attachments
         let model = HistoryModel(store: store)
         var initialMode = Mode.calendar
-        var presented = false
         #if DEBUG
             // Simulator-only: `-openHistory calendar|list`, `-historySearch <text>` for screenshots.
             let args = CommandLine.arguments
@@ -31,13 +29,11 @@ struct HistoryView: View {
             }
             if let i = args.firstIndex(of: "-historySearch"), args.indices.contains(i + 1) {
                 model.searchText = args[i + 1]
-                presented = true
             }
         #endif
         _model = State(initialValue: model)
         _mode = State(initialValue: initialMode)
         _path = State(initialValue: [])
-        _searchPresented = State(initialValue: presented)
     }
 
     private struct RefreshKey: Equatable {
@@ -50,26 +46,13 @@ struct HistoryView: View {
         @Bindable var model = model
         NavigationStack(path: $path) {
             VStack(spacing: 0) {
-                if !model.isFiltering && !model.days.isEmpty {
-                    Picker(Copy.History.modeLabel, selection: $mode) {
-                        Text(Copy.History.calendar).tag(Mode.calendar)
-                        Text(Copy.History.list).tag(Mode.list)
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
-                }
-                if searchPresented || !model.tagIDs.isEmpty, !tags.isEmpty { tagFilter }
+                header
+                if !tags.isEmpty { tagFilter }
                 content
             }
             .background(Palette.paper)
             .completionNotes()
-            .navigationTitle(Copy.Tab.history)
-            .navigationBarTitleDisplayMode(.inline)
-            .searchable(
-                text: $model.searchText, isPresented: $searchPresented,
-                prompt: Text(Copy.History.searchPrompt)
-            )
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: DateKey.self) { key in
                 HistoryDayPage(key: key, store: store, events: events, attachments: attachments)
             }
@@ -93,6 +76,58 @@ struct HistoryView: View {
         }
     }
 
+    private var header: some View {
+        @Bindable var model = model
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(Copy.Tab.history)
+                .brFont(.screenTitle)
+                .foregroundStyle(Palette.ink)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.horizontal, 4)
+                .padding(.top, 8)
+            searchField
+            Picker(Copy.History.modeLabel, selection: $mode) {
+                Text(Copy.History.list).tag(Mode.list)
+                Text(Copy.History.calendar).tag(Mode.calendar)
+            }
+            .pickerStyle(.segmented)
+            .tint(Palette.accent)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
+    }
+
+    private var searchField: some View {
+        @Bindable var model = model
+        return HStack(spacing: 10) {
+            HistorySymbol("magnifyingglass", size: 18)
+                .foregroundStyle(Palette.ink2)
+            TextField(
+                "", text: $model.searchText, prompt: Text(Copy.History.searchPrompt).foregroundStyle(Palette.ink2)
+            )
+            .brFont(.row)
+            .foregroundStyle(Palette.ink)
+            .submitLabel(.search)
+            .autocorrectionDisabled()
+            .accessibilityLabel(Copy.History.searchPrompt)
+            if !model.searchText.isEmpty {
+                Button {
+                    model.searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Palette.ink3)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel(Copy.History.clearSearch)
+            }
+        }
+        .padding(.leading, 14)
+        .padding(.trailing, model.searchText.isEmpty ? 14 : 0)
+        .frame(minHeight: 44)
+        .background(Palette.chip, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
     /// The one way a day gets pushed: calendar taps call this, and so does the DEBUG `-openHistoryDay` launch arg.
     /// Days after today are refused, the same rule the calendar applies to selection.
     private func open(_ key: DateKey) {
@@ -114,39 +149,117 @@ struct HistoryView: View {
 
     @ViewBuilder private var content: some View {
         if model.loadFailed {
-            Button(Copy.History.loadFailed) { Task { await model.refresh() } }
-                .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
+            Button {
+                Task { await model.refresh() }
+            } label: {
+                VStack(spacing: 14) {
+                    HistorySymbol("arrow.clockwise", size: 24)
+                        .foregroundStyle(Palette.accent)
+                        .frame(width: 56, height: 56)
+                        .background(Palette.accentSoft, in: Circle())
+                    Text(Copy.History.loadFailed)
+                        .brFont(.rowWrapping)
+                        .foregroundStyle(Palette.accent)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(minHeight: 44)
+                .padding(.horizontal, 40)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         } else if !model.isLoaded {
             Palette.paper
         } else if model.isFiltering {
             if model.results.isEmpty {
-                message(Copy.History.noMatches)
+                message(Copy.History.noMatches, symbol: "magnifyingglass")
             } else {
                 HistoryList(days: model.results)
             }
         } else if model.days.isEmpty {
-            message(Copy.History.emptyJournal)
+            message(Copy.History.emptyJournal, symbol: "calendar")
         } else if mode == .list {
             HistoryList(days: model.days)
         } else {
             ScrollView {
-                HistoryCalendar(
-                    dotDays: model.dotDays, earliest: model.days.last?.dateKey ?? AppClock.today(),
-                    today: AppClock.today(), openDay: path.last,
-                    onSelect: open
-                )
-                .padding(.horizontal, 12)
+                VStack(spacing: 14) {
+                    HistoryCalendar(
+                        dayScores: model.dayScores, earliest: model.days.last?.dateKey ?? AppClock.today(),
+                        today: AppClock.today(), openDay: path.last,
+                        onSelect: open
+                    )
+                    ScoreLegend()
+                }
+                .padding(.horizontal, 20)
             }
         }
     }
 
-    private func message(_ text: String) -> some View {
-        Text(text)
-            .font(.body)
-            .foregroundStyle(Palette.ink2)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    private func message(_ text: String, symbol: String) -> some View {
+        VStack(spacing: 22) {
+            HistorySymbol(symbol, size: 34)
+                .foregroundStyle(Palette.accent)
+                .frame(width: 76, height: 76)
+                .background(Palette.accentSoft, in: Circle())
+            Text(text)
+                .brFont(.stat)
+                .foregroundStyle(Palette.ink)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 40)
+        .accessibilityElement(children: .combine)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// The five faces with their names, under the calendar: what each dot colour means.
+private struct ScoreLegend: View {
+    @ScaledMetric(relativeTo: .body) private var circle: CGFloat = 28
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        let count = typeSize.isAccessibilitySize ? 2 : 5
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 4, alignment: .top), count: count),
+            spacing: 12
+        ) {
+            ForEach(DayScore.allCases, id: \.self) { score in
+                VStack(spacing: 6) {
+                    Circle().fill(Palette.score(score))
+                        .frame(width: circle, height: circle)
+                        .overlay {
+                            FaceGlyph(score: score, size: circle * 19 / 28, strokeUnits: 2.8)
+                                .foregroundStyle(Palette.faceInk)
+                        }
+                    Text(score.label)
+                        .brFont(.label)
+                        .foregroundStyle(Palette.ink2)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(.horizontal, 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Copy.History.scoreKey)
+    }
+}
+
+/// An SF Symbol that scales with Dynamic Type (capped so the discs and the field stay tidy). Hidden from VoiceOver.
+private struct HistorySymbol: View {
+    let name: String
+    @ScaledMetric private var side: CGFloat
+
+    init(_ name: String, size: CGFloat) {
+        self.name = name
+        _side = ScaledMetric(wrappedValue: size, relativeTo: .body)
+    }
+
+    var body: some View {
+        Image(systemName: name).resizable().scaledToFit()
+            .frame(width: min(side, 40), height: min(side, 40))
+            .accessibilityHidden(true)
     }
 }

@@ -1,3 +1,4 @@
+import ReytKit
 import SwiftUI
 import UIKit
 
@@ -27,6 +28,17 @@ enum Palette {
     static let score4 = Color("score4")
     static let score5 = Color("score5")
 
+    /// The calm five-step colour ramp for a day score.
+    static func score(_ score: DayScore) -> Color {
+        switch score {
+        case .veryDifficult: score1
+        case .difficult: score2
+        case .okay: score3
+        case .good: score4
+        case .excellent: score5
+        }
+    }
+
     /// UIKit accessors for call sites that cannot take a SwiftUI `Color`.
     enum UI {
         static let paper = UIColor(named: "paper") ?? .systemBackground
@@ -39,6 +51,10 @@ enum Palette {
         static let accentSoft = UIColor(named: "accentSoft") ?? .secondarySystemFill
         static let accentText = UIColor(named: "accentText") ?? .label
         static let onAccent = UIColor(named: "onAccent") ?? .white
+
+        static func score(_ score: DayScore) -> UIColor {
+            UIColor(named: "score\(score.rawValue)") ?? .systemGray
+        }
     }
 
     /// Shadow for polaroids and banners, resolved by colour scheme.

@@ -14,13 +14,15 @@ enum Copy {
         static let modeLabel = "history view"
         static let calendar = "calendar"
         static let list = "list"
-        static let emptyJournal = "nothing here yet. today is a good place to start."
+        static let emptyJournal = "nothing here yet."
         static let noMatches = "nothing matches that."
         static let searchPrompt = "search your days"
         static let tagFilterLabel = "filter by tag"
         static let calendarLabel = "calendar of your days"
         static let loadFailed = "couldn't open your history. tap to try again."
         static let hasEntry = "has an entry"
+        static let clearSearch = "clear search"
+        static let scoreKey = "day score key"
         static let photosUnit = "photos"
         static let moodsUnit = "moods"
 
@@ -35,6 +37,12 @@ enum Copy {
         static func rowDate(_ key: DateKey, calendar: Calendar = .current) -> String {
             let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone)
                 .weekday(.abbreviated).day().month(.abbreviated)
+            return key.date(in: calendar).formatted(style).lowercased()
+        }
+
+        /// "thu", lowercase.
+        static func weekdayShort(_ key: DateKey, calendar: Calendar = .current) -> String {
+            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).weekday(.abbreviated)
             return key.date(in: calendar).formatted(style).lowercased()
         }
 

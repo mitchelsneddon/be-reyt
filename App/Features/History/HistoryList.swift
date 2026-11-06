@@ -35,19 +35,21 @@ struct HistoryList: View {
                 Section {
                     ForEach(month.days) { day in
                         NavigationLink(value: day.dateKey) { DaySummaryRow(summary: day) }
-                            .listRowBackground(Palette.paper)
+                            .navigationLinkIndicatorVisibility(.hidden)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                            .listRowBackground(Palette.card)
                             .listRowSeparatorTint(Palette.border)
+                            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                     }
                 } header: {
-                    Text(month.header)
-                        .font(.system(.title3, design: .serif))
-                        .foregroundStyle(Palette.ink)
+                    SectionTitle(month.header)
                         .textCase(nil)
-                        .accessibilityAddTraits(.isHeader)
+                        .padding(.leading, 4)
                 }
             }
         }
-        .listStyle(.plain)
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(28)
         .scrollContentBackground(.hidden)
         .background(Palette.paper)
     }

@@ -43,14 +43,13 @@ private struct Chip: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
-                if isSelected { Image(systemName: "checkmark").font(.caption.weight(.semibold)) }
-                Text(label).font(.subheadline)
+                if isSelected { Image(systemName: "checkmark").brFont(.labelBold) }
+                Text(label).brFont(isSelected ? .chipSelected : .chip)
             }
-            .foregroundStyle(Palette.ink)
-            .padding(.vertical, 6)
-            .padding(.horizontal, 14)
-            .background(Capsule().fill(isSelected ? Palette.accent.opacity(0.18) : Palette.card))
-            .overlay(Capsule().strokeBorder(isSelected ? Palette.accent : Palette.border, lineWidth: 1.5))
+            .foregroundStyle(isSelected ? Palette.accentText : Palette.ink)
+            .padding(.vertical, 7)
+            .padding(.horizontal, 13)
+            .background(Capsule().fill(isSelected ? Palette.accentSoft : Palette.chip))
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
