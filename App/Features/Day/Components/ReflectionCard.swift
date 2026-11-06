@@ -71,10 +71,11 @@ extension ReflectionCard where Action == EmptyView {
 
 extension View {
     /// An italic ink2 placeholder drawn over an empty text field (a `TextField` prompt cannot take `brFont`).
-    func brPlaceholder(_ text: String, show: Bool) -> some View {
+    func brPlaceholder(_ text: String, show: Bool, inset: CGFloat = 0, top: CGFloat = 0) -> some View {
         overlay(alignment: .topLeading) {
             if show {
                 Text(text).brFont(.bodyItalic).foregroundStyle(Palette.ink2)
+                    .padding(.leading, inset).padding(.top, top)
                     .allowsHitTesting(false).accessibilityHidden(true)
             }
         }

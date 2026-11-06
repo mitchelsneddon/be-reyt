@@ -9,49 +9,63 @@ struct FollowUpCard: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(Copy.Plan.followUpTitle)
-                .font(.headline).foregroundStyle(Palette.ink)
-                .accessibilityAddTraits(.isHeader)
-            Text(Copy.Plan.followUpQuote(plan.text)).font(.footnote).foregroundStyle(Palette.ink2)
+        VStack(alignment: .leading, spacing: 6) {
+            SectionTitle(Copy.Plan.followUpTitle)
+            Text(Copy.Plan.followUpQuote(plan.text)).brFont(.pointItalic).foregroundStyle(Palette.ink2)
+                .padding(.bottom, 8)
             if model.followUpIsCollapsed { collapsed } else { editing }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface(padding: 18)
     }
 
     private var collapsed: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(model.followUpSkipped ? Copy.Plan.skipped : model.followUpNote)
-                .font(.body).foregroundStyle(Palette.ink)
+                .brFont(.body).foregroundStyle(Palette.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button(Copy.Plan.edit) { model.editFollowUp() }
-                .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
+                .brFont(.navAction).foregroundStyle(Palette.accent).frame(minHeight: 44)
         }
     }
 
     private var editing: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 14) {
             TextField(
-                Copy.Plan.followUpPlaceholder,
-                text: Binding(get: { model.followUpNote }, set: { model.setFollowUpNote($0) }), axis: .vertical
+                "", text: Binding(get: { model.followUpNote }, set: { model.setFollowUpNote($0) }), axis: .vertical
             )
-            .font(.body).foregroundStyle(Palette.ink)
+            .brFont(.body).foregroundStyle(Palette.ink)
             .lineLimit(1...4)
             .focused($focused)
             .onChange(of: focused) { _, isFocused in model.setFocus(.followUp, isFocused) }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
-            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, minHeight: 48, alignment: .topLeading)
+            .brPlaceholder(Copy.Plan.followUpPlaceholder, show: model.followUpNote.isEmpty, inset: 14, top: 8)
+            .background(Palette.chip, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.border, lineWidth: 1))
             .accessibilityLabel(Copy.Plan.followUpNoteLabel)
-            HStack {
-                Button(Copy.Plan.skip) { model.skipFollowUp() }
+            HStack(spacing: 10) {
+                pill(Copy.Plan.done, filled: true, selected: false) { model.finishEditingFollowUp() }
+                pill(Copy.Plan.skip, filled: false, selected: model.followUpSkipped) { model.skipFollowUp() }
                     .accessibilityHint(Copy.Plan.skipHint)
-                Spacer()
-                if model.isEditingFollowUp {
-                    Button(Copy.Plan.done) { model.finishEditingFollowUp() }
-                }
             }
-            .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
         }
+    }
+
+    private func pill(_ title: String, filled: Bool, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .brFont(.followUpPill)
+                .foregroundStyle(selected ? Palette.onAccent : (filled ? Palette.accentText : Palette.ink))
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(
+                    selected ? Palette.accent : (filled ? Palette.accentSoft : Palette.chip),
+                    in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

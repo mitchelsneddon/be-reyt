@@ -1,8 +1,8 @@
 import ReytKit
 import SwiftUI
 
-/// "your plan for this week": the Sunday plan whose target week contains this day, with a link to edit it.
-/// Outside the current week it shows the real dates instead ("your plan for 9–15 nov").
+/// "this week": the Sunday plan whose target week contains this day, with a link to edit it.
+/// Outside the current week the eyebrow shows the real dates instead ("9–15 nov").
 struct PlanThisWeekCard: View {
     let plan: IntentionPlan
     let today: DateKey
@@ -15,22 +15,20 @@ struct PlanThisWeekCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.footnote).foregroundStyle(Palette.ink2)
+            Text(title).brFont(.eyebrow).foregroundStyle(Palette.ink2)
                 .accessibilityAddTraits(.isHeader)
-            Text(plan.text).font(.body).foregroundStyle(Palette.ink)
+            Text(plan.text).brFont(.body).foregroundStyle(Palette.ink)
             if let category = plan.category, !category.isEmpty {
-                Text(Copy.Plan.categoryLabel(for: category)).font(.footnote).foregroundStyle(Palette.ink2)
+                Pill(text: Copy.Plan.categoryLabel(for: category)).padding(.top, 2)
             }
             Button(Copy.Plan.editPlan) { onOpenSunday(plan.sourceSunday) }
-                .font(.footnote)
+                .brFont(.label)
                 .foregroundStyle(Palette.accent)
                 .frame(minHeight: 44)
                 .accessibilityHint(Copy.Plan.editPlanHint)
         }
-        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Palette.card))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.border, lineWidth: 1))
+        .cardSurface(padding: 16)
         .accessibilityElement(children: .contain)
     }
 }
