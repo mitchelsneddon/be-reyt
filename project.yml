@@ -28,6 +28,9 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: be reyt
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
         NSFaceIDUsageDescription: be reyt uses face id to keep your journal private. nothing leaves your phone.
         NSHealthShareUsageDescription: be reyt reads your workouts from apple health so they can sit quietly beside your day. nothing leaves your phone.
         UIAppFonts:

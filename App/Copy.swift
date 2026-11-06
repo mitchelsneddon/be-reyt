@@ -108,6 +108,11 @@ enum Copy {
         static let weekdayShort = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
 
         static func weekOf(_ range: String) -> String { "week of \(range)" }
+        /// "week of 1 nov", from the week's Sunday.
+        static func weekOfStart(_ key: DateKey, calendar: Calendar = .current) -> String {
+            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).month(.abbreviated)
+            return weekOf("\(key.day) \(key.date(in: calendar).formatted(style).lowercased())")
+        }
         static func coverage(_ recorded: Int) -> String { "\(recorded) of 7 days recorded" }
         static func rowLabel(week: String, coverage: String, isLatest: Bool) -> String {
             isLatest ? "\(thisWeeksReview), \(week), \(coverage)" : "\(week), \(coverage)"
@@ -115,9 +120,13 @@ enum Copy {
 
         /// "your first review opens on sunday 8 nov."
         static func emptyList(opensOn key: DateKey, calendar: Calendar = .current) -> String {
-            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone)
-                .weekday(.wide).day().month(.abbreviated)
-            return "your first review opens on \(key.date(in: calendar).formatted(style).lowercased())."
+            let date = key.date(in: calendar)
+            let weekday = date.formatted(
+                Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).weekday(.wide))
+            let month = date.formatted(
+                Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).month(.abbreviated))
+            return "your first review opens on \(weekday) \(key.day) \(month)."
+                .lowercased()
         }
 
         static let emptyWeek = "nothing was written this week."

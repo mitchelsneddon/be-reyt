@@ -9,6 +9,8 @@ final class ReviewsListModel {
     struct Row: Identifiable, Equatable {
         let weekStart: DateKey
         let recordedDays: Int
+        /// The week's seven day scores, Sunday to Saturday; nil where a day has no score.
+        let scores: [DayScore?]
         var id: DateKey { weekStart }
     }
 
@@ -32,7 +34,13 @@ final class ReviewsListModel {
             // One pass over the days with content gives both the earliest day and every week's coverage.
             let days = try await store.historyDays()
             var perWeek: [DateKey: Int] = [:]
-            for day in days { perWeek[WeekCalendar.reviewWeekStart(containing: day.dateKey), default: 0] += 1 }
+            var scoresByDay: [DateKey: DayScore] = [:]
+            for day in days {
+                perWeek[WeekCalendar.reviewWeekStart(containing: day.dateKey), default: 0] += 1
+                if let raw = day.content.dayScore, let score = DayScore(rawValue: raw) {
+                    scoresByDay[day.dateKey] = score
+                }
+            }
             let persisted = try await store.reviewRows()
             let eligibility = ReviewEligibility(
                 today: today, earliestContentDay: days.last?.dateKey, persisted: persisted)
@@ -42,7 +50,11 @@ final class ReviewsListModel {
                     for: newly, unlockedAt: AppClock.now(), timeZoneID: TimeZone.current.identifier)
                 events.receive(effect)
             }
-            let listed = eligibility.listedWeeks().map { Row(weekStart: $0, recordedDays: perWeek[$0] ?? 0) }
+            let listed = eligibility.listedWeeks().map { start in
+                Row(
+                    weekStart: start, recordedDays: perWeek[start] ?? 0,
+                    scores: (0..<7).map { scoresByDay[start.adding(days: $0)] })
+            }
             if listed != rows { rows = listed }
             loadFailed = false
         } catch {

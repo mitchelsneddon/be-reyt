@@ -6,7 +6,7 @@ a little space for your day. A private, single-user iPhone journal.
 
 - Xcode 27.0, iOS 27.0 SDK, Swift 6
 - `brew install xcodegen`
-- Signing: free Personal Team `C76RQ9NG73` (automatic)
+- Signing: Apple Developer Program team `C76RQ9NG73` (automatic), Apple ID signed in to Xcode
 
 ## Build
 
@@ -27,9 +27,14 @@ scripts/install-device.sh
 
 The phone must be unlocked, trusted, and in Developer Mode. Add `--release` for a Release build (see "Daily use build" below).
 
-## 7-day re-sign
+## TestFlight
 
-A free Personal Team provisioning profile expires after 7 days, after which the app will not open. Run `scripts/install-device.sh` again to reinstall over the top (same bundle id and team keeps your data). Do not delete the app: that deletes local data.
+```sh
+scripts/testflight.sh            # archive + export only, to check signing
+scripts/testflight.sh --upload   # archive + upload to App Store Connect
+```
+
+The build number is a UTC timestamp, so every upload is higher than the last. Bump `MARKETING_VERSION` in `project.yml` for a new version. Needs the app record for `local.mitchel.bereyt` in App Store Connect. TestFlight builds expire after 90 days. Installing from TestFlight replaces a dev install in place (same bundle id and team keeps your data). Do not delete the app: that deletes local data.
 
 ## Checks
 
@@ -113,4 +118,4 @@ What is verified: the `aea decrypt ... -key` and `-key-value base64:...` syntax,
 scripts/install-device.sh --release
 ```
 
-Run it again within 7 days to re-sign. Same bundle id and team, so your data stays.
+The development profile lasts a year; run it again to re-sign before it expires. Same bundle id and team, so your data stays.

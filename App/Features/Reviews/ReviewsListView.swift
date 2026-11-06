@@ -7,7 +7,7 @@ enum ReviewRoute: Hashable {
     case day(DateKey)
 }
 
-/// The Reviews tab: every eligible week, newest first, the latest one marked. A lazy `List`, so a journal
+/// The Reviews tab: every eligible week, newest first, the latest one as a lead card. Lazy stacks, so a journal
 /// imported with years of history stays light.
 struct ReviewsListView: View {
     let store: JournalStore
@@ -44,19 +44,26 @@ struct ReviewsListView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            content
-                .background(Palette.paper)
-                .completionNotes()
-                .navigationTitle(Copy.Reviews.title)
-                .navigationBarTitleDisplayMode(.inline)
-                .navigationDestination(for: ReviewRoute.self) { route in
-                    switch route {
-                    case .week(let key):
-                        ReviewView(weekStart: key, store: store, events: events)
-                    case .day(let key):
-                        HistoryDayPage(key: key, store: store, events: events, attachments: attachments)
-                    }
+            VStack(alignment: .leading, spacing: 0) {
+                Text(Copy.Reviews.title)
+                    .brFont(.largeTitle)
+                    .foregroundStyle(Palette.ink)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(EdgeInsets(top: 18, leading: 28, bottom: 22, trailing: 24))
+                content
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(Palette.paper)
+            .completionNotes()
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(for: ReviewRoute.self) { route in
+                switch route {
+                case .week(let key):
+                    ReviewView(weekStart: key, store: store, events: events)
+                case .day(let key):
+                    HistoryDayPage(key: key, store: store, events: events, attachments: attachments)
                 }
+            }
         }
         .task(id: RefreshKey(revision: events.contentRevision, today: today)) {
             await model.refresh(today: today)
@@ -68,59 +75,165 @@ struct ReviewsListView: View {
 
     @ViewBuilder private var content: some View {
         if model.loadFailed {
-            Button(Copy.Reviews.loadFailed) { Task { await model.refresh(today: today) } }
-                .font(.footnote).foregroundStyle(Palette.accent).frame(minHeight: 44)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if !model.isLoaded {
-            Palette.paper
-        } else if model.rows.isEmpty {
-            Text(
-                Copy.Reviews.emptyList(
-                    opensOn: WeekCalendar.unlockKey(forWeekStart: WeekCalendar.reviewWeekStart(containing: today)))
-            )
-            .font(.body)
-            .foregroundStyle(Palette.ink2)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            List(model.rows) { row in
-                NavigationLink(value: ReviewRoute.week(row.weekStart)) {
-                    ReviewRowView(row: row, isLatest: row.weekStart == model.latestWeek, today: today)
+            Button {
+                Task { await model.refresh(today: today) }
+            } label: {
+                VStack(spacing: 14) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 26, weight: .regular))
+                        .foregroundStyle(Palette.accent)
+                        .frame(width: 56, height: 56)
+                        .background(Palette.accentSoft, in: Circle())
+                    Text(Copy.Reviews.loadFailed)
+                        .brFont(.rowWrapping)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Palette.accent)
+                        .multilineTextAlignment(.center)
                 }
-                .listRowBackground(Palette.paper)
-                .listRowSeparatorTint(Palette.border)
+                .frame(minHeight: 44)
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
+            .buttonStyle(.plain)
+            .accessibilityLabel(Copy.Reviews.loadFailed)
+            .padding(.horizontal, 40)
+            .padding(.top, 120)
+            .frame(maxWidth: .infinity)
+            Spacer(minLength: 0)
+        } else if !model.isLoaded {
+            Spacer(minLength: 0)
+        } else if model.rows.isEmpty {
+            VStack(spacing: 22) {
+                Image(systemName: "star")
+                    .font(.system(size: 34, weight: .light))
+                    .foregroundStyle(Palette.accent)
+                    .frame(width: 76, height: 76)
+                    .background(Palette.accentSoft, in: Circle())
+                    .accessibilityHidden(true)
+                Text(
+                    Copy.Reviews.emptyList(
+                        opensOn: WeekCalendar.unlockKey(forWeekStart: WeekCalendar.reviewWeekStart(containing: today)))
+                )
+                .brFont(.stat)
+                .foregroundStyle(Palette.ink)
+                .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 40)
+            .padding(.top, 90)
+            .frame(maxWidth: .infinity)
+            Spacer(minLength: 0)
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    if let lead = model.rows.first {
+                        NavigationLink(value: ReviewRoute.week(lead.weekStart)) {
+                            LeadReviewCard(row: lead)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    let others = Array(model.rows.dropFirst())
+                    if !others.isEmpty {
+                        LazyVStack(spacing: 0) {
+                            ForEach(others) { row in
+                                if row.id != others.first?.id { Divider().overlay(Palette.border) }
+                                NavigationLink(value: ReviewRoute.week(row.weekStart)) {
+                                    WeekRow(row: row)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .background(Palette.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .strokeBorder(Palette.border, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
+            }
         }
     }
 }
 
-private struct ReviewRowView: View {
-    let row: ReviewsListModel.Row
-    let isLatest: Bool
-    let today: DateKey
-
-    private var week: String {
-        Copy.Reviews.weekOf(
-            DateRangeFormat.string(from: row.weekStart, to: row.weekStart.adding(days: 6), today: today))
-    }
+/// Seven small circles for a week: filled in the day's score colour, dashed where there is no score.
+private struct WeekDots: View {
+    let scores: [DayScore?]
+    let size: CGFloat
+    let gap: CGFloat
+    let missing: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if isLatest {
-                Text(Copy.Reviews.thisWeeksReview).font(.footnote).foregroundStyle(Palette.accent)
+        HStack(spacing: gap) {
+            ForEach(Array(scores.enumerated()), id: \.offset) { _, score in
+                if let score {
+                    Circle().fill(Palette.score(score)).frame(width: size, height: size)
+                } else {
+                    Circle()
+                        .strokeBorder(missing, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2.5]))
+                        .frame(width: size, height: size)
+                }
             }
-            Text(week)
-                .font(isLatest ? .system(.title3, design: .serif) : .body)
-                .foregroundStyle(Palette.ink)
-            Text(Copy.Reviews.coverage(row.recordedDays)).font(.footnote).foregroundStyle(Palette.ink2)
         }
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .padding(.vertical, isLatest ? 8 : 4)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct Chevron: View {
+    var body: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 13, weight: .bold))
+            .accessibilityHidden(true)
+    }
+}
+
+private struct LeadReviewCard: View {
+    let row: ReviewsListModel.Row
+
+    private var week: String { Copy.Reviews.weekOfStart(row.weekStart) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(Copy.Reviews.thisWeeksReview).brFont(.labelBold).opacity(0.82)
+                Spacer(minLength: 8)
+                Chevron().opacity(0.7)
+            }
+            Text(week).brFont(.leadCard).padding(.top, 6)
+            Text(Copy.Reviews.coverage(row.recordedDays)).brFont(.banner).opacity(0.82).padding(.top, 2)
+            WeekDots(scores: row.scores, size: 22, gap: 8, missing: Palette.onAccent.opacity(0.47))
+                .padding(.top, 16)
+        }
+        .foregroundStyle(Palette.onAccent)
+        .padding(EdgeInsets(top: 18, leading: 18, bottom: 20, trailing: 18))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.accent, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            Copy.Reviews.rowLabel(week: week, coverage: Copy.Reviews.coverage(row.recordedDays), isLatest: isLatest))
+            Copy.Reviews.rowLabel(week: week, coverage: Copy.Reviews.coverage(row.recordedDays), isLatest: true))
+    }
+}
+
+private struct WeekRow: View {
+    let row: ReviewsListModel.Row
+
+    private var week: String { Copy.Reviews.weekOfStart(row.weekStart) }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(week).brFont(.weekRow).foregroundStyle(row.recordedDays == 0 ? Palette.ink2 : Palette.ink)
+                Text(Copy.Reviews.coverage(row.recordedDays)).brFont(.label).foregroundStyle(Palette.ink2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            WeekDots(scores: row.scores, size: 9, gap: 4, missing: Palette.ink3)
+            Chevron().foregroundStyle(Palette.ink3)
+        }
+        .padding(.horizontal, 16)
+        .frame(minHeight: 72)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            Copy.Reviews.rowLabel(week: week, coverage: Copy.Reviews.coverage(row.recordedDays), isLatest: false))
     }
 }

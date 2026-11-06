@@ -18,7 +18,9 @@ struct RootView: View {
             // Simulator-only: `-openHistory ...` starts on the history tab.
             if CommandLine.arguments.contains("-openHistory") { return .history }
             if CommandLine.arguments.contains("-openSettings") { return .settings }
-            if CommandLine.arguments.contains("-openReview") { return .reviews }
+            if CommandLine.arguments.contains("-openReview") || CommandLine.arguments.contains("-openReviews") {
+                return .reviews
+            }
         #endif
         return .today
     }
