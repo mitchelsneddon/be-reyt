@@ -13,6 +13,7 @@ struct TagsView: View {
     @State private var renaming: Tag?
     @State private var pendingDelete: Tag?
     @State private var deleteFailed = false
+    @Environment(\.editMode) private var editMode
 
     private var sortedTags: [Tag] {
         tags.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -29,10 +30,7 @@ struct TagsView: View {
     var body: some View {
         Group {
             if tags.isEmpty {
-                Text(Copy.Tags.manageEmpty)
-                    .foregroundStyle(Palette.ink2)
-                    .padding(20)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                emptyState
             } else {
                 list
             }
@@ -40,7 +38,22 @@ struct TagsView: View {
         .background(Palette.paper)
         .navigationTitle(Copy.Tags.manageTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { if !tags.isEmpty { EditButton() } }
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(Copy.Tags.manageTitle).brFont(.navTitle).foregroundStyle(Palette.ink)
+                    .accessibilityAddTraits(.isHeader)
+            }
+            if !tags.isEmpty { ToolbarItem(placement: .primaryAction) { editButton } }
+        }
+        .tint(Palette.accent)
+        #if DEBUG
+            .task {
+                // Simulator-only: `-openTagsRename` opens the rename sheet for the first tag.
+                guard CommandLine.arguments.contains("-openTagsRename") else { return }
+                try? await Task.sleep(for: .seconds(2))
+                renaming = sortedTags.first
+            }
+        #endif
         .sheet(item: $renaming) { tag in
             TagRenameSheet(tag: tag, model: model)
         }
@@ -61,36 +74,64 @@ struct TagsView: View {
         }
     }
 
+    private var editButton: some View {
+        let editing = editMode?.wrappedValue.isEditing == true
+        return Button(editing ? Copy.Tags.done : Copy.Tags.edit) {
+            withAnimation { editMode?.wrappedValue = editing ? .inactive : .active }
+        }
+        .brFont(.navAction)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 18) {
+            Text("#")
+                .brFont(.onboardingTitle)
+                .foregroundStyle(Palette.accent)
+                .frame(width: 72, height: 72)
+                .background(Palette.accentSoft, in: Circle())
+                .accessibilityHidden(true)
+            Text(Copy.Tags.manageEmpty).brFont(.navAction).foregroundStyle(Palette.ink2)
+        }
+        .accessibilityElement(children: .combine)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     private var list: some View {
         let counts = usage
         return List {
-            ForEach(sortedTags) { tag in
-                Button {
-                    renaming = tag
-                } label: {
-                    HStack {
-                        Text(tag.name).foregroundStyle(Palette.ink)
-                        Spacer()
-                        Text(Copy.Tags.usedOn(counts[tag.id] ?? 0))
-                            .font(.footnote)
-                            .foregroundStyle(Palette.ink2)
+            Section {
+                ForEach(sortedTags) { tag in
+                    Button {
+                        renaming = tag
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text(tag.name).brFont(.row).foregroundStyle(Palette.ink)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(Copy.Tags.usedOn(counts[tag.id] ?? 0))
+                                .brFont(.rowWrapping).foregroundStyle(Palette.ink2)
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Palette.ink3)
+                                .accessibilityHidden(true)
+                        }
+                        .frame(minHeight: 52)
+                        .contentShape(Rectangle())
                     }
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
+                    .accessibilityLabel(Copy.Tags.rowLabel(tag.name, days: counts[tag.id] ?? 0))
+                    .accessibilityHint(Copy.Tags.rowHint)
+                    .swipeActions {
+                        Button(Copy.Tags.deleteAction, role: .destructive) { pendingDelete = tag }
+                            .tint(Palette.danger)
+                    }
                 }
-                .accessibilityLabel(Copy.Tags.rowLabel(tag.name, days: counts[tag.id] ?? 0))
-                .accessibilityHint(Copy.Tags.rowHint)
-                .swipeActions {
-                    Button(Copy.Tags.deleteAction, role: .destructive) { pendingDelete = tag }
+                .onDelete { offsets in
+                    let current = sortedTags
+                    if let index = offsets.first { pendingDelete = current[index] }
                 }
             }
-            .onDelete { offsets in
-                let current = sortedTags
-                if let index = offsets.first { pendingDelete = current[index] }
-            }
+            .settingsRows()
         }
         .scrollContentBackground(.hidden)
-        .tint(Palette.accent)
     }
 }
 
@@ -115,27 +156,45 @@ private struct TagRenameSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    TextField(Copy.Tags.renameField, text: $name)
-                        .textInputAutocapitalization(.never)
-                        .submitLabel(.done)
-                        .focused($focused)
-                        .onSubmit(save)
-                        .accessibilityLabel(Copy.Tags.renameField)
-                        .frame(minHeight: 44)
-                } footer: {
-                    if let message { Text(message) }
+            VStack(alignment: .leading, spacing: 8) {
+                Text(Copy.Tags.renameField).brFont(.sectionHeader).foregroundStyle(Palette.ink2)
+                    .accessibilityHidden(true)
+                TextField(Copy.Tags.renameField, text: $name)
+                    .brFont(.navAction)
+                    .foregroundStyle(Palette.ink)
+                    .textInputAutocapitalization(.never)
+                    .submitLabel(.done)
+                    .focused($focused)
+                    .onSubmit(save)
+                    .accessibilityLabel(Copy.Tags.renameField)
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 52)
+                    .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(message == nil ? Palette.border : Palette.danger, lineWidth: 1)
+                    )
+                if let message {
+                    Text(message).brFont(.banner).foregroundStyle(Palette.danger)
+                        .padding(.horizontal, 4)
                 }
+                Spacer(minLength: 0)
             }
-            .scrollContentBackground(.hidden)
+            .padding(EdgeInsets(top: 20, leading: 24, bottom: 0, trailing: 24))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(Palette.paper)
             .navigationTitle(Copy.Tags.renameTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(Copy.Tags.cancel) { dismiss() } }
+                ToolbarItem(placement: .principal) {
+                    Text(Copy.Tags.renameTitle).brFont(.navTitle).foregroundStyle(Palette.ink)
+                        .accessibilityAddTraits(.isHeader)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(Copy.Tags.cancel) { dismiss() }.brFont(.navAction)
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(Copy.Tags.save, action: save).disabled(trimmed.isEmpty || saving)
+                    Button(Copy.Tags.save, action: save).brFont(.navActionBold).disabled(trimmed.isEmpty || saving)
                 }
             }
             .onChange(of: name) { message = nil }

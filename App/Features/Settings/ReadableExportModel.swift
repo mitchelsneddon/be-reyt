@@ -94,6 +94,11 @@ final class ReadableExportModel {
         }
     }
 
+    #if DEBUG
+        /// Simulator-only: shows the working state without running an export.
+        func debugShowWorking(_ fraction: Double) { state = .working(fraction) }
+    #endif
+
     func exporterFinished(_ result: Result<URL, Error>) {
         cleanUp()
         switch result {

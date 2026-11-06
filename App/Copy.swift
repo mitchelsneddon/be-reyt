@@ -253,7 +253,7 @@ enum Copy {
         static let addFailed = "couldn't add that tag. try again in a moment."
         static let manageLink = "manage tags"
         static let manageTitle = "tags"
-        static let manageEmpty = "no tags yet. add one from any day."
+        static let manageEmpty = "no tags yet."
         static func usedOn(_ days: Int) -> String { days == 1 ? "used on 1 day" : "used on \(days) days" }
         static func rowLabel(_ name: String, days: Int) -> String { "\(name), \(usedOn(days))" }
         static let rowHint = "opens rename"
@@ -272,6 +272,7 @@ enum Copy {
         static let cancel = "cancel"
         static let save = "save"
         static let done = "done"
+        static let edit = "edit"
         static let settingsRow = "tags"
         static let journalSection = "journal"
         static func chipLabel(_ name: String, selected: Bool) -> String {
@@ -636,8 +637,6 @@ enum Copy {
         static let markdownRow = "export as markdown"
         static let pdfRow = "export as pdf"
         static let notEncrypted = "readable exports aren't encrypted. keep them somewhere private."
-        static let footer =
-            "these are for reading, not for restoring. use a backup if you want to bring your journal back into be reyt."
         static let rangeSection = "which days"
         static let rangeLabel = "days to include"
         static let rangeAll = "all days"
@@ -645,10 +644,8 @@ enum Copy {
         static let startLabel = "from"
         static let endLabel = "to"
         static let workoutsToggle = "include workouts"
-        static let workoutsFooter =
-            "workouts are copied from apple health. when this is off, they are left out of the export and it says so."
         static let working = "putting it together…"
-        static let saved = "export saved. it isn't encrypted, so keep it somewhere private."
+        static let saved = "export saved."
         static let nothing = "there's nothing to export for those days."
         static let failed = "couldn't make the export. nothing was changed, try again in a moment."
         static let storageFull =
@@ -746,14 +743,13 @@ enum Copy {
         ]
         static let keepsHeader = "this does not remove"
         static let keeps = [
-            "backup files you've saved, or that were saved to your backup folder. delete those yourself in the files app.",
-            "apple health data. be reyt only ever reads it, and never changes it.",
+            "backup files you've saved. delete those yourself in the files app.",
+            "apple health data. be reyt only reads it.",
         ]
         static let irreversible = "this can't be undone. be reyt will be empty, as if you'd just installed it."
         static let reauthReason = "confirm it's you to delete all data."
         static let reauthFailed = "couldn't confirm it's you, so nothing was deleted."
         static let continueAction = "continue"
-        static let confirmPrompt = "type delete to confirm."
         static let confirmWord = "delete"
         static let confirmField = "type delete"
         static let action = "delete everything"

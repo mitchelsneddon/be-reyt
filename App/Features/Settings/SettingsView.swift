@@ -19,6 +19,14 @@ struct SettingsView: View {
     @State private var showJournalPicker = false
     @State private var showUndoConfirm = false
     @State private var authMessage: String?
+    #if DEBUG
+        // Simulator-only: `-openTags`, `-openReadableExport`, `-openDeleteAll` (or `-openDeleteAllConfirm`) push that screen.
+        @State private var debugTags =
+            CommandLine.arguments.contains("-openTags") || CommandLine.arguments.contains("-openTagsRename")
+        @State private var debugExport = CommandLine.arguments.contains("-openReadableExport")
+        @State private var debugDelete =
+            CommandLine.arguments.contains("-openDeleteAll") || CommandLine.arguments.contains("-openDeleteAllConfirm")
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -52,6 +60,11 @@ struct SettingsView: View {
             .completionNotes()
             .navigationTitle(Copy.Settings.title)
             .toolbar(.hidden, for: .navigationBar)
+            #if DEBUG
+                .navigationDestination(isPresented: $debugTags) { TagsView(model: tags) }
+                .navigationDestination(isPresented: $debugExport) { ReadableExportView(host: backup.host) }
+                .navigationDestination(isPresented: $debugDelete) { DeleteAllView() }
+            #endif
         }
     }
 
