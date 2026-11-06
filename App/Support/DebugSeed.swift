@@ -131,10 +131,10 @@
                     day: "2026-10-07", text: "a long meeting day, but the walk home helped.", moods: ["tired"],
                     tags: [walk]),
                 Seed(day: "2026-10-09", rotating: "i finally cleared the desk.", score: .good),
-                Seed(day: "2026-10-11", text: "sunday. tidied up and made soup.", moods: ["calm"]),
+                Seed(day: "2026-10-11", text: "sunday. tidied up and made soup.", moods: ["annoyed"]),
                 Seed(
                     day: "2026-10-12", text: "Coffee with Priya at the Café on the corner.", score: .excellent,
-                    moods: ["happy", "calm"], tags: [friends]),
+                    moods: ["happy", "anxious"], tags: [friends]),
                 Seed(day: "2026-10-16", smile: "a stranger held the door and we both laughed."),
                 Seed(day: "2026-10-18", text: "sunday reset, long walk by the river.", score: .good, tags: [walk]),
                 Seed(
@@ -154,7 +154,7 @@
                     moods: ["tired"], tags: [reading]),
                 Seed(
                     day: "2026-10-29", text: "windy. kept the doors shut and read all afternoon.", score: .difficult,
-                    moods: ["calm"], tags: [reading]),
+                    moods: ["sad"], tags: [reading]),
                 Seed(
                     day: "2026-10-31", text: "pumpkins on the step, a few kids came by.", score: .good, moods: ["happy"]
                 ),

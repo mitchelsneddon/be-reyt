@@ -90,6 +90,14 @@ struct WeeklyStatsTests {
         #expect(WeeklyStats.display(tenths: WeeklyStats.roundedTenths(sum: 9, count: 4)) == "2.3")
     }
 
+    @Test("a retired mood stored on a day is still counted, after the active ones")
+    func retiredMoodCounted() {
+        let s = stats(input(week, moods: [["tired"], ["anxious", "tired"], ["sad"]]))
+        #expect(s.moodFrequency.map(\.moodID) == ["sad", "anxious", "tired"])
+        #expect(s.moodFrequency.first { $0.moodID == "tired" }?.dayCount == 2)
+        #expect(s.moodLoggedDays == 3)
+    }
+
     @Test("multiple moods per day count by distinct day and can exceed days in total")
     func multipleMoods() {
         let s = stats(input(week, moods: [["happy", "tired"], ["happy", "tired"], ["happy"]]))

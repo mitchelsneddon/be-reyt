@@ -121,7 +121,7 @@ struct DayPageView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(Copy.Day.moodsTitle).font(.footnote).foregroundStyle(Palette.ink2)
             ChipGroup(
-                items: MoodCatalog.all.map { ChipItem(id: $0.id, label: $0.label) },
+                items: MoodCatalog.offered(including: model.moodIDs).map { ChipItem(id: $0.id, label: $0.label) },
                 selection: Binding(get: { Set(model.moodIDs) }, set: { _ in }),
                 onToggle: { model.toggleMood($0) })
         }

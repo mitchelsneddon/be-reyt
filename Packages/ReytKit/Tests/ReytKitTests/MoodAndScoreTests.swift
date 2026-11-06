@@ -6,8 +6,11 @@ import Testing
 struct MoodCatalogTests {
     @Test("catalog ids and labels")
     func catalog() {
-        #expect(MoodCatalog.all.map(\.id) == ["happy", "stressed", "tired", "annoyed"])
-        #expect(MoodCatalog.all.map(\.label) == ["happy", "stressed", "tired", "annoyed"])
+        let ids = ["happy", "sad", "stressed", "annoyed", "anxious"]
+        #expect(MoodCatalog.active.map(\.id) == ids)
+        #expect(MoodCatalog.active.map(\.label) == ids)
+        #expect(MoodCatalog.retired.map(\.id) == ["tired"])
+        #expect(MoodCatalog.all.map(\.id) == ids + ["tired"])
         #expect(MoodCatalog.label(for: "tired") == "tired")
         #expect(MoodCatalog.label(for: "nope") == nil)
     }
@@ -21,7 +24,7 @@ struct MoodCatalogTests {
     func order() {
         #expect(
             MoodCatalog.normalize(["annoyed", "tired", "stressed", "happy"]) == [
-                "happy", "stressed", "tired", "annoyed",
+                "happy", "stressed", "annoyed", "tired",
             ])
     }
 
@@ -31,6 +34,21 @@ struct MoodCatalogTests {
             MoodCatalog.normalize(["zen", "tired", "calm", "zen", "happy", "calm"]) == [
                 "happy", "tired", "zen", "calm",
             ])
+    }
+
+    @Test("offered hides retired moods unless the day carries them")
+    func offered() {
+        #expect(MoodCatalog.offered(including: []).map(\.id) == MoodCatalog.active.map(\.id))
+        #expect(MoodCatalog.offered(including: ["happy", "zen"]).map(\.id) == MoodCatalog.active.map(\.id))
+        #expect(
+            MoodCatalog.offered(including: ["tired"]).map(\.id) == MoodCatalog.active.map(\.id) + ["tired"])
+    }
+
+    @Test("retired mood still resolves and is kept by normalize")
+    func retiredResolves() {
+        #expect(MoodCatalog.isRetired("tired") && !MoodCatalog.isRetired("happy"))
+        #expect(MoodCatalog.label(for: "tired") == "tired")
+        #expect(MoodCatalog.normalize(["zen", "tired", "anxious", "sad"]) == ["sad", "anxious", "tired", "zen"])
     }
 
     @Test("empty stays empty")
