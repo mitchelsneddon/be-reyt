@@ -212,7 +212,7 @@ struct HistoryView: View {
     }
 }
 
-/// The five faces with their names, under the calendar: what each dot colour means.
+/// The five stars with their names, under the calendar: what each dot colour means.
 private struct ScoreLegend: View {
     @ScaledMetric(relativeTo: .body) private var circle: CGFloat = 28
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -228,7 +228,7 @@ private struct ScoreLegend: View {
                     Circle().fill(Palette.score(score))
                         .frame(width: circle, height: circle)
                         .overlay {
-                            FaceGlyph(score: score, size: circle * 19 / 28, strokeUnits: 2.8)
+                            ScoreGlyph(score: score, size: circle * 19 / 28, strokeUnits: 2.8)
                                 .foregroundStyle(Palette.faceInk)
                         }
                     Text(score.label)

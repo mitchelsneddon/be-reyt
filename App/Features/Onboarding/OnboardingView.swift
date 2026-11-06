@@ -287,6 +287,8 @@ private struct OnboardingTopRow: View {
 
     var body: some View {
         HStack {
+            LockMark(size: 30)
+                .padding(.trailing, 4)
             HStack(alignment: .lastTextBaseline, spacing: 0) {
                 Text(Copy.Onboarding.wordmarkStart)
                 Circle()

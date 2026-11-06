@@ -27,22 +27,35 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            Tab(Copy.Tab.today, systemImage: "sunrise", value: Destination.today) {
+            Tab(value: Destination.today) {
                 TodayView(store: store, events: events, attachments: attachments)
+            } label: {
+                tabLabel(Copy.Tab.today, "tab.today", .today)
             }
-            Tab(Copy.Tab.history, systemImage: "calendar", value: Destination.history) {
+            Tab(value: Destination.history) {
                 HistoryView(store: store, events: events, attachments: attachments)
+            } label: {
+                tabLabel(Copy.Tab.history, "tab.history", .history)
             }
-            Tab(Copy.Tab.reviews, systemImage: "star", value: Destination.reviews) {
+            Tab(value: Destination.reviews) {
                 ReviewsListView(store: store, events: events, attachments: attachments)
+            } label: {
+                tabLabel(Copy.Tab.reviews, "tab.reviews", .reviews)
             }
-            Tab(Copy.Tab.settings, systemImage: "slider.horizontal.3", value: Destination.settings) {
+            Tab(value: Destination.settings) {
                 SettingsView(backup: backup, restore: restore, tags: TagsModel(store: store, events: events))
+            } label: {
+                tabLabel(Copy.Tab.settings, "tab.settings", .settings)
             }
         }
         .tint(Palette.accent)
         .modifier(PassphraseQuestionAlerts(restore: restore))
         .environment(restore)
+    }
+
+    /// Outline when idle, filled when selected.
+    private func tabLabel(_ title: String, _ image: String, _ destination: Destination) -> some View {
+        Label(title, image: selection == destination ? "\(image).fill" : image)
     }
 }
 

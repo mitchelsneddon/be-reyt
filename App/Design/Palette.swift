@@ -24,6 +24,10 @@ enum Palette {
     static let tape = Color("tape")
     /// The gold dot in the onboarding wordmark. The same in light and dark, so it is not an asset.
     static let wordmarkDot = Color(red: 0xD9 / 255, green: 0xA5 / 255, blue: 0x4A / 255)
+    /// The app icon's midnight tile and page (`LockMark`), matching scripts/make-icon.swift. Fixed in light and
+    /// dark like the icon itself, so not assets.
+    static let iconGround = Color(red: 0x0D / 255, green: 0x15 / 255, blue: 0x22 / 255)
+    static let iconPage = Color(red: 0xFB / 255, green: 0xF8 / 255, blue: 0xF1 / 255)
     static let score1 = Color("score1")
     static let score2 = Color("score2")
     static let score3 = Color("score3")

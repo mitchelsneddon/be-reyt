@@ -239,7 +239,7 @@ struct ReviewView: View {
 
 // MARK: - Pieces
 
-/// Seven faces, Sunday to Saturday, with weekday initials under them. A day with no score is a dashed circle.
+/// Seven stars, Sunday to Saturday, with weekday initials under them. A day with no score is a dashed circle.
 private struct WeekFaces: View {
     let chart: [WeeklyStats.ChartPoint]
     @ScaledMetric(relativeTo: .body) private var circle: CGFloat = 38
@@ -267,7 +267,7 @@ private struct WeekFaces: View {
             Circle().fill(Palette.score(score))
                 .frame(width: side, height: side)
                 .overlay {
-                    FaceGlyph(score: score, size: side * 25 / 38, strokeUnits: 2.8).foregroundStyle(Palette.faceInk)
+                    ScoreGlyph(score: score, size: side * 25 / 38, strokeUnits: 2.8).foregroundStyle(Palette.faceInk)
                 }
         } else {
             Circle()

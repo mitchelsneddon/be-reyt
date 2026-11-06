@@ -13,7 +13,7 @@
 
         init() {
             assert(
-                MoodCatalog.all.allSatisfy { MoodGlyph.hasGlyph($0.id) || $0.id == "tired" },
+                MoodCatalog.all.allSatisfy { MoodGlyph.hasGlyph($0.id) },
                 "a mood id has no glyph")
         }
 
@@ -61,7 +61,7 @@
                 Text("glyph only, stroke 2.6").brFont(.label).foregroundStyle(Palette.ink2)
                 HStack(spacing: 12) {
                     ForEach(DayScore.allCases, id: \.self) { s in
-                        FaceGlyph(score: s, size: 56).foregroundStyle(Palette.ink)
+                        ScoreGlyph(score: s, size: 56).foregroundStyle(Palette.ink)
                     }
                 }
             }
@@ -71,7 +71,7 @@
             let glyph: CGFloat = circle == 56 ? 34 : circle == 38 ? 25 : 19
             return ZStack {
                 Circle().fill(selected ? scoreColor(s) : Palette.chip)
-                FaceGlyph(score: s, size: glyph, strokeUnits: circle == 56 ? 2.6 : 2.8)
+                ScoreGlyph(score: s, size: glyph, strokeUnits: circle == 56 ? 2.6 : 2.8)
                     .foregroundStyle(selected ? Palette.faceInk : Palette.ink3)
             }
             .frame(width: circle, height: circle)
@@ -96,7 +96,7 @@
                 Text("large").brFont(.label).foregroundStyle(Palette.ink2)
                 HStack(spacing: 8) {
                     ForEach(ids, id: \.self) {
-                        MoodGlyph(id: $0, size: 44, strokeUnits: 1.9).foregroundStyle(Palette.ink)
+                        MoodGlyph(id: $0, size: 44).foregroundStyle(Palette.ink)
                     }
                 }
                 SectionTitle("marks")
@@ -143,7 +143,7 @@
                     StatusDot(color: Palette.danger)
                     IconTile(systemName: "lock")
                     IconTile(systemName: "trash", style: .danger)
-                    IconTile(glyph: MoodGlyph(id: "happy", size: 18, strokeUnits: 1.9))
+                    IconTile(glyph: MoodGlyph(id: "happy", size: 18))
                     ProgressRing()
                 }
                 VStack(spacing: 0) {

@@ -2,7 +2,7 @@ import ReytKit
 import SwiftUI
 
 /// One history row: day number over weekday, the first line as a title, the next line as a snippet, a photo count
-/// and the day's score as a face circle (no circle when unscored).
+/// and the day's score as a star in a circle (no circle when unscored).
 struct DaySummaryRow: View {
     let summary: DaySummary
 
@@ -41,7 +41,7 @@ struct DaySummaryRow: View {
                 Circle().fill(Palette.score(score))
                     .frame(width: circle, height: circle)
                     .overlay {
-                        FaceGlyph(score: score, size: circle * 19 / 28, strokeUnits: 2.8)
+                        ScoreGlyph(score: score, size: circle * 19 / 28, strokeUnits: 2.8)
                             .foregroundStyle(Palette.faceInk)
                     }
             }

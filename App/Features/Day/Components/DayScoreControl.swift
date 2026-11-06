@@ -1,8 +1,8 @@
 import ReytKit
 import SwiftUI
 
-/// "how was your day?": five 56 pt faces. Tap selects, tap the selected one clears.
-/// No red/green: the five score colours are a calm ramp, and the value is also written out under each face.
+/// "how was your day?": five 56 pt stars. Tap selects, tap the selected one clears.
+/// No red/green: the five score colours are a calm ramp, and the value is also written out under each star.
 struct DayScoreControl: View {
     let score: DayScore?
     let onChange: (DayScore?) -> Void
@@ -34,7 +34,7 @@ struct DayScoreControl: View {
     }
 
     private var faces: some View {
-        // Five do not fit once labels scale. At accessibility sizes the faces wrap into two columns (3 rows),
+        // Five do not fit once labels scale. At accessibility sizes the stars wrap into two columns (3 rows),
         // because even 3 per row cannot hold a scaled "difficult" without breaking the word.
         let count = typeSize.isAccessibilitySize ? 2 : 5
         return LazyVGrid(
@@ -60,7 +60,7 @@ struct DayScoreControl: View {
                         Circle().fill(Palette.paper).padding(-3)
                     }
                     Circle().fill(isOn ? color : Palette.chip)
-                    FaceGlyph(score: value, size: size * 34 / 56, strokeUnits: 2.6)
+                    ScoreGlyph(score: value, size: size * 34 / 56, strokeUnits: 2.6)
                         .foregroundStyle(isOn ? Palette.faceInk : Palette.ink3)
                 }
                 .frame(width: size, height: size)
