@@ -39,7 +39,7 @@ struct RestoreFlowView: View {
     @ViewBuilder private var content: some View {
         switch restore.phase {
         case .idle: EmptyView()
-        case .needsPassphrase(let url): passphraseForm(url)
+        case .needsPassphrase(let input): passphraseForm(input)
         case .preparing: progress(Copy.Restore.opening)
         case .ready: previewView
         case .restoring: progress(Copy.Restore.restoring)
@@ -48,9 +48,10 @@ struct RestoreFlowView: View {
         }
     }
 
-    private func passphraseForm(_ url: URL) -> some View {
+    private func passphraseForm(_ input: RestoreInput) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(Copy.Restore.enterPassphrase).font(.body).foregroundStyle(Color("ink"))
+            Text(isSnapshot(input) ? Copy.RestoreBrowser.enterPassphrase : Copy.Restore.enterPassphrase)
+                .font(.body).foregroundStyle(Color("ink"))
             SecureField(Copy.Restore.passphraseField, text: $passphrase)
                 .textContentType(.password)
                 .padding(12)
@@ -58,7 +59,7 @@ struct RestoreFlowView: View {
                 .frame(minHeight: 44)
             Button(Copy.Restore.open) {
                 let entered = passphrase
-                Task { await restore.openFile(url, passphrase: entered) }
+                Task { await restore.open(input, passphrase: entered) }
             }
             .buttonStyle(.borderedProminent)
             .disabled(passphrase.isEmpty)
@@ -66,6 +67,11 @@ struct RestoreFlowView: View {
         }
         .padding(.top, 24)
         .onAppear { if passphrase.isEmpty { passphrase = passphrases.stored() ?? "" } }
+    }
+
+    private func isSnapshot(_ input: RestoreInput) -> Bool {
+        if case .snapshot = input { return true }
+        return false
     }
 
     private func progress(_ text: String) -> some View {
@@ -121,11 +127,11 @@ struct RestoreFlowView: View {
         }
     }
 
-    private func failureView(_ failure: RestoreFailure, retry: URL?) -> some View {
+    private func failureView(_ failure: RestoreFailure, retry: RestoreInput?) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(Copy.Restore.failure(failure)).font(.body).foregroundStyle(Color("ink"))
             if let retry {
-                Button(Copy.Restore.tryAgain) { restore.retry(url: retry) }.frame(minHeight: 44)
+                Button(Copy.Restore.tryAgain) { restore.retry(retry) }.frame(minHeight: 44)
             }
             Button(Copy.Restore.close) { restore.cancel() }.frame(minHeight: 44)
         }

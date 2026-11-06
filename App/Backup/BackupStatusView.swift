@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 /// now. Never claims "uploaded" unless iCloud says so for the latest snapshot and its photos.
 struct BackupStatusView: View {
     let backup: BackupSettingsModel
+    let restore: RestoreCoordinator
     @Environment(BackupManager.self) private var manager
     @State private var showPicker = false
 
@@ -24,6 +25,9 @@ struct BackupStatusView: View {
                 }
                 .disabled(manager.isRunning || !manager.isActive)
                 .frame(minHeight: 44, alignment: .leading)
+                NavigationLink(Copy.RestoreBrowser.row) { RestoreBrowserView(restore: restore) }
+                    .accessibilityHint(Copy.RestoreBrowser.rowHint)
+                    .frame(minHeight: 44, alignment: .leading)
             }
         } header: {
             Text(Copy.AutoBackup.title)

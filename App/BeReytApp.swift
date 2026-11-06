@@ -23,13 +23,13 @@ struct BeReytApp: App {
         _events = State(initialValue: events)
         let backupModel = BackupSettingsModel(host: host)
         _backup = State(initialValue: backupModel)
-        let restore = RestoreCoordinator(host: host, events: events)
+        let autoBackup = BackupManager(host: host)
+        let restore = RestoreCoordinator(host: host, events: events, backup: autoBackup)
         let health = HealthCoordinator(host: host, events: events)
         let reminders = ReminderScheduler(host: host, events: events)
         restore.registerPostRestoreHook { await health.resyncAfterRestore() }
         restore.registerPostRestoreHook { await reminders.refresh() }
         events.onContentChange = { days in Task { await reminders.contentChanged(days: days) } }
-        let autoBackup = BackupManager(host: host)
         events.onDirty = { autoBackup.markDirty() }
         backupModel.onPassphraseChanged = { autoBackup.passphraseChanged() }
         _autoBackup = State(initialValue: autoBackup)
@@ -38,7 +38,8 @@ struct BeReytApp: App {
         let registry = DeviceDataRegistry()
         Self.registerDeviceWipers(registry, deviceRoot: host.paths.deviceRoot)
         registry.register(Copy.DeleteAll.wiperAutoBackup) { try await autoBackup.forgetEverything() }
-        _deleteAll = State(initialValue: DeleteAllCoordinator(host: host, events: events, registry: registry))
+        _deleteAll = State(
+            initialValue: DeleteAllCoordinator(host: host, events: events, backup: autoBackup, registry: registry))
         _restore = State(initialValue: restore)
         _health = State(initialValue: health)
     }

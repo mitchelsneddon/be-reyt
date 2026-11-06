@@ -216,6 +216,16 @@ struct BookmarkedFolderDestination: BackupDestination {
         return .uploading
     }
 
+    func isDownloaded(_ relativePath: String) -> Bool {
+        guard isUbiquitous, let file = try? url(relativePath) else { return true }
+        let scoped = scopeURL.startAccessingSecurityScopedResource()
+        defer { if scoped { scopeURL.stopAccessingSecurityScopedResource() } }
+        if Self.placeholderExists(for: file) { return false }
+        let status = try? file.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey])
+            .ubiquitousItemDownloadingStatus
+        return status == nil || status == .current
+    }
+
     private static func placeholderExists(for file: URL) -> Bool {
         let placeholder = file.deletingLastPathComponent().appending(path: ".\(file.lastPathComponent).icloud")
         return FileManager.default.fileExists(atPath: placeholder.path)

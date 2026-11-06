@@ -61,4 +61,6 @@ protocol BackupDestination: Sendable {
     func coordinatedRead<T>(_ relativePath: String, _ body: (URL) throws -> T) throws -> T
     func remove(_ relativePath: String) throws
     func uploadStatus(_ relativePath: String) -> UploadStatus
+    /// False when iCloud holds the file only as a placeholder, so reading it downloads it first.
+    func isDownloaded(_ relativePath: String) -> Bool
 }

@@ -4,7 +4,7 @@
     import ReytKit
 
     /// Simulator-only drivers for the backup flows, so they can be exercised without the system pickers:
-    /// `-debugPassphrase <p>`, `-exportTo <path>`, `-restoreFrom <path>` (add `-autoConfirmRestore` to go through),
+    /// `-debugPassphrase <p>`, `-exportTo <path>`, `-restoreFrom <path>`, `-restoreSnapshot <name>` (from `-backupFolder`; add `-autoConfirmRestore` to go through),
     /// `-undoLastRestore`. Results (counts and outcomes, never journal text) go to the log and to
     /// `Documents/backup-debug.txt`.
     enum DebugBackup {
@@ -21,7 +21,8 @@
             let args = CommandLine.arguments
             let passphrase = value(after: "-debugPassphrase")
             let wants =
-                args.contains("-exportTo") || args.contains("-restoreFrom") || args.contains("-undoLastRestore")
+                args.contains("-exportTo") || args.contains("-restoreFrom") || args.contains("-restoreSnapshot")
+                || args.contains("-undoLastRestore")
                 || passphrase != nil
             guard wants else { return }
             if let passphrase {
@@ -55,6 +56,18 @@
                 if args.contains("-autoConfirmRestore"), restore.phase == .ready {
                     await restore.confirmRestore()
                     log("restore finished phase=\(restore.phase) undoAvailable=\(restore.undoAvailable)")
+                }
+            }
+
+            if let name = value(after: "-restoreSnapshot"), let passphrase {
+                let area: BackupArea = name.hasPrefix("be-reyt-pre-restore-") ? .preRestore : .snapshots
+                let input = RestoreInput.snapshot(SnapshotRef(name: name, area: area))
+                restore.beginRestore(fromSnapshot: SnapshotRef(name: name, area: area))
+                await restore.open(input, passphrase: passphrase)
+                log("restore snapshot prepare phase=\(restore.phase)")
+                if args.contains("-autoConfirmRestore"), restore.phase == .ready {
+                    await restore.confirmRestore()
+                    log("restore snapshot finished phase=\(restore.phase) undoAvailable=\(restore.undoAvailable)")
                 }
             }
 

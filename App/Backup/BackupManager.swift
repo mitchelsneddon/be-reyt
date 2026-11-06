@@ -3,6 +3,20 @@ import OSLog
 import Observation
 import ReytKit
 
+/// One snapshot as the restore browser shows it.
+struct SnapshotListing: Identifiable, Equatable, Sendable {
+    let name: String
+    let area: BackupArea
+    let day: DateKey
+    let bytes: Int?
+    /// False when iCloud holds it only as a placeholder: restoring downloads it first.
+    let isDownloaded: Bool
+
+    var id: String { "\(area.folder)/\(name)" }
+    var isPreRestore: Bool { area == .preRestore }
+    var ref: SnapshotRef { SnapshotRef(name: name, area: area) }
+}
+
 /// Decides when the automatic backup runs and keeps the status the settings screen shows. Foreground only: a run
 /// starts while the app is active, the journal has unbacked changes and has been quiet for about a minute (or on
 /// opening, when today's snapshot is missing), and is abandoned, leaving the folder as it was, if the app leaves
@@ -168,6 +182,84 @@ final class BackupManager {
         timer = nil
         runTask?.cancel()
         _ = await runTask?.value
+    }
+
+    /// A restore that did not go through: backups carry on where they were.
+    func resumeAfterQuiesce() { scheduleCheck(after: Self.openingDelaySeconds) }
+
+    // MARK: Restore
+
+    /// The folder as a destination, for the restore browser and a restore's photo fetches.
+    func openDestination() throws -> BookmarkedFolderDestination { try makeDestination() }
+
+    /// Every snapshot in the folder, newest first: the index reconciled with the folder listing, so snapshots only
+    /// the folder knows (written by another phone) are included and evicted ones are listed without downloading.
+    func listSnapshots() async throws -> [SnapshotListing] {
+        let destination = try makeDestination()
+        let created = Dictionary(
+            index.snapshots.map { ($0.name, $0.createdAt) }, uniquingKeysWith: { first, _ in first })
+        return try await Task.detached(priority: .userInitiated) {
+            let rows: [(SnapshotListing, Date)] = try destination.list().compactMap { item in
+                guard item.area != .blobs, let info = BackupFolderNames.snapshotInfo(fileName: item.name) else {
+                    return nil
+                }
+                let relative = "\(item.area.folder)/\(item.name)"
+                let listing = SnapshotListing(
+                    name: item.name, area: item.area, day: info.day, bytes: item.bytes,
+                    isDownloaded: destination.isDownloaded(relative))
+                return (listing, created[item.name] ?? .distantPast)
+            }
+            return rows.sorted { ($0.0.day, $0.1, $0.0.name) > ($1.0.day, $1.1, $1.0.name) }.map(\.0)
+        }.value
+    }
+
+    /// The safety copy before a restore: a full verified run into `pre-restore/` (snapshot, plus any photo the
+    /// folder lacks). The store is read-only by now; nothing in the folder is replaced or deleted. Throws when it
+    /// did not verify, so the restore stops.
+    func writePreRestoreCopy(passphrase: String) async throws {
+        guard hasDestination else { throw BackupDestinationError.notConfigured }
+        guard let store = host.store, let generation = host.generationURL else { throw BackupRunError.coded(.other) }
+        let destination = try makeDestination()
+        let dataKey = try dataKeys.ensure()
+        isRunning = true
+        let input = BackupRunner.Input(
+            store: store, paths: host.paths, generation: generation, destination: destination, passphrase: passphrase,
+            dataKey: dataKey, index: index, today: AppClock.today(), now: .now, appVersion: Self.appVersion,
+            kind: .preRestore)
+        let task = Task.detached(priority: .userInitiated) { await BackupRunner().run(input) }
+        runTask = task
+        let output = await task.value
+        runTask = nil
+        isRunning = false
+        // Keep the safety copy and the blobs the run proved; the daily bookkeeping stays as it was.
+        var updated = output.index
+        updated.pendingChanges = index.pendingChanges
+        updated.lastError = index.lastError
+        index = updated
+        persist()
+        if let error = output.error { throw error }
+    }
+
+    /// After a restore (or an undo) replaced the journal: a new lineage, so the next daily snapshot never replaces
+    /// an older same-day one of the old lineage; the index learns what the restored snapshot references (so
+    /// cleanup knows it); this phone keeps its data key, or adopts the snapshot's when it has none; and a fresh
+    /// snapshot is queued.
+    func didRestore(snapshot: SnapshotRef?, manifest: ArchiveManifest?, dataKey: Data?) {
+        index.lineageID = UUID()
+        if let snapshot, let manifest, let info = BackupFolderNames.snapshotInfo(fileName: snapshot.name) {
+            index.snapshots.removeAll { $0.name == snapshot.name }
+            index.snapshots.append(
+                KnownSnapshot(
+                    name: snapshot.name, dayKey: info.day, lineageID: manifest.lineageID, kind: info.kind,
+                    verified: true, createdAt: manifest.createdAt,
+                    referencedBlobNames: Set(manifest.attachments.compactMap(\.blob))))
+        }
+        if let dataKey { try? dataKeys.adoptIfMissing(dataKey) }
+        index.pendingChanges = true
+        index.lastError = nil
+        changeCounter += 1
+        persist()
+        scheduleCheck(after: Self.openingDelaySeconds)
     }
 
     /// Delete-all: forget the backup folder, the data key and the index on this phone, in memory as well as on

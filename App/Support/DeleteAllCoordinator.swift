@@ -20,12 +20,14 @@ final class DeleteAllCoordinator {
 
     @ObservationIgnored private let host: ContainerHost
     @ObservationIgnored private let events: JournalEvents
+    @ObservationIgnored private let backup: BackupManager
     @ObservationIgnored private let registry: DeviceDataRegistry
     @ObservationIgnored private let logger = Logger(subsystem: "local.mitchel.bereyt", category: "delete-all")
 
-    init(host: ContainerHost, events: JournalEvents, registry: DeviceDataRegistry) {
+    init(host: ContainerHost, events: JournalEvents, backup: BackupManager, registry: DeviceDataRegistry) {
         self.host = host
         self.events = events
+        self.backup = backup
         self.registry = registry
     }
 
@@ -47,6 +49,7 @@ final class DeleteAllCoordinator {
         await events.flushAllDrafts()
         await attachments.waitForIdle()
         await store.setReadOnly(true)
+        await backup.quiesce()
 
         // (2) empty generation, flip, reopen.
         var built: BuiltGeneration?
@@ -63,6 +66,7 @@ final class DeleteAllCoordinator {
                 try? switcher.abandon(built.id)
             }
             if paths.currentGenerationID() == previousID { await store.setReadOnly(false) }
+            backup.resumeAfterQuiesce()
             phase = .failed
             return
         }

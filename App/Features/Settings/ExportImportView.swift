@@ -24,7 +24,7 @@ struct ExportImportView: View {
             HealthSection()
             OnDeviceAISection()
             ImportSection { showJournalPicker = true }
-            BackupStatusView(backup: backup)
+            BackupStatusView(backup: backup, restore: restore)
             Section {
                 passphraseRow
                 exportRow

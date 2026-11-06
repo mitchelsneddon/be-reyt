@@ -26,6 +26,9 @@ struct BackupRunner: Sendable {
         let today: DateKey
         let now: Date
         let appVersion: String
+        /// `.preRestore` is the safety copy before a restore: it runs while the store is read-only, lands in
+        /// `pre-restore/`, never replaces or prunes anything and leaves the daily bookkeeping alone.
+        var kind: KnownSnapshot.Kind = .daily
     }
 
     struct Output: Sendable {
@@ -45,7 +48,7 @@ struct BackupRunner: Sendable {
         do { scratch = try ScratchSpace.make() } catch { return Output(index: index, error: .coded(.other)) }
         defer { ScratchSpace.remove(scratch) }
         do {
-            if await input.store.isReadOnly { throw BackupRunError.cancelled }
+            if input.kind == .daily, await input.store.isReadOnly { throw BackupRunError.cancelled }
             var items = try input.destination.list()
             index.reconcile(with: items)
 
@@ -93,8 +96,13 @@ struct BackupRunner: Sendable {
             try? FileManager.default.removeItem(at: payload)  // plaintext gone as soon as it is sealed
             try verify(sealed, input: input, referenced: referenced, scratch: scratch)
             try check()
-            let name = BackupFolderNames.snapshotFileName(day: input.today)
-            let relative = "\(BackupFolderNames.snapshots)/\(name)"
+            let isPreRestore = input.kind == .preRestore
+            let folder = isPreRestore ? BackupFolderNames.preRestore : BackupFolderNames.snapshots
+            let name =
+                isPreRestore
+                ? BackupFolderNames.preRestoreFileName(day: input.today)
+                : BackupFolderNames.snapshotFileName(day: input.today)
+            let relative = "\(folder)/\(name)"
             try input.destination.coordinatedWrite(from: sealed, to: relative)
             written = name
             try input.destination.coordinatedRead(relative) { url in
@@ -106,27 +114,33 @@ struct BackupRunner: Sendable {
             let listedBlobs = BackupIndex.blobNames(in: items)
             guard referenced.isSubset(of: listedBlobs) else { throw BackupRunError.coded(.verifyFailed) }
             let known = KnownSnapshot(
-                name: name, dayKey: input.today, lineageID: index.lineageID, kind: .daily, verified: true,
+                name: name, dayKey: input.today, lineageID: index.lineageID, kind: input.kind, verified: true,
                 createdAt: input.now, referencedBlobNames: referenced)
             index.reconcile(with: items)
             index.snapshots.append(known)
             written = nil  // proven good from here on
 
-            // (5) only now: prune and clean up, as `BackupPlan` decides.
-            let cleanup = BackupPlan.cleanup(
-                runVerified: true, newSnapshot: name, snapshots: index.snapshots,
-                folderSnapshotNames: BackupIndex.snapshotNames(in: items), folderBlobNames: listedBlobs,
-                now: input.now)
-            apply(cleanup, to: &index, destination: input.destination)
+            // (5) only now: prune and clean up, as `BackupPlan` decides. A safety copy deletes nothing; the next
+            // daily run expires it after 30 days.
+            if !isPreRestore {
+                let cleanup = BackupPlan.cleanup(
+                    runVerified: true, newSnapshot: name, snapshots: index.snapshots,
+                    folderSnapshotNames: BackupIndex.snapshotNames(in: items), folderBlobNames: listedBlobs,
+                    now: input.now)
+                apply(cleanup, to: &index, destination: input.destination)
 
-            // (6) the index.
-            index.lastSnapshotName = name
-            index.lastSnapshotWrittenAt = Date.now
-            index.latestRunBlobs = uploaded
-            index.lastError = nil
+                // (6) the index.
+                index.lastSnapshotName = name
+                index.lastSnapshotWrittenAt = Date.now
+                index.latestRunBlobs = uploaded
+                index.lastError = nil
+            }
             return Output(index: index, error: nil, snapshotName: name)
         } catch {
-            if let written { try? input.destination.remove("\(BackupFolderNames.snapshots)/\(written)") }
+            if let written {
+                let folder = input.kind == .preRestore ? BackupFolderNames.preRestore : BackupFolderNames.snapshots
+                try? input.destination.remove("\(folder)/\(written)")
+            }
             return Output(index: index, error: Self.map(error))
         }
     }

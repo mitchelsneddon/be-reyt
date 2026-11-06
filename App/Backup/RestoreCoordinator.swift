@@ -14,6 +14,11 @@ enum RestoreFailure: Error, Equatable {
     case noPassphrase
     case safetyCopyFailed
     case switchFailed
+    /// A photo the backup points at is missing, damaged or could not be fetched.
+    case photoUnreadable
+    case folderMissing
+    /// The snapshot file could not be read (an iCloud download that did not finish, for example).
+    case unreachable
     case busy
     case nothingToUndo
 }
@@ -23,6 +28,56 @@ enum RestoreFailure: Error, Equatable {
 protocol RestorePayloadSource: Sendable {
     var displayName: String { get }
     func extract(into directory: URL) async throws
+}
+
+/// A snapshot in the backup folder: which area it is in and its file name.
+struct SnapshotRef: Equatable, Hashable, Sendable {
+    let name: String
+    let area: BackupArea
+    var relativePath: String { "\(area.folder)/\(name)" }
+}
+
+/// What the user picked to restore from.
+enum RestoreInput: Equatable, Sendable {
+    case file(URL)
+    case snapshot(SnapshotRef)
+}
+
+/// A snapshot of the backup set: the snapshot file, then every photo it points at, each fetched with a coordinated
+/// read (iCloud downloads an evicted file first), decrypted with that snapshot's own data key and checked against
+/// the manifest's SHA256, then staged as `attachments/` so the payload validates like a portable archive.
+struct SnapshotSource: RestorePayloadSource {
+    let destination: any BackupDestination
+    let ref: SnapshotRef
+    let passphrase: String
+    var displayName: String { ref.name }
+
+    func extract(into directory: URL) async throws {
+        let destination = destination
+        let ref = ref
+        let passphrase = passphrase
+        try await Task.detached(priority: .userInitiated) {
+            try destination.coordinatedRead(ref.relativePath) { readable in
+                try ArchiveCrypto.decrypt(archive: readable, passphrase: passphrase, into: directory)
+            }
+            let manifest = try ArchiveReader.readManifest(
+                in: directory, maxBytes: ArchiveValidator.Limits.default.perFileBytes)
+            guard manifest.kind == .snapshot else { throw ArchiveError.notAnArchive }
+            let key = try SnapshotBlobs.readDataKey(in: directory)
+            do {
+                try SnapshotBlobs.stage(manifest: manifest, dataKey: key, into: directory) { blob in
+                    guard let relative = BlobNaming.relativePath(for: blob) else {
+                        throw RestoreFailure.photoUnreadable
+                    }
+                    // shortcut: the URL outlives the coordinated read (the file stays where iCloud downloaded it
+                    // for the seconds staging takes); a blob evicted in between fails the restore, nothing changed
+                    return try destination.coordinatedRead(relative) { $0 }
+                }
+            } catch {
+                throw RestoreFailure.photoUnreadable
+            }
+        }.value
+    }
 }
 
 struct EncryptedFileSource: RestorePayloadSource {
@@ -58,6 +113,10 @@ struct RestorePreview: Sendable {
     let sourceName: String
     /// The passphrase the archive opened with; the fallback for a pre-restore copy when none is stored.
     let passphrase: String
+    /// Set when it came from the backup set: the file it was read from.
+    var snapshot: SnapshotRef?
+    /// Set for a backup-set snapshot: the data key it carried.
+    var dataKey: Data?
 
     var counts: ArchiveManifest.Counts { archive.counts }
     var dateRange: ArchiveManifest.DateRange? { archive.dateRange }
@@ -69,12 +128,12 @@ struct RestorePreview: Sendable {
 final class RestoreCoordinator {
     enum Phase: Equatable {
         case idle
-        case needsPassphrase(URL)
+        case needsPassphrase(RestoreInput)
         case preparing
         case ready
         case restoring
         case undoing
-        case failed(RestoreFailure, retry: URL?)
+        case failed(RestoreFailure, retry: RestoreInput?)
     }
 
     static let maxPreRestoreCopies = 3
@@ -89,12 +148,17 @@ final class RestoreCoordinator {
     @ObservationIgnored private let host: ContainerHost
     @ObservationIgnored private let events: JournalEvents
     @ObservationIgnored private let passphrases: PassphraseStore
+    @ObservationIgnored private let backup: BackupManager
     @ObservationIgnored private var hooks: [@Sendable () async -> Void] = []
     @ObservationIgnored private let logger = Logger(subsystem: "local.mitchel.bereyt", category: "restore")
 
-    init(host: ContainerHost, events: JournalEvents, passphrases: PassphraseStore = PassphraseStore()) {
+    init(
+        host: ContainerHost, events: JournalEvents, backup: BackupManager,
+        passphrases: PassphraseStore = PassphraseStore()
+    ) {
         self.host = host
         self.events = events
+        self.backup = backup
         self.passphrases = passphrases
         refreshUndoAvailability()
     }
@@ -109,7 +173,13 @@ final class RestoreCoordinator {
 
     func beginRestore(from url: URL) {
         discardPreview()
-        phase = .needsPassphrase(url)
+        phase = .needsPassphrase(.file(url))
+    }
+
+    /// The restore browser picked a snapshot from the backup set.
+    func beginRestore(fromSnapshot ref: SnapshotRef) {
+        discardPreview()
+        phase = .needsPassphrase(.snapshot(ref))
     }
 
     /// Back to nothing: removes any plaintext and closes the flow.
@@ -119,19 +189,23 @@ final class RestoreCoordinator {
         phase = .idle
     }
 
-    func retry(url: URL) { phase = .needsPassphrase(url) }
+    func retry(_ input: RestoreInput) { phase = .needsPassphrase(input) }
 
-    /// UI entry: decrypt and validate `url`, then move to `.ready` or `.failed`.
-    func openFile(_ url: URL, passphrase: String) async {
+    /// UI entry: decrypt and validate `input`, then move to `.ready` or `.failed`.
+    func open(_ input: RestoreInput, passphrase: String) async {
         phase = .preparing
         do {
-            preview = try await prepare(
-                from: EncryptedFileSource(url: url, passphrase: passphrase), passphrase: passphrase)
+            switch input {
+            case .file(let url): preview = try await prepare(from: url, passphrase: passphrase)
+            case .snapshot(let ref): preview = try await prepare(fromSnapshot: ref, passphrase: passphrase)
+            }
             phase = .ready
         } catch {
-            phase = .failed(Self.failure(for: error), retry: url)
+            phase = .failed(Self.failure(for: error), retry: input)
         }
     }
+
+    func openFile(_ url: URL, passphrase: String) async { await open(.file(url), passphrase: passphrase) }
 
     /// UI entry: the user confirmed.
     func confirmRestore() async {
@@ -148,16 +222,21 @@ final class RestoreCoordinator {
 
     // MARK: Prepare
 
-    /// Decrypts into a fresh scratch directory and validates. On failure the scratch directory is removed.
-    func prepare(from source: some RestorePayloadSource, passphrase: String) async throws -> RestorePreview {
+    /// Decrypts into a fresh scratch directory and validates, photos included. On failure the scratch directory is
+    /// removed.
+    func prepare(
+        from source: some RestorePayloadSource, passphrase: String, snapshot: SnapshotRef? = nil
+    ) async throws -> RestorePreview {
         let scratch = try ScratchSpace.make()
         do {
             try await source.extract(into: scratch)
             let archive = try await Task.detached(priority: .userInitiated) {
-                try ArchiveValidator.validate(directory: scratch)
+                try ArchiveValidator.validate(directory: scratch, verifyAttachmentFiles: true)
             }.value
+            let key = snapshot == nil ? nil : try SnapshotBlobs.readDataKey(in: scratch)
             return RestorePreview(
-                archive: archive, scratch: scratch, sourceName: source.displayName, passphrase: passphrase)
+                archive: archive, scratch: scratch, sourceName: source.displayName, passphrase: passphrase,
+                snapshot: snapshot, dataKey: key)
         } catch {
             ScratchSpace.remove(scratch)
             throw error
@@ -166,6 +245,15 @@ final class RestoreCoordinator {
 
     func prepare(from archiveURL: URL, passphrase: String) async throws -> RestorePreview {
         try await prepare(from: EncryptedFileSource(url: archiveURL, passphrase: passphrase), passphrase: passphrase)
+    }
+
+    /// A snapshot of the backup set: downloads it and its photos if iCloud had evicted them, checks every photo,
+    /// then previews. Any photo that is missing or fails its checksum fails the whole preparation.
+    func prepare(fromSnapshot ref: SnapshotRef, passphrase: String) async throws -> RestorePreview {
+        let destination = try backup.openDestination()
+        return try await prepare(
+            from: SnapshotSource(destination: destination, ref: ref, passphrase: passphrase), passphrase: passphrase,
+            snapshot: ref)
     }
 
     func discardPreview() {
@@ -177,7 +265,8 @@ final class RestoreCoordinator {
 
     /// Replaces the whole journal with the previewed archive.
     func commit(_ preview: RestorePreview) async throws {
-        try await switchGeneration(to: .archive(preview.archive), fallbackPassphrase: preview.passphrase)
+        try await switchGeneration(
+            to: .archive(preview.archive), fallbackPassphrase: preview.passphrase, source: preview)
         ScratchSpace.remove(preview.scratch)
         self.preview = nil
         completionNote = Copy.Restore.doneNote(entries: preview.counts.entries)
@@ -206,7 +295,7 @@ final class RestoreCoordinator {
         phase = .undoing
         defer { if phase == .undoing { phase = .idle } }
         do {
-            try await switchGeneration(to: .previous(target), fallbackPassphrase: nil)
+            try await switchGeneration(to: .previous(target), fallbackPassphrase: nil, source: nil)
         } catch {
             phase = .failed(Self.failure(for: error), retry: nil)
             throw error
@@ -221,7 +310,8 @@ final class RestoreCoordinator {
         case previous(String)
     }
 
-    private func switchGeneration(to target: Target, fallbackPassphrase: String?) async throws {
+    private func switchGeneration(to target: Target, fallbackPassphrase: String?, source: RestorePreview?) async throws
+    {
         guard !isSwapping else { throw RestoreFailure.busy }
         isSwapping = true
         defer { isSwapping = false }
@@ -235,6 +325,7 @@ final class RestoreCoordinator {
         await events.flushAllDrafts()
         await attachments.waitForIdle()
         await store.setReadOnly(true)
+        await backup.quiesce()
 
         var built: BuiltGeneration?
         var flipped = false
@@ -269,6 +360,7 @@ final class RestoreCoordinator {
             // (v) the root view is keyed on the generation id: reopening rebuilds everything.
             try host.reopenCurrent()
         } catch {
+            backup.resumeAfterQuiesce()
             await rollback(
                 store: store, switcher: switcher, previousID: currentID, built: built, flipped: flipped,
                 priorRecord: priorRecord)
@@ -278,7 +370,12 @@ final class RestoreCoordinator {
             throw RestoreFailure.switchFailed
         }
 
-        // (vi) hooks, then validate every restored narrative against its week's input (mismatches purge).
+        // (vi) the backup set learns the journal changed under it: new lineage, the restored snapshot's references,
+        // this phone's data key (or the snapshot's when there is none), and a fresh daily snapshot queued.
+        backup.didRestore(
+            snapshot: source?.snapshot, manifest: source?.archive.manifest, dataKey: source?.dataKey)
+
+        // (vii) hooks, then validate every restored narrative against its week's input (mismatches purge).
         if let newStore = host.store, case .archive(let archive) = target {
             for review in archive.data.reviews {
                 if let week = DateKey(review.weekStartKey) {
@@ -302,8 +399,10 @@ final class RestoreCoordinator {
 
     // MARK: Safety copy
 
-    /// A portable export of the current journal into `Device/pre-restore/`, newest three kept. Skipped when the
-    /// journal holds nothing worth keeping (a new phone, or a fresh install).
+    /// What is about to be replaced, saved first. With an automatic-backup folder: a full verified run into
+    /// `pre-restore/` (snapshot plus any photos the folder lacks), exempt from pruning for 30 days; it must verify
+    /// or the restore stops. Without one: a portable export into `Device/pre-restore/`, newest three kept. Skipped
+    /// when the journal holds nothing worth keeping (a new phone, or a fresh install).
     private func writeSafetyCopy(store: JournalStore, generation: URL, passphrase: String?) async throws {
         let snapshot = try await store.archiveSnapshot()
         let data = snapshot.data
@@ -311,6 +410,19 @@ final class RestoreCoordinator {
             !data.entries.isEmpty || !data.attachments.isEmpty || !data.tags.isEmpty || !data.intentions.isEmpty
             || !data.reviews.isEmpty || !data.workouts.isEmpty || !data.importRecords.isEmpty
         guard hasContent else { return }
+        if backup.hasDestination, let passphrase {
+            do {
+                try await backup.writePreRestoreCopy(passphrase: passphrase)
+                return
+            } catch BackupRunError.coded(.folderMissing) {
+                // the folder is gone: fall through to the on-phone copy rather than block the restore for good
+            } catch BackupDestinationError.folderMissing {
+            } catch BackupDestinationError.notConfigured {
+            } catch {
+                logger.error("pre-restore backup failed: \(String(describing: error), privacy: .public)")
+                throw RestoreFailure.safetyCopyFailed
+            }
+        }
         guard let passphrase else { throw RestoreFailure.noPassphrase }
         let directory = paths.deviceRoot.appending(path: "pre-restore", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -341,6 +453,8 @@ final class RestoreCoordinator {
         case ArchiveCryptoError.wrongPassphrase, ArchiveCryptoError.passphraseTooLong: return .wrongPassphrase
         case ArchiveCryptoError.notEncryptedArchive, ArchiveError.notAnArchive: return .notABackup
         case ArchiveError.newerVersion: return .newerVersion
+        case BackupDestinationError.folderMissing, BackupDestinationError.notConfigured: return .folderMissing
+        case BackupDestinationError.io: return .unreachable
         default: return .damaged
         }
     }

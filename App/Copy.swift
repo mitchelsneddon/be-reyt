@@ -467,11 +467,45 @@ enum Copy {
             case .noPassphrase:
                 "set a backup passphrase first, so what's on this phone can be saved before it's replaced."
             case .safetyCopyFailed:
-                "couldn't save a safety copy of what's here, so nothing was changed. try again in a moment."
+                "couldn't save a safety copy first, so nothing was changed. try again in a moment."
             case .switchFailed: "something went wrong, so nothing was changed. try again in a moment."
+            case .photoUnreadable: "a photo in this backup couldn't be read, so nothing was changed."
+            case .folderMissing:
+                "the backup folder couldn't be found. choose it again in automatic backups. nothing was changed."
+            case .unreachable:
+                "couldn't reach that backup. if it's in icloud, check your connection and try again. nothing was changed."
             case .busy: "a restore is already running."
             case .nothingToUndo: "there's nothing to go back to."
             }
+        }
+    }
+
+    /// Restoring from a snapshot in the automatic-backup folder.
+    enum RestoreBrowser {
+        static let row = "restore from a backup"
+        static let rowHint = "pick one of the backups in your backup folder"
+        static let title = "restore from a backup"
+        static let intro = "pick a backup. nothing changes until you've seen what's in it and said yes."
+        static let loading = "looking in your backup folder…"
+        static let empty = "no backups in this folder yet."
+        static let loadFailed = "couldn't read the backup folder. check it still exists and try again."
+        static let retry = "try again"
+        static let savedBeforeRestore = "saved before a restore"
+        static let onThisPhone = "on this iphone"
+        static let inICloud = "in icloud (downloads when needed)"
+        static let enterPassphrase =
+            "enter the passphrase for this backup. an older backup may need the passphrase you had back then."
+
+        static func day(_ key: DateKey, calendar: Calendar = .current) -> String {
+            History.rowDate(key, calendar: calendar)
+        }
+
+        static func size(_ bytes: Int?) -> String? {
+            bytes.map { ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file).lowercased() }
+        }
+
+        static func rowLabel(day: String, size: String?, kind: String?, location: String) -> String {
+            [day, kind, size, location].compactMap { $0 }.joined(separator: ", ")
         }
     }
 
