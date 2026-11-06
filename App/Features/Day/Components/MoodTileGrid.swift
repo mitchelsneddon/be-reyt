@@ -1,7 +1,8 @@
 import ReytKit
 import SwiftUI
 
-/// "how did you feel today?": a grid of 56 pt mood tiles. Multi-select; each tile is a toggle button.
+/// "how did you feel today?": a carousel of 56 pt mood tiles (wrapping rows at accessibility sizes).
+/// Multi-select; each tile is a toggle button.
 /// Retired moods show only when the day carried them at load (`loadedIDs`).
 struct MoodTileGrid: View {
     let selected: [String]
@@ -22,12 +23,16 @@ struct MoodTileGrid: View {
                     ForEach(moods, id: \.id) { cell($0) }
                 }
             } else {
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: 6, alignment: .top), count: 5),
-                    alignment: .center, spacing: 14
-                ) {
-                    ForEach(moods, id: \.id) { cell($0) }
+                // A carousel: one row that scrolls sideways and runs into the page margin, so the next tile peeks.
+                ScrollView(.horizontal) {
+                    LazyHStack(alignment: .top, spacing: 12) {
+                        ForEach(moods, id: \.id) { cell($0) }
+                    }
+                    .scrollTargetLayout()
                 }
+                .scrollIndicators(.hidden)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollClipDisabled()
             }
         }
     }
@@ -58,7 +63,7 @@ struct MoodTileGrid: View {
                     .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
                     .minimumScaleFactor(typeSize.isAccessibilitySize ? 1 : 0.8)
             }
-            .frame(minWidth: 44, minHeight: 44)
+            .frame(minWidth: min(tile, 72), minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

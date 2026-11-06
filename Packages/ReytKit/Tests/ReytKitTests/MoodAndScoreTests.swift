@@ -6,7 +6,7 @@ import Testing
 struct MoodCatalogTests {
     @Test("catalog ids and labels")
     func catalog() {
-        let ids = ["happy", "sad", "stressed", "annoyed", "anxious"]
+        let ids = ["happy", "excited", "relaxed", "bored", "sad", "stressed", "anxious", "annoyed", "angry"]
         #expect(MoodCatalog.active.map(\.id) == ids)
         #expect(MoodCatalog.active.map(\.label) == ids)
         #expect(MoodCatalog.retired.map(\.id) == ["tired"])

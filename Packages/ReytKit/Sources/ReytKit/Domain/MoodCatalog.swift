@@ -9,10 +9,14 @@ public enum MoodCatalog {
     /// What a new day can pick. Order is display order. IDs are stable and persisted; labels are display only.
     public static let active: [Mood] = [
         Mood(id: "happy", label: "happy"),
+        Mood(id: "excited", label: "excited"),
+        Mood(id: "relaxed", label: "relaxed"),
+        Mood(id: "bored", label: "bored"),
         Mood(id: "sad", label: "sad"),
         Mood(id: "stressed", label: "stressed"),
-        Mood(id: "annoyed", label: "annoyed"),
         Mood(id: "anxious", label: "anxious"),
+        Mood(id: "annoyed", label: "annoyed"),
+        Mood(id: "angry", label: "angry"),
     ]
 
     /// No longer offered, but still stored on older days, so it must keep resolving, counting and exporting.

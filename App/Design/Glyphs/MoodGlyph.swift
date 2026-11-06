@@ -36,6 +36,25 @@ struct MoodGlyph: View {
         "anxious": Parts(
             strokes: [round, "M7.8 9.1l2.6-1.3M16.2 9.1l-2.6-1.3M8.6 16.2q.85-.9 1.7 0t1.7 0 1.7 0 1.7 0"],
             dots: [CGPoint(x: 9.3, y: 11.7), CGPoint(x: 14.7, y: 11.7)], dotRadius: 1.3),
+        "excited": Parts(
+            strokes: [
+                smaller, "M6.9 9q1.4-1 2.8 0M12.3 9q1.4-1 2.8 0", "M7 14.6h8q-.6 4.2-4 4.2t-4-4.2z",
+            ],
+            dots: [CGPoint(x: 8.3, y: 11.4), CGPoint(x: 13.7, y: 11.4)],
+            filled: [
+                "M7 14.6h8q-.6 4.2-4 4.2t-4-4.2z",
+                "M20 1.8l.65 1.55 1.55.65-1.55.65L20 6.2l-.65-1.55L17.8 4l1.55-.65z",
+            ]),
+        "relaxed": Parts(strokes: [round, "M8 11q1.3 1 2.6 0M13.4 11q1.3 1 2.6 0M9.5 15.2q2.5 1.8 5 0"]),
+        "bored": Parts(
+            strokes: [round, "M7.8 10.6h2.8M13.4 10.6h2.8M9.5 16.2h5"],
+            dots: [CGPoint(x: 9.2, y: 11.7), CGPoint(x: 14.8, y: 11.7)], dotRadius: 1),
+        "angry": Parts(
+            strokes: [
+                smaller, "M6.4 9.2l3.4 1.6M15.6 9.2l-3.4 1.6M7.6 17.4q3.4-2.8 6.8 0",
+                "M17.6 3.2l.9 1.5M21.4 3.2l-.9 1.5M17.6 6.8l.9-1.5M21.4 6.8l-.9-1.5",
+            ],
+            dots: [CGPoint(x: 8.4, y: 12.6), CGPoint(x: 13.6, y: 12.6)]),
         "tired": Parts(strokes: [
             smaller, "M7.3 12q1.3 1 2.6 0M12.1 12q1.3 1 2.6 0M9.6 16.6h2.8M17.3 2.4h3.2l-3.2 3.4h3.2",
         ]),
