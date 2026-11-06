@@ -13,11 +13,10 @@ public struct ReflectionInput: Codable, Sendable, Equatable {
         public var rotatingAnswer: String?
         public var score: Int?
         public var moodIDs: [String]
-        public var tagNames: [String]
 
         public init(
             dateKey: DateKey, text: String, smileAnswer: String?, rotatingPrompt: String?, rotatingAnswer: String?,
-            score: Int?, moodIDs: [String], tagNames: [String]
+            score: Int?, moodIDs: [String]
         ) {
             self.dateKey = dateKey
             self.text = text
@@ -26,7 +25,6 @@ public struct ReflectionInput: Codable, Sendable, Equatable {
             self.rotatingAnswer = rotatingAnswer
             self.score = score
             self.moodIDs = moodIDs
-            self.tagNames = tagNames
         }
     }
 
@@ -75,7 +73,6 @@ public struct ReflectionInput: Codable, Sendable, Equatable {
         self.days = days.sorted { $0.dateKey < $1.dateKey }.map { day in
             var d = day
             d.moodIDs = day.moodIDs.sorted()
-            d.tagNames = day.tagNames.sorted()
             return d
         }
         self.intention = intention

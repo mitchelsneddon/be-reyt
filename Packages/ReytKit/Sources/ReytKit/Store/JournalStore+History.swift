@@ -23,7 +23,6 @@ extension JournalStore {
                 $0.content.rotatingAnswer = e.rotatingAnswer
                 $0.content.dayScore = e.dayScore
                 $0.content.moodIDs = e.moodIDs
-                $0.content.tagIDs = e.tagIDs
             }
         }
         for a in try modelContext.fetch(FetchDescriptor<Attachment>()) {
@@ -52,13 +51,12 @@ extension JournalStore {
     }
 
     /// Days matching `text` in the entry text, smile answer, rotating answer, Sunday plan or follow-up note
-    /// (case and diacritic insensitive), and carrying every tag in `tagIDs`. Newest first. Blank text and no tags
-    /// returns every day with content.
-    public func searchDays(text: String, tagIDs: Set<UUID> = []) throws -> [DateKey] {
+    /// (case and diacritic insensitive). Newest first. Blank text returns every day with content.
+    public func searchDays(text: String) throws -> [DateKey] {
         // shortcut: filters in memory after `historyDays()`, because localizedStandardContains has no #Predicate
         // form; fine at the same scale (a few thousand days).
         try historyDays()
-            .filter { tagIDs.isSubset(of: Set($0.content.tagIDs)) && $0.matches(text: text) }
+            .filter { $0.matches(text: text) }
             .map(\.dateKey)
     }
 }

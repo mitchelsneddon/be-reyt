@@ -11,20 +11,13 @@ final class HistoryModel {
     private(set) var isLoaded = false
     private(set) var loadFailed = false
     var searchText = ""
-    var tagIDs: Set<UUID> = []
 
     @ObservationIgnored private let store: JournalStore
 
     init(store: JournalStore) { self.store = store }
 
     var isFiltering: Bool {
-        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !tagIDs.isEmpty
-    }
-
-    /// Drops filter tags that no longer exist (a tag was deleted), so the list can never be stuck on a hidden filter.
-    func pruneTags(existing: Set<UUID>) {
-        let kept = tagIDs.intersection(existing)
-        if kept != tagIDs { tagIDs = kept }
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// Days with content mapped to their score (nil when unscored), for the calendar's coloured dots.
@@ -39,7 +32,7 @@ final class HistoryModel {
             days = try await store.historyDays()
             loadFailed = false
             if isFiltering {
-                let keys = try await store.searchDays(text: searchText, tagIDs: tagIDs)
+                let keys = try await store.searchDays(text: searchText)
                 let byKey = Dictionary(uniqueKeysWithValues: days.map { ($0.dateKey, $0) })
                 results = keys.compactMap { byKey[$0] }
             } else {

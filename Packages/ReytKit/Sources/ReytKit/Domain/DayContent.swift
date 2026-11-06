@@ -10,7 +10,6 @@ public struct DayContent: Sendable, Equatable {
     public var rotatingAnswer: String?
     public var dayScore: Int?
     public var moodIDs: [String]
-    public var tagIDs: [UUID]
     public var attachmentCount: Int
     /// A Sunday intention sourced on this day with nonblank text or a category.
     public var hasIntention: Bool
@@ -19,7 +18,7 @@ public struct DayContent: Sendable, Equatable {
 
     public init(
         text: String = "", smileAnswer: String? = nil, rotatingAnswer: String? = nil, dayScore: Int? = nil,
-        moodIDs: [String] = [], tagIDs: [UUID] = [], attachmentCount: Int = 0, hasIntention: Bool = false,
+        moodIDs: [String] = [], attachmentCount: Int = 0, hasIntention: Bool = false,
         hasFollowUpNote: Bool = false
     ) {
         self.text = text
@@ -27,7 +26,6 @@ public struct DayContent: Sendable, Equatable {
         self.rotatingAnswer = rotatingAnswer
         self.dayScore = dayScore
         self.moodIDs = moodIDs
-        self.tagIDs = tagIDs
         self.attachmentCount = attachmentCount
         self.hasIntention = hasIntention
         self.hasFollowUpNote = hasFollowUpNote
@@ -35,7 +33,7 @@ public struct DayContent: Sendable, Equatable {
 
     public var hasUserContent: Bool {
         Self.isNonblank(text) || Self.isNonblank(smileAnswer) || Self.isNonblank(rotatingAnswer)
-            || dayScore != nil || !moodIDs.isEmpty || !tagIDs.isEmpty || attachmentCount > 0 || hasIntention
+            || dayScore != nil || !moodIDs.isEmpty || attachmentCount > 0 || hasIntention
             || hasFollowUpNote
     }
 

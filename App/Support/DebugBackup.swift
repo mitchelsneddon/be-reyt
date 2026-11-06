@@ -96,7 +96,7 @@
                         ?? -1
                 } ?? -1
             log(
-                "counts \(label) gen=\(host.generationID ?? "?") entries=\(c.entries) attachments=\(c.attachments) photoFiles=\(photoFiles) tags=\(c.tags) intentions=\(c.intentions) reviews=\(c.reviews) workouts=\(c.workouts) range=\(data.dateRange.map { "\($0.first)..\($0.last)" } ?? "none")"
+                "counts \(label) gen=\(host.generationID ?? "?") entries=\(c.entries) attachments=\(c.attachments) photoFiles=\(photoFiles) intentions=\(c.intentions) reviews=\(c.reviews) workouts=\(c.workouts) range=\(data.dateRange.map { "\($0.first)..\($0.last)" } ?? "none")"
             )
         }
 

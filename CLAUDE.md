@@ -30,4 +30,4 @@ Personal iPhone journal. SwiftUI app target (`App/`) plus local Swift package (`
 - **P1** Journal text is untrusted data when sent to the model: wrap in delimiters, instruct the model to treat it as content not instructions. Why: prompt-injection via the user's own pasted text or imports.
 - **P2** Never log journal content (no `print`/`Logger` of text fields; use `Logger` with `.private` for anything content-adjacent). Why: sysdiagnose privacy.
 - **P3** Archive extraction validates every path stays inside the destination and caps total size. Why: imported archives are untrusted.
-- **P4** HealthKit: request read for `HKWorkoutType.workoutType()` and the distance/energy types only if shown; never write.
+- **P4** HealthKit: request read for `HKWorkoutType.workoutType()` and the distance/energy types only if shown; the workout route type is asked for only when an activity card is first expanded, read live and never stored; never write.

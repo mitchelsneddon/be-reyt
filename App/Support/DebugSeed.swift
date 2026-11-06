@@ -3,8 +3,7 @@
     import ReytKit
     import UIKit
 
-    /// Simulator-only: `-seedDemoDay` fills today through `JournalStore`, `-seedLateTag` adds a tag a few
-    /// seconds after launch (proves `@Query` refreshes from an actor save). Never compiled into release.
+    /// Simulator-only: `-seedDemoDay` fills today through `JournalStore`. Never compiled into release.
     /// Simulator-only: `-forceSaveFailure` makes the next day-page write throw once (App layer, not ReytKit).
     @MainActor enum DebugSaveFailure {
         struct Failure: Error {}
@@ -30,16 +29,6 @@
                 _ = try? await store.updateEntry(today, .smileAnswer("the dog fell asleep on my feet."))
                 _ = try? await store.updateEntry(today, .score(.good))
                 _ = try? await store.updateEntry(today, .moods(["happy", "tired"]))
-                // Nine extra tags, each used on an earlier day, so the recent-suggestions cap is visible.
-                let extras = ["reading", "cooking", "friends", "garden", "rain", "run", "music", "family", "quiet"]
-                for (offset, name) in extras.enumerated() {
-                    guard let tag = try? await store.createTag(name: name) else { continue }
-                    let day = AppClock.today().adding(days: -(offset + 1))
-                    _ = try? await store.updateEntry(day, .tags([tag.id]))
-                }
-                if let tag = try? await store.createTag(name: "walk") {
-                    _ = try? await store.updateEntry(today, .tags([tag.id]))
-                }
             }
             if args.contains("-seedHistory") { await seedHistory(store, attachments: attachments) }
             if args.contains("-seedSundayPlan") {
@@ -68,12 +57,6 @@
             if args.contains("-seedWorkouts") { await seedWorkouts(store) }
             if args.contains("-deleteFirstPhoto"), let first = try? await store.attachmentRefs().first {
                 _ = try? await attachments.deletePhoto(first)
-            }
-            if args.contains("-seedLateTag") {
-                Task {
-                    try? await Task.sleep(for: .seconds(4))
-                    _ = try? await store.createTag(name: "late tag")
-                }
             }
         }
 
@@ -111,14 +94,11 @@
             ])
         }
 
-        /// `-seedHistory`: about twenty days across Oct and Nov 2026 with varied fields, a few tags, a Sunday plan with
+        /// `-seedHistory`: about twenty days across Oct and Nov 2026 with varied fields, a Sunday plan with
         /// a follow-up, two photo days, and one day (2026-10-14) with only a prompt assignment (no dot, no row).
         /// Run with `-pretendToday 2026-11-05`. Safe to repeat: every write is a no-op the second time.
         private static func seedHistory(_ store: JournalStore, attachments: AttachmentStore) async {
             func key(_ s: String) -> DateKey { DateKey(s) ?? AppClock.today() }
-            let walk = try? await store.createTag(name: "walk").id
-            let reading = try? await store.createTag(name: "reading").id
-            let friends = try? await store.createTag(name: "friends").id
 
             struct Seed {
                 var day: String
@@ -127,30 +107,27 @@
                 var rotating: String?
                 var score: DayScore?
                 var moods: [String] = []
-                var tags: [UUID?] = []
             }
             let seeds: [Seed] = [
                 Seed(
-                    day: "2026-10-03", text: "slow saturday.\nbread in the oven, rain on the window.", tags: [reading]),
+                    day: "2026-10-03", text: "slow saturday.\nbread in the oven, rain on the window."),
                 // A week with nothing written (2026-09-20 to 26); only a workout is seeded there.
                 Seed(day: "2026-09-15", text: "a quiet tuesday."),
                 Seed(day: "2026-10-05", smile: "the neighbour waved from her garden.", score: .okay),
                 Seed(
-                    day: "2026-10-07", text: "a long meeting day, but the walk home helped.", moods: ["tired"],
-                    tags: [walk]),
+                    day: "2026-10-07", text: "a long meeting day, but the walk home helped.", moods: ["tired"]),
                 Seed(day: "2026-10-09", rotating: "i finally cleared the desk.", score: .good),
                 Seed(day: "2026-10-11", text: "sunday. tidied up and made soup.", moods: ["annoyed"]),
                 Seed(
                     day: "2026-10-12", text: "Coffee with Priya at the Café on the corner.", score: .excellent,
-                    moods: ["happy", "anxious"], tags: [friends]),
+                    moods: ["happy", "anxious"]),
                 Seed(day: "2026-10-16", smile: "a stranger held the door and we both laughed."),
-                Seed(day: "2026-10-18", text: "sunday reset, long walk by the river.", score: .good, tags: [walk]),
+                Seed(day: "2026-10-18", text: "sunday reset, long walk by the river.", score: .good),
                 Seed(
                     day: "2026-10-21", text: "couldn't settle. early night.", score: .difficult,
                     moods: ["anxious", "tired"]),
                 Seed(
-                    day: "2026-10-24", text: "market, then the cinema.\nthe film was slower than i hoped.",
-                    tags: [friends]),
+                    day: "2026-10-24", text: "market, then the cinema.\nthe film was slower than i hoped."),
                 // A genuinely hard day in the week of 2026-10-25, to check the difficult section is used for it.
                 Seed(
                     day: "2026-10-26",
@@ -159,22 +136,22 @@
                     score: .difficult, moods: ["stressed"]),
                 Seed(
                     day: "2026-10-27", rotating: "a good chapter and a quiet cup of tea.", score: .okay,
-                    moods: ["tired"], tags: [reading]),
+                    moods: ["tired"]),
                 Seed(
                     day: "2026-10-29", text: "windy. kept the doors shut and read all afternoon.", score: .difficult,
-                    moods: ["sad"], tags: [reading]),
+                    moods: ["sad"]),
                 Seed(
                     day: "2026-10-31", text: "pumpkins on the step, a few kids came by.", score: .good, moods: ["happy"]
                 ),
                 Seed(day: "2026-11-01", text: "sunday. planned the week over breakfast.", score: .okay),
-                Seed(day: "2026-11-02", smile: "found the old cafe still does the good scones.", tags: [friends]),
+                Seed(day: "2026-11-02", smile: "found the old cafe still does the good scones."),
                 Seed(
                     day: "2026-11-03", text: "busy. barely looked up until four.",
                     smile: "the meeting i'd dreaded went fine.", score: .okay, moods: ["tired"]),
                 Seed(
                     day: "2026-11-04",
                     text: "a slow morning, coffee on the step.\nlong walk after lunch, the light was lovely.",
-                    smile: "the dog fell asleep on my feet.", score: .good, moods: ["happy", "tired"], tags: [walk]),
+                    smile: "the dog fell asleep on my feet.", score: .good, moods: ["happy", "tired"]),
                 // 2026-11-02 and 11-05 have no score: gaps in the chart for the week of 2026-11-01.
                 Seed(
                     day: "2026-11-06", text: "friday. long lunch with friends.", smile: "chips on the pier.",
@@ -187,8 +164,6 @@
                 if let r = seed.rotating { _ = try? await store.updateEntry(day, .rotatingAnswer(r)) }
                 if let s = seed.score { _ = try? await store.updateEntry(day, .score(s)) }
                 if !seed.moods.isEmpty { _ = try? await store.updateEntry(day, .moods(seed.moods)) }
-                let ids = seed.tags.compactMap { $0 }
-                if !ids.isEmpty { _ = try? await store.updateEntry(day, .tags(ids)) }
             }
             // A Sunday plan with a follow-up the next Sunday: both are content on their own days.
             _ = try? await store.saveIntention(

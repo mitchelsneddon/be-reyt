@@ -34,24 +34,6 @@ struct HistoryTests {
         #expect(try await store.searchDays(text: "CAFÉ") == found)
     }
 
-    @Test("tag filter is ANDed with text and with other tags")
-    func tagsAndText() async throws {
-        let store = try makeStore()
-        let walk = try await store.createTag(name: "walk").id
-        let rain = try await store.createTag(name: "rain").id
-        _ = try await store.updateEntry(day("2026-11-01"), .text("long walk"))
-        _ = try await store.updateEntry(day("2026-11-01"), .tags([walk]))
-        _ = try await store.updateEntry(day("2026-11-02"), .text("long walk"))
-        _ = try await store.updateEntry(day("2026-11-03"), .text("a quiet one"))
-        _ = try await store.updateEntry(day("2026-11-03"), .tags([walk, rain]))
-
-        #expect(try await store.searchDays(text: "", tagIDs: [walk]) == [day("2026-11-03"), day("2026-11-01")])
-        #expect(try await store.searchDays(text: "long", tagIDs: [walk]) == [day("2026-11-01")])
-        #expect(try await store.searchDays(text: "", tagIDs: [walk, rain]) == [day("2026-11-03")])
-        #expect(try await store.searchDays(text: "quiet", tagIDs: [walk]) == [day("2026-11-03")])
-        #expect(try await store.searchDays(text: "long", tagIDs: [rain]).isEmpty)
-    }
-
     @Test("no match returns nothing")
     func noMatch() async throws {
         let store = try makeStore()

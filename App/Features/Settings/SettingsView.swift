@@ -6,7 +6,6 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     let backup: BackupSettingsModel
     let restore: RestoreCoordinator
-    let tags: TagsModel
     @Environment(AppleJournalImporter.self) private var journalImporter
 
     private enum PassphraseSheet: String, Identifiable {
@@ -20,9 +19,7 @@ struct SettingsView: View {
     @State private var showUndoConfirm = false
     @State private var authMessage: String?
     #if DEBUG
-        // Simulator-only: `-openTags`, `-openReadableExport`, `-openDeleteAll` (or `-openDeleteAllConfirm`) push that screen.
-        @State private var debugTags =
-            CommandLine.arguments.contains("-openTags") || CommandLine.arguments.contains("-openTagsRename")
+        // Simulator-only: `-openReadableExport`, `-openDeleteAll` (or `-openDeleteAllConfirm`) push that screen.
         @State private var debugExport = CommandLine.arguments.contains("-openReadableExport")
         // `-openRestoreBrowser` pushes the backup list; `-openPassphrase set|change` opens that sheet;
         // `-debugExportState working|saved|savedSkipped|failed` shows the inline export status.
@@ -64,7 +61,6 @@ struct SettingsView: View {
             .navigationTitle(Copy.Settings.title)
             .toolbar(.hidden, for: .navigationBar)
             #if DEBUG
-                .navigationDestination(isPresented: $debugTags) { TagsView(model: tags) }
                 .navigationDestination(isPresented: $debugExport) { ReadableExportView(host: backup.host) }
                 .navigationDestination(isPresented: $debugDelete) { DeleteAllView() }
                 .navigationDestination(isPresented: $debugBrowser) { RestoreBrowserView(restore: restore) }
@@ -76,16 +72,6 @@ struct SettingsView: View {
         List {
             ReminderSection()
             AppearanceSection()
-            Section {
-                NavigationLink {
-                    TagsView(model: tags)
-                } label: {
-                    SettingsRowLabel(title: Copy.Tags.settingsRow, icon: "number")
-                }
-            } header: {
-                SettingsHeader(Copy.Tags.journalSection)
-            }
-            .settingsRows()
             AppLockSection()
             HealthSection()
             OnDeviceAISection()

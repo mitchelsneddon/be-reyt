@@ -1,7 +1,7 @@
 import ReytKit
 import SwiftUI
 
-/// One day's page: heading, score, moods, tags, editor. Reflections, photos and workouts slot in below the editor.
+/// One day's page: heading, score, moods, editor. Reflections, workouts and visual reminders slot in below.
 struct DayPageView: View {
     let model: DayPageModel
     let photos: PhotosModel
@@ -13,14 +13,19 @@ struct DayPageView: View {
     static let reflectionsAnchor = "reflections"
     static let planAnchor = "plan"
     static let photosAnchor = "photos"
+    static let editorEndAnchor = "editorEnd"
+    static let smileEndAnchor = "smileEnd"
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(HealthCoordinator.self) private var health
     @FocusState private var editorFocused: Bool
+    @State private var smileFocused = false
+    /// Top of the keyboard on screen, `.infinity` while hidden (see `KeepAboveKeyboard`).
+    @State private var keyboardTop: CGFloat = .infinity
 
     var body: some View {
         ScrollViewReader { proxy in
-            page
+            page(proxy)
                 .task(id: model.isLoaded) { await scrollToReflectionsIfRequested(proxy) }
         }
     }
@@ -43,7 +48,7 @@ struct DayPageView: View {
         #endif
     }
 
-    private var page: some View {
+    private func page(_ proxy: ScrollViewProxy) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
@@ -74,10 +79,9 @@ struct DayPageView: View {
                     DayScoreControl(score: model.score, onChange: model.setScore)
                     MoodTileGrid(
                         selected: model.moodIDs, loadedIDs: model.loadedMoodIDs, onToggle: model.toggleMood)
-                    editor
-                    reflections
+                    editor(proxy)
+                    reflections(proxy)
                     planLifecycle
-                    TagEditor()
                     WorkoutSection(dateKey: model.dateKey)
                     PhotoStrip(model: photos).id(DayPageView.photosAnchor)
                 }
@@ -86,6 +90,7 @@ struct DayPageView: View {
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .trackingKeyboardTop($keyboardTop)
         .scrollDismissesKeyboard(.interactively)
         .background(Palette.paper)
         .environment(model)
@@ -116,13 +121,22 @@ struct DayPageView: View {
         .accessibilityAddTraits(.isHeader)
     }
 
-    @ViewBuilder private var reflections: some View {
+    @ViewBuilder private func reflections(_ proxy: ScrollViewProxy) -> some View {
         ReflectionCard(
             question: Copy.Reflection.smileQuestion,
             answerLabel: Copy.Reflection.smileAnswerLabel,
             answer: Binding(get: { model.smileAnswer }, set: { model.setSmileAnswer($0) }),
-            isEnabled: model.isLoaded, onFocusChange: { model.setFocus(.smile, $0) },
+            isEnabled: model.isLoaded,
+            onFocusChange: {
+                smileFocused = $0
+                model.setFocus(.smile, $0)
+            },
             placeholder: Copy.Reflection.smilePlaceholder, plainHeading: true
+        )
+        .modifier(
+            KeepAboveKeyboard(
+                anchorID: Self.smileEndAnchor, text: model.smileAnswer, isFocused: smileFocused,
+                keyboardTop: keyboardTop, proxy: proxy)
         )
         .id(DayPageView.reflectionsAnchor)
         if model.showsRotatingPrompt, let prompt = model.prompt {
@@ -134,7 +148,7 @@ struct DayPageView: View {
         }
     }
 
-    private var editor: some View {
+    private func editor(_ proxy: ScrollViewProxy) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionTitle(Copy.Day.entryTitle)
             TextField("", text: Binding(get: { model.text }, set: { model.setText($0) }), axis: .vertical)
@@ -146,6 +160,10 @@ struct DayPageView: View {
                 .frame(maxWidth: .infinity, minHeight: 90, alignment: .topLeading)
                 .brPlaceholder(Copy.Day.editorPlaceholder, show: model.text.isEmpty)
                 .accessibilityLabel(Copy.Day.editorLabel)
+                .modifier(
+                    KeepAboveKeyboard(
+                        anchorID: Self.editorEndAnchor, text: model.text, isFocused: editorFocused,
+                        keyboardTop: keyboardTop, proxy: proxy))
         }
     }
 }

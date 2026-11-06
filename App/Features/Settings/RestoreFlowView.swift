@@ -215,7 +215,7 @@ struct RestoreFlowView: View {
     private func infoRows(_ preview: RestorePreview) -> some View {
         var rows = [
             Copy.Restore.days(preview.counts.entries), Copy.Restore.photos(preview.counts.attachments),
-            Copy.Restore.tags(preview.counts.tags), Copy.Restore.plans(preview.counts.intentions),
+            Copy.Restore.plans(preview.counts.intentions),
         ].map { ($0, Palette.ink) }
         if let range = preview.dateRange {
             rows.append(

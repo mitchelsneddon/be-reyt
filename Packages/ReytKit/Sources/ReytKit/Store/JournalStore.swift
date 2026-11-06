@@ -4,8 +4,6 @@ import SwiftData
 public enum JournalStoreError: Error, Equatable, Sendable {
     case readOnly
     case promptAnswered
-    case invalidTagName
-    case tagNameTaken
     case notASunday
     case intentionNotFound
     /// The week changed between reading it for generation and saving the narrative.
@@ -19,7 +17,6 @@ public enum EntryChange: Sendable, Equatable {
     case rotatingAnswer(String?)
     case score(DayScore?)
     case moods([String])
-    case tags([UUID])
 }
 
 public struct PromptChoice: Sendable, Equatable {
@@ -136,7 +133,7 @@ public actor JournalStore {
         let hasFollowUp = followUps.contains { DayContent.isNonblank($0.followUpNote) }
         return DayContent(
             text: entry?.text ?? "", smileAnswer: entry?.smileAnswer, rotatingAnswer: entry?.rotatingAnswer,
-            dayScore: entry?.dayScore, moodIDs: entry?.moodIDs ?? [], tagIDs: entry?.tagIDs ?? [],
+            dayScore: entry?.dayScore, moodIDs: entry?.moodIDs ?? [],
             attachmentCount: attachments, hasIntention: hasIntention, hasFollowUpNote: hasFollowUp)
     }
 
@@ -147,8 +144,6 @@ public actor JournalStore {
         let lo = start.string
         let hi = end.string
 
-        let tagNames = Dictionary(
-            uniqueKeysWithValues: try modelContext.fetch(FetchDescriptor<Tag>()).map { ($0.id, $0.name) })
         let prompts = Dictionary(
             uniqueKeysWithValues: try modelContext.fetch(
                 FetchDescriptor<PromptAssignment>(predicate: #Predicate { $0.dateKey >= lo && $0.dateKey <= hi })
@@ -159,17 +154,16 @@ public actor JournalStore {
             FetchDescriptor<DailyEntry>(predicate: #Predicate { $0.dateKey >= lo && $0.dateKey <= hi }))
         for e in entries {
             guard let key = DateKey(e.dateKey) else { continue }
-            let names = e.tagIDs.compactMap { tagNames[$0] }
             let answered = DayContent.isNonblank(e.rotatingAnswer)
             let hasInput =
                 DayContent.isNonblank(e.text) || DayContent.isNonblank(e.smileAnswer) || answered
-                || e.dayScore != nil || !e.moodIDs.isEmpty || !names.isEmpty
+                || e.dayScore != nil || !e.moodIDs.isEmpty
             guard hasInput else { continue }
             days.append(
                 ReflectionInput.Day(
                     dateKey: key, text: e.text, smileAnswer: e.smileAnswer,
                     rotatingPrompt: answered ? prompts[e.dateKey] : nil, rotatingAnswer: e.rotatingAnswer,
-                    score: e.dayScore, moodIDs: e.moodIDs, tagNames: names))
+                    score: e.dayScore, moodIDs: e.moodIDs))
         }
 
         // shortcut: loads every intention (one row per week), fine for decades of use
@@ -236,12 +230,6 @@ public actor JournalStore {
             let v = MoodCatalog.normalize(ids)
             guard entry.moodIDs != v else { return false }
             entry.moodIDs = v
-        case .tags(let ids):
-            let known = Set(try modelContext.fetch(FetchDescriptor<Tag>()).map(\.id))
-            var seen = Set<UUID>()
-            let v = ids.filter { known.contains($0) && seen.insert($0).inserted }
-            guard entry.tagIDs != v else { return false }
-            entry.tagIDs = v
         }
         return true
     }
@@ -295,48 +283,6 @@ public actor JournalStore {
                     dateKey: key.string, promptID: candidate.id, promptText: candidate.text, assignedAt: clock()))
         }
         return try commit(candidateDays: [], before: [:], bumpDays: [])
-    }
-
-    // MARK: Tags
-
-    /// Trimmed, case-insensitive unique: returns the existing tag's ID when a match exists.
-    public func createTag(name: String) throws -> (id: UUID, effect: StoreEffect) {
-        try requireWritable()
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw JournalStoreError.invalidTagName }
-        if let match = try tag(named: trimmed) { return (match.id, StoreEffect()) }
-        let tag = Tag(name: trimmed, createdAt: clock())
-        modelContext.insert(tag)
-        return (tag.id, try commit(candidateDays: [], before: [:], bumpDays: []))
-    }
-
-    public func renameTag(id: UUID, to name: String) throws -> StoreEffect {
-        try requireWritable()
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw JournalStoreError.invalidTagName }
-        guard let tag = try fetchTag(id) else { return StoreEffect() }
-        if let clash = try self.tag(named: trimmed), clash.id != id { throw JournalStoreError.tagNameTaken }
-        guard tag.name != trimmed else { return StoreEffect() }
-        tag.name = trimmed
-        let days = try entryDays(usingTag: id)
-        return try commit(candidateDays: [], before: [:], bumpDays: days)
-    }
-
-    /// Removes the tag and its ID from every entry; reports every day whose content flipped and every week bumped.
-    public func deleteTag(id: UUID) throws -> StoreEffect {
-        try requireWritable()
-        guard let tag = try fetchTag(id) else { return StoreEffect() }
-        // shortcut: scans all entries, fine for a personal journal
-        let affected = try modelContext.fetch(FetchDescriptor<DailyEntry>()).filter { $0.tagIDs.contains(id) }
-        let days = Set(affected.compactMap { DateKey($0.dateKey) })
-        let before = try contentFlags(days)
-        let now = clock()
-        for e in affected {
-            e.tagIDs.removeAll { $0 == id }
-            e.updatedAt = now
-        }
-        modelContext.delete(tag)
-        return try commit(candidateDays: days, before: before, bumpDays: days)
     }
 
     // MARK: Intentions
@@ -596,13 +542,6 @@ public actor JournalStore {
         return flags
     }
 
-    private func entryDays(usingTag id: UUID) throws -> Set<DateKey> {
-        // shortcut: scans all entries, fine for a personal journal
-        Set(
-            try modelContext.fetch(FetchDescriptor<DailyEntry>()).filter { $0.tagIDs.contains(id) }
-                .compactMap { DateKey($0.dateKey) })
-    }
-
     func fetchEntry(_ key: DateKey) throws -> DailyEntry? {
         let s = key.string
         var d = FetchDescriptor<DailyEntry>(predicate: #Predicate { $0.dateKey == s })
@@ -629,16 +568,5 @@ public actor JournalStore {
         var d = FetchDescriptor<WeeklyReview>(predicate: #Predicate { $0.weekStartKey == s })
         d.fetchLimit = 1
         return try modelContext.fetch(d).first
-    }
-
-    private func fetchTag(_ id: UUID) throws -> Tag? {
-        var d = FetchDescriptor<Tag>(predicate: #Predicate { $0.id == id })
-        d.fetchLimit = 1
-        return try modelContext.fetch(d).first
-    }
-
-    private func tag(named name: String) throws -> Tag? {
-        let folded = name.lowercased()
-        return try modelContext.fetch(FetchDescriptor<Tag>()).first { $0.name.lowercased() == folded }
     }
 }

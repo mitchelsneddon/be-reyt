@@ -68,7 +68,6 @@ enum ReflectionPrompt {
                 lines.append(
                     "moods chosen: " + day.moodIDs.map { MoodCatalog.label(for: $0) ?? $0 }.joined(separator: ", "))
             }
-            if !day.tagNames.isEmpty { lines.append("tags: " + day.tagNames.joined(separator: ", ")) }
             let workouts = input.workouts.filter { $0.dateKey == day.dateKey }.map {
                 WorkoutActivity(id: $0.activity).displayName
             }

@@ -1,6 +1,7 @@
 import ReytKit
 import SwiftData
 import SwiftUI
+import UIKit
 
 @main
 struct BeReytApp: App {
@@ -89,6 +90,9 @@ struct BeReytApp: App {
                         Task { await health.syncIfDue() }
                         Task { await reminders.refresh() }
                     case .background:
+                        // Drop the keyboard so it cannot sit over the lock screen on return.
+                        UIApplication.shared.sendAction(
+                            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                         lock.didEnterBackground()
                         host.protect()
                     default: break
@@ -123,19 +127,27 @@ struct BeReytApp: App {
         #endif
     }
 
+    private var isLocked: Bool { lock.state == .locked || lock.state == .authenticating }
+
     @ViewBuilder private var appContentLive: some View {
         if let store = host.store, let attachments = host.attachments, let container = host.container,
             let generation = host.generationID
         {
-            switch lock.state {
-            case .unlocked:
-                root(store: store, attachments: attachments, container: container, generation: generation)
-            case .unavailable:
-                root(store: store, attachments: attachments, container: container, generation: generation)
-                    .safeAreaInset(edge: .top, spacing: 0) { NoPasscodeBanner().noteBannerInset() }
-            case .locked, .authenticating:
-                LockScreenView(lock: lock)
-            }
+            // The journal stays in the hierarchy while locked, so unlocking returns to the same tab, day, scroll
+            // position and open sheet. The lock screen covers it from its own window above every presentation.
+            root(store: store, attachments: attachments, container: container, generation: generation)
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    if lock.state == .unavailable { NoPasscodeBanner().noteBannerInset() }
+                }
+                // Covers the first frame of a cold launch, before the lock window is up.
+                .overlay { if isLocked { PrivacyCover().ignoresSafeArea() } }
+                .accessibilityHidden(isLocked)
+                .onChange(of: isLocked, initial: true) { _, locked in
+                    LockWindow.shared.setVisible(locked, lock: lock)
+                }
+                .onChange(of: isLocked && scenePhase == .active, initial: true) { _, due in
+                    if due { lock.authenticateOnceIfNeeded() }
+                }
         } else {
             WaitingView(failed: host.openFailed)
         }

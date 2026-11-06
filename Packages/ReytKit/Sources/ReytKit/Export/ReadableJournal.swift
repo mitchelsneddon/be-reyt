@@ -31,7 +31,6 @@ public struct ReadableDay: Sendable, Equatable {
     public var heading: String
     public var scoreLabel: String?
     public var moods: [String]
-    public var tags: [String]
     public var text: String?
     public var answers: [Answer]
     public var plan: Plan?
@@ -60,7 +59,7 @@ public enum ReadableFormat {
         "december",
     ]
 
-    public static let smileQuestion = "what made me smile today?"
+    public static let smileQuestion = "what made you smile today?"
     public static let reflectionTitle = "reflection"
     public static let followUpTitle = "how did that go?"
     public static let planTitle = "plan for the week"
@@ -117,7 +116,6 @@ extension ReadableJournal {
     public init(_ data: ArchiveData, includeWorkouts: Bool, range: ClosedRange<DateKey>? = nil) {
         func inRange(_ key: DateKey) -> Bool { range?.contains(key) ?? true }
 
-        let tagNames = Dictionary(data.tags.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         let entries = Dictionary(
             data.entries.compactMap { e in DateKey(e.dateKey).map { ($0, e) } }, uniquingKeysWith: { first, _ in first }
         )
@@ -166,7 +164,6 @@ extension ReadableJournal {
             let rotating = ReadableFormat.nonblank(entry?.rotatingAnswer)
             let score = entry?.dayScore.flatMap { DayScore(rawValue: $0) }?.label
             let moods = MoodCatalog.normalize(entry?.moodIDs ?? []).map { MoodCatalog.label(for: $0) ?? $0 }
-            let tags = (entry?.tagIDs ?? []).compactMap { tagNames[$0] }.filter { !$0.isEmpty }
             let dayPhotos = (photos[key] ?? [])
                 .sorted { ($0.createdAt, $0.id.uuidString) < ($1.createdAt, $1.id.uuidString) }
                 .compactMap { a -> ReadableDay.Photo? in
@@ -201,12 +198,12 @@ extension ReadableJournal {
             }
 
             let hasContent =
-                text != nil || !answers.isEmpty || score != nil || !moods.isEmpty || !tags.isEmpty
+                text != nil || !answers.isEmpty || score != nil || !moods.isEmpty
                 || !dayPhotos.isEmpty || plan != nil || followUp != nil
             guard hasContent else { continue }
             days.append(
                 ReadableDay(
-                    key: key, heading: ReadableFormat.longDate(key), scoreLabel: score, moods: moods, tags: tags,
+                    key: key, heading: ReadableFormat.longDate(key), scoreLabel: score, moods: moods,
                     text: text, answers: answers, plan: plan, followUp: followUp, photos: dayPhotos,
                     workouts: workouts))
         }

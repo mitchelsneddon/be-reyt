@@ -85,7 +85,7 @@ public enum ReflectionSanitiser {
             var signals = Set<DateKey>()
             var all = Set(ReflectionSanitiser.words(ReflectionValidator.sourceText(input)))
             for d in input.days {
-                var parts = [d.text] + [d.smileAnswer, d.rotatingAnswer].compactMap { $0 } + d.tagNames
+                var parts = [d.text] + [d.smileAnswer, d.rotatingAnswer].compactMap { $0 }
                 parts += input.followUps.filter { $0.writtenOn == d.dateKey }.map(\.note)
                 parts += d.moodIDs.compactMap(MoodCatalog.label(for:))
                 if let s = d.score.flatMap(DayScore.init(rawValue:)) { parts.append(s.label) }

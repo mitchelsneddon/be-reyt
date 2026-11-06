@@ -66,7 +66,6 @@ struct DayContentTests {
         #expect(DayContent(rotatingAnswer: "x").hasUserContent)
         #expect(DayContent(dayScore: 3).hasUserContent)
         #expect(DayContent(moodIDs: ["happy"]).hasUserContent)
-        #expect(DayContent(tagIDs: [UUID()]).hasUserContent)
         #expect(DayContent(attachmentCount: 1).hasUserContent)
         #expect(DayContent(hasIntention: true).hasUserContent)
         #expect(DayContent(hasFollowUpNote: true).hasUserContent)
@@ -89,16 +88,14 @@ struct DayContentTests {
         #expect(effect.contentChangedDays.isEmpty)
     }
 
-    @Test("assembled from records: tag, photo, score, mood each count")
+    @Test("assembled from records: photo, score, mood each count")
     func counts() async throws {
         let h = try Harness()
-        let tag = try await h.store.createTag(name: "run").id
-        let d = (0..<4).map { week.adding(days: $0 + 1) }
-        _ = try await h.store.updateEntry(d[0], .tags([tag]))
+        let d = (0..<3).map { week.adding(days: $0 + 1) }
         _ = try await h.store.addAttachmentRecord(
-            id: UUID(), dateKey: d[1], relativePath: "a.jpg", uti: "public.jpeg", sha256: "x")
-        _ = try await h.store.updateEntry(d[2], .score(.good))
-        _ = try await h.store.updateEntry(d[3], .moods(["happy"]))
+            id: UUID(), dateKey: d[0], relativePath: "a.jpg", uti: "public.jpeg", sha256: "x")
+        _ = try await h.store.updateEntry(d[1], .score(.good))
+        _ = try await h.store.updateEntry(d[2], .moods(["happy"]))
         for k in d { #expect(try await h.store.dayContent(k).hasUserContent, "\(k)") }
     }
 
@@ -121,7 +118,7 @@ struct JournalStoreEffectTests {
     @Test("no-op on a missing entry creates nothing")
     func noOpMissing() async throws {
         let h = try Harness()
-        for change: EntryChange in [.text(""), .smileAnswer(nil), .score(nil), .moods([]), .tags([])] {
+        for change: EntryChange in [.text(""), .smileAnswer(nil), .score(nil), .moods([])] {
             #expect(try await h.store.updateEntry(day, change) == StoreEffect())
         }
         #expect(try h.reader.fetchCount(FetchDescriptor<DailyEntry>()) == 0)
@@ -170,49 +167,6 @@ struct JournalStoreEffectTests {
         #expect(try h.reader.fetchCount(FetchDescriptor<WeeklyIntention>()) == 0)
     }
 
-    @Test("createTag dedupes case-insensitively; rename collision rejected")
-    func tags() async throws {
-        let h = try Harness()
-        let a = try await h.store.createTag(name: "  Run ").id
-        let again = try await h.store.createTag(name: "rUN")
-        #expect(again.id == a)
-        #expect(again.effect.isEmpty)
-        let b = try await h.store.createTag(name: "swim").id
-        #expect(b != a)
-        await #expect(throws: JournalStoreError.tagNameTaken) { try await h.store.renameTag(id: b, to: "RUN") }
-        await #expect(throws: JournalStoreError.invalidTagName) { try await h.store.renameTag(id: b, to: "  ") }
-        // case-only rename of itself is allowed
-        _ = try await h.store.renameTag(id: a, to: "RUN")
-        #expect(try h.reader.fetch(FetchDescriptor<SchemaV1.Tag>()).count == 2)
-    }
-
-    @Test("deleteTag across 3 days in 2 weeks reports every flipped day and both weeks")
-    func deleteTagCascade() async throws {
-        let h = try Harness()
-        let tag = try await h.store.createTag(name: "run").id
-        let days = [DateKey("2026-11-02")!, DateKey("2026-11-03")!, DateKey("2026-11-10")!]
-        for d in days { _ = try await h.store.updateEntry(d, .tags([tag])) }
-        _ = try await h.store.updateEntry(DateKey("2026-11-04")!, .text("untouched"))
-        try await h.seedReview(week)
-        try await h.seedReview(nextWeek)
-        let effect = try await h.store.deleteTag(id: tag)
-        #expect(effect.contentChangedDays == Set(days))
-        #expect(effect.revisionBumpedWeeks == [week, nextWeek])
-        #expect(effect.dirty)
-        h.reader.rollback()
-        for e in try h.reader.fetch(FetchDescriptor<DailyEntry>()) { #expect(!e.tagIDs.contains(tag)) }
-        #expect(try h.reader.fetchCount(FetchDescriptor<SchemaV1.Tag>()) == 0)
-    }
-
-    @Test("an entry with text keeps its content flag when its only tag is deleted")
-    func deleteTagKeepsContent() async throws {
-        let h = try Harness()
-        let tag = try await h.store.createTag(name: "run").id
-        _ = try await h.store.updateEntry(day, .text("hi"))
-        _ = try await h.store.updateEntry(day, .tags([tag]))
-        #expect(try await h.store.deleteTag(id: tag).contentChangedDays.isEmpty)
-    }
-
     @Test("rerollPrompt refused when answered; allowed and answer untouched when blank")
     func reroll() async throws {
         let h = try Harness()
@@ -237,7 +191,6 @@ struct JournalStoreEffectTests {
     @Test("readOnly rejects every mutation and allows reads; lifting it restores writes")
     func readOnly() async throws {
         let h = try Harness()
-        let tag = try await h.store.createTag(name: "t").id
         await h.store.setReadOnly(true)
         let s = h.store
         let sunday = DateKey("2026-11-08")!
@@ -248,9 +201,6 @@ struct JournalStoreEffectTests {
         await #expect(throws: JournalStoreError.readOnly) {
             try await s.rerollPrompt(day, candidate: PromptChoice(id: "a", text: "b"))
         }
-        await #expect(throws: JournalStoreError.readOnly) { try await s.createTag(name: "n") }
-        await #expect(throws: JournalStoreError.readOnly) { try await s.renameTag(id: tag, to: "q") }
-        await #expect(throws: JournalStoreError.readOnly) { try await s.deleteTag(id: tag) }
         await #expect(throws: JournalStoreError.readOnly) {
             try await s.saveIntention(sunday: sunday, text: "x", category: nil)
         }
@@ -273,26 +223,22 @@ struct JournalStoreEffectTests {
 @Suite("Narrative invalidation")
 struct NarrativeInvalidationTests {
     enum Writer: CaseIterable, CustomTestStringConvertible {
-        case text, smile, rotating, score, moods, tags, tagRename, tagDelete, intention, followUp, workoutChange,
-            workoutDelete
+        case text, smile, rotating, score, moods, intention, followUp, workoutChange, workoutDelete
         var testDescription: String { "\(self)" }
     }
 
-    private let tagA = UUID()
     private let workoutID = UUID(uuidString: "00000000-0000-0000-0000-0000000000AA")!
     private let priorSunday = DateKey("2026-10-25")!
 
     /// Seeds every model-input source in `week`, then a review row with a matching narrative.
-    private func seeded() async throws -> (Harness, UUID) {
+    private func seeded() async throws -> Harness {
         let h = try Harness()
-        let tag = try await h.store.createTag(name: "run").id
         _ = try await h.store.assignPromptIfNeeded(day) { _, _ in PromptChoice(id: "p", text: "what stood out?") }
         _ = try await h.store.updateEntry(day, .text("a"))
         _ = try await h.store.updateEntry(day, .smileAnswer("s"))
         _ = try await h.store.updateEntry(day, .rotatingAnswer("r"))
         _ = try await h.store.updateEntry(day, .score(.okay))
         _ = try await h.store.updateEntry(day, .moods(["happy"]))
-        _ = try await h.store.updateEntry(day, .tags([tag]))
         _ = try await h.store.saveIntention(sunday: week, text: "x", category: "health")
         _ = try await h.store.saveIntention(sunday: priorSunday, text: "earlier", category: nil)
         _ = try await h.store.saveFollowUp(
@@ -300,10 +246,10 @@ struct NarrativeInvalidationTests {
         _ = try await h.store.upsertWorkouts([h.workout(workoutID)])
         try await h.seedReview(week, moreOfThis: "more walks")
         #expect(try h.narrativeIntact(week), "seed must start with an intact narrative")
-        return (h, tag)
+        return h
     }
 
-    private func perform(_ w: Writer, _ h: Harness, tag: UUID) async throws -> StoreEffect {
+    private func perform(_ w: Writer, _ h: Harness) async throws -> StoreEffect {
         let s = h.store
         switch w {
         case .text: return try await s.updateEntry(day, .text("b"))
@@ -311,9 +257,6 @@ struct NarrativeInvalidationTests {
         case .rotating: return try await s.updateEntry(day, .rotatingAnswer("q"))
         case .score: return try await s.updateEntry(day, .score(.good))
         case .moods: return try await s.updateEntry(day, .moods(["happy", "tired"]))
-        case .tags: return try await s.updateEntry(day, .tags([]))
-        case .tagRename: return try await s.renameTag(id: tag, to: "jog")
-        case .tagDelete: return try await s.deleteTag(id: tag)
         case .intention: return try await s.saveIntention(sunday: week, text: "y", category: "health")
         case .followUp:
             return try await s.saveFollowUp(
@@ -325,8 +268,8 @@ struct NarrativeInvalidationTests {
 
     @Test("every model-input writer purges the narrative and reports the week", arguments: Writer.allCases)
     func writerPurges(_ w: Writer) async throws {
-        let (h, tag) = try await seeded()
-        let effect = try await perform(w, h, tag: tag)
+        let h = try await seeded()
+        let effect = try await perform(w, h)
         #expect(effect.revisionBumpedWeeks == [week])
         #expect(effect.dirty)
         h.reader.rollback()
@@ -341,7 +284,7 @@ struct NarrativeInvalidationTests {
 
     @Test("an edit in another week leaves this week's narrative alone")
     func otherWeek() async throws {
-        let (h, _) = try await seeded()
+        let h = try await seeded()
         let effect = try await h.store.updateEntry(DateKey("2026-11-10")!, .text("later"))
         #expect(effect.revisionBumpedWeeks.isEmpty)
         #expect(try h.narrativeIntact(week))
@@ -349,14 +292,12 @@ struct NarrativeInvalidationTests {
 
     @Test("no-op writes keep the narrative and bump nothing")
     func noOps() async throws {
-        let (h, tag) = try await seeded()
+        let h = try await seeded()
         let s = h.store
         let noOps: [StoreEffect] = [
             try await s.updateEntry(day, .text("a")),
             try await s.updateEntry(day, .score(.okay)),
             try await s.updateEntry(day, .moods(["happy"])),
-            try await s.updateEntry(day, .tags([tag])),
-            try await s.renameTag(id: tag, to: "run"),
             try await s.saveIntention(sunday: week, text: "x", category: "health"),
             try await s.saveFollowUp(
                 sourceSunday: priorSunday, writtenOn: week.adding(days: 3), note: "n", skipped: false),
@@ -369,7 +310,7 @@ struct NarrativeInvalidationTests {
 
     @Test("attachment add and delete keep the narrative but flip content and set dirty")
     func attachmentsDontTouchInput() async throws {
-        let (h, _) = try await seeded()
+        let h = try await seeded()
         let quiet = DateKey("2026-11-06")!
         let id = UUID()
         let added = try await h.store.addAttachmentRecord(
@@ -408,7 +349,7 @@ struct NarrativeInvalidationTests {
 
     @Test("workout energy change is persisted (dirty) but does not bump")
     func workoutEnergy() async throws {
-        let (h, _) = try await seeded()
+        let h = try await seeded()
         var w = h.workout(workoutID)
         w.energyKcal = 300
         let effect = try await h.store.upsertWorkouts([w])
@@ -419,7 +360,7 @@ struct NarrativeInvalidationTests {
 
     @Test("a follow-up moved to another week bumps both weeks")
     func followUpMoves() async throws {
-        let (h, _) = try await seeded()
+        let h = try await seeded()
         try await h.seedReview(nextWeek)
         let effect = try await h.store.saveFollowUp(
             sourceSunday: priorSunday, writtenOn: nextWeek.adding(days: 1), note: "n", skipped: false)
@@ -435,16 +376,14 @@ struct NarrativeInvalidationTests {
 
 @Suite("ReflectionInput and fingerprint")
 struct ReflectionInputTests {
-    @Test("tag rename changes the fingerprint; a promptVersion change does not")
+    @Test("a text change changes the fingerprint; a promptVersion change does not")
     func fingerprintSensitivity() async throws {
         let h = try Harness()
-        let tag = try await h.store.createTag(name: "run").id
         _ = try await h.store.updateEntry(day, .text("a"))
-        _ = try await h.store.updateEntry(day, .tags([tag]))
         let f1 = try ReviewFingerprint.compute(try await h.store.reflectionInput(weekStart: week))
         #expect(f1.count == 64)
         #expect(f1 == (try ReviewFingerprint.compute(try await h.store.reflectionInput(weekStart: week))))
-        _ = try await h.store.renameTag(id: tag, to: "jog")
+        _ = try await h.store.updateEntry(day, .text("b"))
         let f2 = try ReviewFingerprint.compute(try await h.store.reflectionInput(weekStart: week))
         #expect(f1 != f2)
 
@@ -458,15 +397,13 @@ struct ReflectionInputTests {
         #expect(try h.review(week)?.narrativeJSON != nil)
     }
 
-    @Test("input contains exactly the model-input set, with tag names and prompt wording resolved")
+    @Test("input contains exactly the model-input set, with prompt wording resolved")
     func contents() async throws {
         let h = try Harness()
-        let tag = try await h.store.createTag(name: "run").id
         _ = try await h.store.assignPromptIfNeeded(day) { _, _ in PromptChoice(id: "p", text: "what stood out?") }
         _ = try await h.store.updateEntry(day, .text("hello"))
         _ = try await h.store.updateEntry(day, .rotatingAnswer("this"))
         _ = try await h.store.updateEntry(day, .score(.good))
-        _ = try await h.store.updateEntry(day, .tags([tag]))
         _ = try await h.store.saveIntention(sunday: week, text: "walk", category: "health")
         _ = try await h.store.upsertWorkouts([h.workout(UUID())])
         _ = try await h.store.addAttachmentRecord(
@@ -479,7 +416,6 @@ struct ReflectionInputTests {
         #expect(d.rotatingPrompt == "what stood out?")
         #expect(d.rotatingAnswer == "this")
         #expect(d.score == 4)
-        #expect(d.tagNames == ["run"])
         #expect(input.intention == ReflectionInput.Intention(text: "walk", category: "health"))
         #expect(input.workouts.count == 1)
         #expect(input.workouts.first?.activity == "running")
@@ -496,19 +432,19 @@ struct ReflectionInputTests {
         #expect(before == (try ReviewFingerprint.compute(try await h.store.reflectionInput(weekStart: week))))
     }
 
-    @Test("canonical form ignores ordering of moods, tags and workouts")
+    @Test("canonical form ignores ordering of moods and workouts")
     func canonical() throws {
         let w1 = ReflectionInput.Workout(dateKey: day, activity: "run", durationSeconds: 1, distanceMeters: nil)
         let w2 = ReflectionInput.Workout(dateKey: day, activity: "walk", durationSeconds: 2, distanceMeters: 5)
-        func mkDay(_ moods: [String], _ tags: [String]) -> ReflectionInput.Day {
+        func mkDay(_ moods: [String]) -> ReflectionInput.Day {
             .init(
                 dateKey: DateKey("2026-11-03")!, text: "t", smileAnswer: nil, rotatingPrompt: nil, rotatingAnswer: nil,
-                score: nil, moodIDs: moods, tagNames: tags)
+                score: nil, moodIDs: moods)
         }
         let a = ReflectionInput(
-            weekStart: week, days: [mkDay(["a", "b"], ["x", "y"])], intention: nil, followUps: [], workouts: [w1, w2])
+            weekStart: week, days: [mkDay(["a", "b"])], intention: nil, followUps: [], workouts: [w1, w2])
         let b = ReflectionInput(
-            weekStart: week, days: [mkDay(["b", "a"], ["y", "x"])], intention: nil, followUps: [], workouts: [w2, w1])
+            weekStart: week, days: [mkDay(["b", "a"])], intention: nil, followUps: [], workouts: [w2, w1])
         #expect(try ReviewFingerprint.compute(a) == ReviewFingerprint.compute(b))
         #expect(a == b)
     }

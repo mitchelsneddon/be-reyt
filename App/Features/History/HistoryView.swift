@@ -1,10 +1,9 @@
 import ReytKit
-import SwiftData
 import SwiftUI
 
-/// The History tab: a calendar or a list of days with content, plus local search by text and tag.
+/// The History tab: a calendar or a list of days with content, plus local search by text.
 struct HistoryView: View {
-    private enum Mode: Hashable { case calendar, list }
+    private enum Mode: String { case calendar, list }
 
     let store: JournalStore
     let events: JournalEvents
@@ -13,7 +12,10 @@ struct HistoryView: View {
     @State private var model: HistoryModel
     @State private var mode: Mode = .calendar
     @State private var path: [DateKey] = []
-    @Query(sort: \Tag.name) private var tags: [Tag]
+    /// Scene storage, so a relaunch after iOS ended the app in the background reopens the same mode and day.
+    @SceneStorage("history.mode") private var storedMode = ""
+    @SceneStorage("history.openDay") private var storedDay = ""
+    @State private var restored = false
 
     init(store: JournalStore, events: JournalEvents, attachments: AttachmentStore) {
         self.store = store
@@ -39,7 +41,6 @@ struct HistoryView: View {
     private struct RefreshKey: Equatable {
         var revision: Int
         var text: String
-        var tags: Set<UUID>
     }
 
     var body: some View {
@@ -47,7 +48,6 @@ struct HistoryView: View {
         NavigationStack(path: $path) {
             VStack(spacing: 0) {
                 header
-                if !tags.isEmpty { tagFilter }
                 content
             }
             .background(Palette.paper)
@@ -57,6 +57,9 @@ struct HistoryView: View {
                 HistoryDayPage(key: key, store: store, events: events, attachments: attachments)
             }
         }
+        .onChange(of: mode) { _, new in storedMode = new.rawValue }
+        .onChange(of: path) { _, new in storedDay = new.last?.string ?? "" }
+        .task { restoreStoredPlace() }
         #if DEBUG
             .task {
                 // Simulator-only: `-openHistoryDay YYYY-MM-DD` opens that day as if it had been tapped.
@@ -67,8 +70,7 @@ struct HistoryView: View {
                 open(key)
             }
         #endif
-        .onChange(of: tags.map(\.id)) { _, ids in model.pruneTags(existing: Set(ids)) }
-        .task(id: RefreshKey(revision: events.contentRevision, text: model.searchText, tags: model.tagIDs)) {
+        .task(id: RefreshKey(revision: events.contentRevision, text: model.searchText)) {
             // Light debounce so typing does not fetch on every keystroke; a newer key cancels this one.
             if model.isFiltering { try? await Task.sleep(for: .milliseconds(200)) }
             guard !Task.isCancelled else { return }
@@ -128,23 +130,19 @@ struct HistoryView: View {
         .background(Palette.chip, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
+    /// Once per view lifetime: the mode and open day saved before iOS ended the app.
+    private func restoreStoredPlace() {
+        guard !restored else { return }
+        restored = true
+        if let stored = Mode(rawValue: storedMode) { mode = stored }
+        if path.isEmpty, let key = DateKey(storedDay) { open(key) }
+    }
+
     /// The one way a day gets pushed: calendar taps call this, and so does the DEBUG `-openHistoryDay` launch arg.
     /// Days after today are refused, the same rule the calendar applies to selection.
     private func open(_ key: DateKey) {
         guard key <= AppClock.today() else { return }
         path.append(key)
-    }
-
-    private var tagFilter: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            ChipGroup(
-                items: tags.map { ChipItem(id: $0.id, label: $0.name) },
-                selection: Binding(get: { model.tagIDs }, set: { model.tagIDs = $0 })
-            )
-            .padding(.horizontal, 20)
-        }
-        .accessibilityLabel(Copy.History.tagFilterLabel)
-        .frame(minHeight: 44)
     }
 
     @ViewBuilder private var content: some View {

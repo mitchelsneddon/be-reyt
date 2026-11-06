@@ -8,6 +8,10 @@ import ReytKit
 @MainActor @Observable
 final class AppLock {
     private(set) var state: LockState
+    /// False until an unlock attempt has been cancelled or has failed in this foregrounding. Until then the lock
+    /// screen shows the plain cover (the same as the app-switcher cover), so the unlock button never flashes up
+    /// between launch and the Face ID prompt.
+    private(set) var offersUnlock = false
 
     @ObservationIgnored private let isDisabled: Bool
     @ObservationIgnored private var context: LAContext?
@@ -31,6 +35,7 @@ final class AppLock {
         context?.invalidate()
         context = nil
         autoAttempted = false
+        offersUnlock = false
         send(.enteredBackground)
     }
 
@@ -61,6 +66,7 @@ final class AppLock {
                 send(.passcodeNotSet)
             } else {
                 logger.error("cannot evaluate: \(error?.code ?? 0, privacy: .public)")
+                offersUnlock = true
                 send(.authFailed)
             }
             return
@@ -69,6 +75,7 @@ final class AppLock {
             let ok = try await context.evaluatePolicy(
                 .deviceOwnerAuthentication, localizedReason: Copy.Lock.reason)
             guard id == attemptID else { return }
+            if !ok { offersUnlock = true }
             send(ok ? .authSucceeded : .authFailed)
         } catch {
             guard id == attemptID else { return }
@@ -77,6 +84,8 @@ final class AppLock {
             // a system or app cancel (the scene went inactive mid-prompt) should be retried on return.
             if code == LAError.systemCancel.rawValue || code == LAError.appCancel.rawValue {
                 autoAttempted = false
+            } else {
+                offersUnlock = true
             }
             send(.authFailed)
         }

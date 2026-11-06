@@ -74,14 +74,13 @@ struct MarkdownRendererTests {
             # thursday, 5 november 2026
 
             day score: good  
-            moods: happy, tired  
-            tags: walk 🚶
+            moods: happy, tired
 
             café 😊 שלום  
             \\# not a heading  
             second line
 
-            ## what made me smile today?
+            ## what made you smile today?
 
             the dog
 
@@ -114,7 +113,7 @@ struct MarkdownRendererTests {
     @Test("empty optionals never appear as sections, nil or empty headings")
     func noEmptySections() throws {
         let day = try #require(file(fullFixture(), "2026-11-08.md"))
-        for banned in ["nil", "day score", "moods", "tags", "photos", "workouts", "what made me smile"] {
+        for banned in ["nil", "day score", "moods", "tags", "photos", "workouts", "what made you smile"] {
             #expect(!day.contains(banned))
         }
         #expect(!day.contains("## \n"))

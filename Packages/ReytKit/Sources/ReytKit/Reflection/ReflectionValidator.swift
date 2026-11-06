@@ -105,7 +105,6 @@ public enum ReflectionValidator {
         for d in input.days {
             parts.append(d.text)
             parts.append(contentsOf: [d.smileAnswer, d.rotatingPrompt, d.rotatingAnswer].compactMap { $0 })
-            parts.append(contentsOf: d.tagNames)
         }
         if let i = input.intention {
             parts.append(i.text)

@@ -50,7 +50,7 @@ scripts/privacy-check.sh
   - `-designGallery` shows the design gallery; `-showOnboarding` / `-skipOnboarding` force or skip onboarding, `-onboardingStep <n>` jumps to a step.
   - `-reflectionState <state>` sets the review reflection state; `-forceSaveFailure` fails the next save.
   - `-forceWaiting` / `-forceOpenFailed` / `-showPrivacyCover` show the lock screen's other states.
-  - `-openReviews`, `-openTags`, `-openReadableExport`, `-openDeleteAll`, `-openRestoreBrowser`, `-openPassphrase`, `-openPhotoViewer` open that screen directly.
+  - `-openReviews`, `-openReadableExport`, `-openDeleteAll`, `-openRestoreBrowser`, `-openPassphrase`, `-openPhotoViewer` open that screen directly.
   - `-showRestoreNote` / `-showDeleteAllNote` show the result banners.
 
 ## Device checklist

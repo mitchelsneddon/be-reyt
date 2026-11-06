@@ -43,7 +43,6 @@ enum Copy {
         static let emptyJournal = "nothing here yet."
         static let noMatches = "nothing matches that."
         static let searchPrompt = "search your days"
-        static let tagFilterLabel = "filter by tag"
         static let calendarLabel = "calendar of your days"
         static let loadFailed = "couldn't open your history. tap to try again."
         static let hasEntry = "has an entry"
@@ -68,7 +67,7 @@ enum Copy {
             return key.date(in: calendar).formatted(style).lowercased()
         }
 
-        static func photosLabel(_ n: Int) -> String { n == 1 ? "1 photo" : "\(n) photos" }
+        static func photosLabel(_ n: Int) -> String { n == 1 ? "1 visual reminder" : "\(n) visual reminders" }
         static func moodsLabel(_ n: Int) -> String { n == 1 ? "1 mood" : "\(n) moods" }
         static func scoreLabel(_ score: DayScore) -> String { "day score, \(score.label)" }
         static func rowLabel(date: String, preview: String) -> String {
@@ -224,8 +223,8 @@ enum Copy {
     }
 
     enum Reflection {
-        static let smileQuestion = "what made me smile today?"
-        static let smileAnswerLabel = "answer to what made me smile today"
+        static let smileQuestion = "what made you smile today?"
+        static let smileAnswerLabel = "answer to what made you smile today"
         static let answerPlaceholder = "write here, or leave it blank."
         static let smilePlaceholder = "even a small thing."
         static let anotherPrompt = "another prompt"
@@ -264,43 +263,9 @@ enum Copy {
         static let skipped = "skipped"
     }
 
-    enum Tags {
-        static let addAffordance = "+ add a tag"
-        static let addPlaceholder = "add a tag"
-        static let addLabel = "add tag"
-        static let addFailed = "couldn't add that tag. try again in a moment."
-        static let manageLink = "manage tags"
-        static let manageTitle = "tags"
-        static let manageEmpty = "no tags yet."
-        static func usedOn(_ days: Int) -> String { days == 1 ? "used on 1 day" : "used on \(days) days" }
-        static func rowLabel(_ name: String, days: Int) -> String { "\(name), \(usedOn(days))" }
-        static let rowHint = "opens rename"
-        static let renameTitle = "rename tag"
-        static let renameField = "tag name"
-        static let renameBlank = "a tag needs a name."
-        static func renameTaken(_ name: String) -> String { "you already have a tag called \(name)." }
-        static let renameFailed = "couldn't rename that tag. try again in a moment."
-        static func deleteConfirm(_ name: String) -> String {
-            "remove “\(name)” from every day? the days themselves stay."
-        }
-        static let deleteAction = "remove"
-        static let keep = "keep it"
-        static let deleteFailed = "couldn't remove that tag. try again in a moment."
-        static let ok = "ok"
-        static let cancel = "cancel"
-        static let save = "save"
-        static let done = "done"
-        static let edit = "edit"
-        static let settingsRow = "tags"
-        static let journalSection = "journal"
-        static func chipLabel(_ name: String, selected: Bool) -> String {
-            selected ? "\(name), on this day" : "\(name), not on this day"
-        }
-    }
-
     enum Photos {
-        static let title = "photos"
-        static let add = "add photos"
+        static let title = "visual reminders"
+        static let add = "add visual reminders"
         static let addShort = "add"
         static let beingAdded = "photo being added"
         static let addHint = "choose photos from your library"
@@ -363,6 +328,63 @@ enum Copy {
 
         static func cardLabel(name: String, duration: String, distance: String?) -> String {
             [name, duration, distance].compactMap { $0 }.joined(separator: ", ")
+        }
+
+        // Expanded card.
+        static let showDetailsHint = "shows the route and more details"
+        static let hideDetailsHint = "hides the details"
+        static let expanded = "expanded"
+        static let collapsed = "collapsed"
+        static let timeLabel = "time"
+        static let durationLabel = "duration"
+        static let distanceLabel = "distance"
+        static let paceLabel = "pace"
+        static let speedLabel = "speed"
+        static let caloriesLabel = "active calories"
+        static let elevationLabel = "elevation gain"
+        static let sourceLabel = "recorded by"
+        static func routeAccessibility(_ name: String) -> String { "\(name) route drawing" }
+
+        /// "07:02 – 07:48".
+        static func timeRange(_ start: Date, _ end: Date) -> String { "\(startTime(start)) – \(startTime(end))" }
+
+        /// "412 kcal".
+        static func calories(_ kcal: Double) -> String {
+            Measurement(value: kcal, unit: UnitEnergy.kilocalories)
+                .formatted(
+                    .measurement(
+                        width: .abbreviated, usage: .asProvided,
+                        numberFormatStyle: .number.precision(.fractionLength(0))))
+        }
+
+        /// "120 m" or "394 ft" by locale.
+        static func elevation(meters: Double) -> String {
+            let metric = Locale.current.measurementSystem == .metric
+            let value = Measurement(value: meters, unit: UnitLength.meters).converted(to: metric ? .meters : .feet)
+            return value.formatted(
+                .measurement(
+                    width: .abbreviated, usage: .asProvided, numberFormatStyle: .number.precision(.fractionLength(0))))
+        }
+
+        /// Running, walking, hiking: "5:12 /km" or "8:22 /mi". Swimming: "2:05 /100 m".
+        static func pace(seconds: Double, meters: Double, swimming: Bool) -> String? {
+            guard meters > 0, seconds > 0 else { return nil }
+            let metric = Locale.current.measurementSystem == .metric
+            let per: Double = swimming ? 100 : (metric ? 1000 : 1609.344)
+            let unit = swimming ? "100 m" : (metric ? "km" : "mi")
+            let total = Int((seconds / meters * per).rounded())
+            return String(format: "%d:%02d /%@", total / 60, total % 60, unit)
+        }
+
+        /// Cycling: "24.3 km/h" or "15.1 mph".
+        static func speed(seconds: Double, meters: Double) -> String? {
+            guard meters > 0, seconds > 0 else { return nil }
+            let metric = Locale.current.measurementSystem == .metric
+            let value = Measurement(value: meters / seconds, unit: UnitSpeed.metersPerSecond)
+                .converted(to: metric ? .kilometersPerHour : .milesPerHour)
+            return value.formatted(
+                .measurement(
+                    width: .abbreviated, usage: .asProvided, numberFormatStyle: .number.precision(.fractionLength(1))))
         }
     }
 
@@ -566,7 +588,6 @@ enum Copy {
         static let previewIntro = "it holds"
         static func days(_ n: Int) -> String { n == 1 ? "1 day written" : "\(n) days written" }
         static func photos(_ n: Int) -> String { n == 1 ? "1 photo" : "\(n) photos" }
-        static func tags(_ n: Int) -> String { n == 1 ? "1 tag" : "\(n) tags" }
         static func plans(_ n: Int) -> String { n == 1 ? "1 sunday plan" : "\(n) sunday plans" }
         static func range(first: String, last: String) -> String { "from \(first) to \(last)" }
         static func fileDate(_ date: Date) -> String { Dates.format(date, year: true) }
@@ -776,7 +797,7 @@ enum Copy {
         static let removesHeader = "this removes, from this phone"
         static let removes = [
             "every entry, photo, reflection and plan",
-            "your tags and settings",
+            "your settings",
             "the backup passphrase stored on this phone",
             "scheduled reminders",
         ]

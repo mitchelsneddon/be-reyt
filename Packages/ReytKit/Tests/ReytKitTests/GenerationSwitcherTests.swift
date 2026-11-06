@@ -135,7 +135,6 @@ struct GenerationSwitcherTests {
         await #expect(throws: JournalStoreError.readOnly) {
             try await old.updateEntry(ArchiveFixture.entryDay, .text("late write"))
         }
-        await #expect(throws: JournalStoreError.readOnly) { try await old.createTag(name: "late") }
         #expect(try pointer(f) == "g2")
         // Old generation untouched and still on disk for recovery.
         #expect(FileManager.default.fileExists(atPath: f.paths.store(in: f.generation).path))

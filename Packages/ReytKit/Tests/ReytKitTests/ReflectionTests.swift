@@ -12,7 +12,7 @@ private let thu = DateKey("2026-11-05")!
 private func day(_ key: DateKey, _ text: String) -> ReflectionInput.Day {
     ReflectionInput.Day(
         dateKey: key, text: text, smileAnswer: nil, rotatingPrompt: nil, rotatingAnswer: nil, score: nil,
-        moodIDs: [], tagNames: [])
+        moodIDs: [])
 }
 
 private func input(_ days: [ReflectionInput.Day]) -> ReflectionInput {
@@ -186,18 +186,17 @@ struct ReflectionSanitiserTests {
 @Suite("Reflection guards in code")
 struct ReflectionGuardTests {
     private static func d(
-        _ key: String, _ text: String = "", smile: String? = nil, score: Int? = nil, moods: [String] = [],
-        tags: [String] = []
+        _ key: String, _ text: String = "", smile: String? = nil, score: Int? = nil, moods: [String] = []
     ) -> ReflectionInput.Day {
         .init(
             dateKey: DateKey(key)!, text: text, smileAnswer: smile, rotatingPrompt: nil, rotatingAnswer: nil,
-            score: score, moodIDs: moods, tagNames: tags)
+            score: score, moodIDs: moods)
     }
 
     /// The seeded week from the round-1 device runs.
     private let seeded = input([
         d("2026-11-01", "planning the week, a few things to sort out."),
-        d("2026-11-02", smile: "found the old cafe still does the good scones", tags: ["friends"]),
+        d("2026-11-02", smile: "found the old cafe still does the good scones"),
         d("2026-11-03", "busy, barely looked up until four", moods: ["tired"]),
         d(
             "2026-11-04", "a slow morning, coffee on the step. long walk after lunch, the light was lovely.",

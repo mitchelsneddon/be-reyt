@@ -17,6 +17,9 @@ struct TodayView: View {
     @State private var cache: DayPageCache
     /// True while the open page is the live "today" (so a roll may move it), false after the user pages back.
     @State private var followsToday = true
+    /// The open past day, so a relaunch after iOS ended the app in the background reopens it. Empty while the
+    /// page follows today, so tomorrow's launch opens tomorrow rather than a stale "today".
+    @SceneStorage("today.openDay") private var storedDay = ""
 
     init(
         store: JournalStore, events: JournalEvents, attachments: AttachmentStore,
@@ -46,7 +49,16 @@ struct TodayView: View {
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in rollIfIdle() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { rollIfIdle() } }
         .onChange(of: cache.model(for: current).isIdle) { _, _ in rollIfIdle() }
-        .onChange(of: current) { _, key in followsToday = key == today }
+        .onChange(of: current) { _, key in
+            followsToday = key == today
+            storedDay = followsToday ? "" : key.string
+        }
+        .task { restoreStoredDay() }
+    }
+
+    private func restoreStoredDay() {
+        guard let key = DateKey(storedDay), key < today, key != current else { return }
+        current = key
     }
 
     private static func currentDay() -> DateKey { AppClock.today() }

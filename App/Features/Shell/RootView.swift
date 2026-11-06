@@ -9,21 +9,10 @@ struct RootView: View {
     let backup: BackupSettingsModel
     let restore: RestoreCoordinator
 
-    private enum Destination: Hashable { case today, history, reviews, settings }
+    private enum Destination: String { case today, history, reviews, settings }
 
-    @State private var selection: Destination = Self.initialSelection
-
-    private static var initialSelection: Destination {
-        #if DEBUG
-            // Simulator-only: `-openHistory ...` starts on the history tab.
-            if CommandLine.arguments.contains("-openHistory") { return .history }
-            if CommandLine.arguments.contains("-openSettings") { return .settings }
-            if CommandLine.arguments.contains("-openReview") || CommandLine.arguments.contains("-openReviews") {
-                return .reviews
-            }
-        #endif
-        return .today
-    }
+    /// Scene storage, so a relaunch after iOS ended the app in the background opens on the same tab.
+    @SceneStorage("root.tab") private var selection = Destination.today
 
     var body: some View {
         TabView(selection: $selection) {
@@ -43,12 +32,21 @@ struct RootView: View {
                 tabLabel(Copy.Tab.reviews, "tab.reviews", .reviews)
             }
             Tab(value: Destination.settings) {
-                SettingsView(backup: backup, restore: restore, tags: TagsModel(store: store, events: events))
+                SettingsView(backup: backup, restore: restore)
             } label: {
                 tabLabel(Copy.Tab.settings, "tab.settings", .settings)
             }
         }
         .tint(Palette.accent)
+        #if DEBUG
+            .task {
+                // Simulator-only: `-openHistory ...` starts on the history tab.
+                let args = CommandLine.arguments
+                if args.contains("-openHistory") { selection = .history }
+                if args.contains("-openSettings") { selection = .settings }
+                if args.contains("-openReview") || args.contains("-openReviews") { selection = .reviews }
+            }
+        #endif
         .modifier(PassphraseQuestionAlerts(restore: restore))
         .environment(restore)
     }

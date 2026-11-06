@@ -7,8 +7,7 @@ import ReytKit
 @MainActor @Observable
 final class DayPageModel: DraftFlushing {
     enum SaveState: Equatable { case idle, saving, saved, failed }
-    enum AddTagResult { case added, blank, failed }
-    private enum Field: Hashable { case text, smile, rotating, score, moods, tags, intention, followUp }
+    private enum Field: Hashable { case text, smile, rotating, score, moods, intention, followUp }
 
     let dateKey: DateKey
 
@@ -18,7 +17,6 @@ final class DayPageModel: DraftFlushing {
     /// The moods the day carried when the page loaded or was last reloaded from outside. The mood grid keeps a
     /// retired mood's tile for this set, so deselecting it during the session does not make it vanish.
     private(set) var loadedMoodIDs: [String] = []
-    private(set) var tagIDs: [UUID] = []
     private(set) var smileAnswer = ""
     private(set) var rotatingAnswer = ""
     /// The persisted assignment for this day; the displayed wording always comes from here.
@@ -148,7 +146,7 @@ final class DayPageModel: DraftFlushing {
     }
 
     /// Applies a snapshot. With `onlyClean`, text fields equal to their saved baseline are refreshed, and the
-    /// immediately-written fields (score, moods, tags, categories) only while no write is in flight.
+    /// immediately-written fields (score, moods, categories) only while no write is in flight.
     private func apply(_ snapshot: Snapshot, onlyClean: Bool) {
         let content = snapshot.content
         let plans = snapshot.plans
@@ -161,7 +159,6 @@ final class DayPageModel: DraftFlushing {
             score = content.dayScore.flatMap { DayScore($0) }
             moodIDs = content.moodIDs
             loadedMoodIDs = content.moodIDs
-            tagIDs = content.tagIDs
         }
         if !onlyClean || smileAnswer == savedSmile {
             smileAnswer = content.smileAnswer ?? ""
@@ -283,32 +280,6 @@ final class DayPageModel: DraftFlushing {
         write(.moods)
     }
 
-    func toggleTag(_ id: UUID) {
-        guard isLoaded else { return }
-        if tagIDs.contains(id) { tagIDs.removeAll { $0 == id } } else { tagIDs.append(id) }
-        write(.tags)
-    }
-
-    /// The tags screen's model, sharing this day's store and event sink.
-    func makeTagsModel() -> TagsModel { TagsModel(store: store, events: events) }
-
-    func addTag(named name: String) async -> AddTagResult {
-        guard isLoaded else { return .failed }
-        do {
-            let created = try await store.createTag(name: name)
-            events.receive(created.effect)
-            if !tagIDs.contains(created.id) {
-                tagIDs.append(created.id)
-                write(.tags)
-            }
-            return .added
-        } catch JournalStoreError.invalidTagName {
-            return .blank
-        } catch {
-            return .failed
-        }
-    }
-
     // MARK: Saving
 
     /// Writes any pending text now (scene leaving active, navigating away).
@@ -367,7 +338,6 @@ final class DayPageModel: DraftFlushing {
             change = .rotatingAnswer(rotatingAnswer)
         case .score: change = .score(score)
         case .moods: change = .moods(moodIDs)
-        case .tags: change = .tags(tagIDs)
         case .intention:
             let sent = intentionText
             do {

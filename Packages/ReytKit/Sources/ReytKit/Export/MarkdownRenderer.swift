@@ -55,7 +55,6 @@ public enum MarkdownRenderer {
         var meta: [String] = []
         if let score = d.scoreLabel { meta.append("day score: \(score)") }
         if !d.moods.isEmpty { meta.append("moods: \(d.moods.joined(separator: ", "))") }
-        if !d.tags.isEmpty { meta.append("tags: \(d.tags.joined(separator: ", "))") }
         if !meta.isEmpty { blocks.append(meta.joined(separator: "  \n")) }
         if let text = d.text { blocks.append(body(text)) }
         for a in d.answers { blocks.append("## \(heading(a.title))\n\n\(body(a.body))") }

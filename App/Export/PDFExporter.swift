@@ -170,7 +170,6 @@ private final class PDFComposer {
         var meta: [String] = []
         if let score = day.scoreLabel { meta.append("day score: \(score)") }
         if !day.moods.isEmpty { meta.append("moods: \(day.moods.joined(separator: ", "))") }
-        if !day.tags.isEmpty { meta.append("tags: \(day.tags.joined(separator: ", "))") }
         if !meta.isEmpty {
             drawText(NSAttributedString(string: meta.joined(separator: "\n"), attributes: mutedAttributes))
             y += 8

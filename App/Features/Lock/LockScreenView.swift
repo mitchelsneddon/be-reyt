@@ -1,13 +1,21 @@
 import ReytKit
 import SwiftUI
 
-/// Shown instead of the journal while locked. The journal UI is not in the hierarchy at all, so nothing can be
-/// read by VoiceOver or snapshotted behind it.
+/// Shown over the journal while locked, in its own window above every sheet (`LockWindow`). Until an unlock
+/// attempt has been cancelled or failed it is the plain cover, so launch goes cover, Face ID, journal with no
+/// unlock button flashing up in between.
 struct LockScreenView: View {
     let lock: AppLock
-    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
+        if lock.offersUnlock {
+            unlockPrompt
+        } else {
+            PrivacyCover()
+        }
+    }
+
+    private var unlockPrompt: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 LockMark()
@@ -47,9 +55,6 @@ struct LockScreenView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Palette.paper)
         .ignoresSafeArea(edges: .top)
-        .onChange(of: scenePhase, initial: true) { _, phase in
-            if phase == .active { lock.authenticateOnceIfNeeded() }
-        }
     }
 }
 
