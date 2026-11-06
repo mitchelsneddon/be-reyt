@@ -8,33 +8,45 @@ struct LockScreenView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        VStack(spacing: 12) {
-            Text(Copy.Lock.appName)
-                .font(.system(.largeTitle, design: .serif))
-                .foregroundStyle(Palette.ink)
-                .accessibilityAddTraits(.isHeader)
-            Text(Copy.Lock.tagline)
-                .font(.body)
-                .foregroundStyle(Palette.ink2)
-                .multilineTextAlignment(.center)
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                LockMark()
+                    .padding(.vertical, 2)
+                Text(Copy.Lock.appName)
+                    .brFont(.largeTitle)
+                    .foregroundStyle(Palette.ink)
+                    .accessibilityAddTraits(.isHeader)
+                Text(Copy.Lock.tagline)
+                    .brFont(.bodyItalic)
+                    .foregroundStyle(Palette.ink2)
+            }
             Button {
                 Task { await lock.authenticate() }
             } label: {
-                Text(Copy.Lock.unlock)
-                    .font(.headline)
-                    .foregroundStyle(Palette.paper)
-                    .padding(.horizontal, 28)
-                    .frame(minHeight: 44)
-                    .background(Capsule().fill(Palette.accent))
+                HStack(spacing: 10) {
+                    Image(systemName: "faceid")
+                        .font(.system(size: 24, weight: .regular))
+                        .accessibilityHidden(true)
+                    Text(Copy.Lock.unlock)
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .foregroundStyle(Palette.onAccent)
+                .padding(.leading, 22)
+                .padding(.trailing, 28)
+                .frame(minHeight: 48)
+                .background(Capsule().fill(Palette.accent))
             }
             .buttonStyle(.plain)
-            .padding(.top, 20)
+            .padding(.top, 36)
             .accessibilityLabel(Copy.Lock.unlock)
             .accessibilityHint(Copy.Lock.unlockHint)
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.top, 214)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Palette.paper)
+        .ignoresSafeArea(edges: .top)
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active { lock.authenticateOnceIfNeeded() }
         }
@@ -45,12 +57,15 @@ struct LockScreenView: View {
 /// Shown in its own window (`PrivacyCoverWindow`), because a SwiftUI overlay sits below sheets and full-screen covers.
 struct PrivacyCover: View {
     var body: some View {
-        Text(Copy.Lock.appName)
-            .font(.system(.largeTitle, design: .serif))
-            .foregroundStyle(Palette.ink)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Palette.paper)
-            .accessibilityHidden(true)
+        VStack(spacing: 22) {
+            LockMark()
+            Text(Copy.Lock.appName)
+                .brFont(.largeTitle)
+                .foregroundStyle(Palette.ink)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Palette.paper)
+        .accessibilityHidden(true)
     }
 }
 

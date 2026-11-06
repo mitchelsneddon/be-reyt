@@ -56,6 +56,12 @@ struct BeReytApp: App {
                     .task { await DebugBackup.runIfRequested(host: host, restore: restore) }
                     .task { await DebugReadableExport.runIfRequested(host: host) }
                     .task { await DebugImport.runIfRequested(host: host, importer: journalImporter) }
+                    .task {
+                        if CommandLine.arguments.contains("-showPrivacyCover") {
+                            try? await Task.sleep(for: .seconds(1.5))
+                            PrivacyCoverWindow.shared.setVisible(true)
+                        }
+                    }
                     .task { await DebugAutoBackup.runIfRequested(manager: autoBackup, host: host, backup: backup) }
                 #endif
                 .task { autoBackup.setActive(scenePhase == .active) }
@@ -92,6 +98,20 @@ struct BeReytApp: App {
     }
 
     @ViewBuilder private var appContent: some View {
+        #if DEBUG
+            if CommandLine.arguments.contains("-forceWaiting") {
+                WaitingView(failed: false)
+            } else if CommandLine.arguments.contains("-forceOpenFailed") {
+                WaitingView(failed: true)
+            } else {
+                appContentLive
+            }
+        #else
+            appContentLive
+        #endif
+    }
+
+    @ViewBuilder private var appContentLive: some View {
         if let store = host.store, let attachments = host.attachments, let container = host.container,
             let generation = host.generationID
         {
@@ -161,12 +181,16 @@ private struct WaitingView: View {
     let failed: Bool
 
     var body: some View {
-        Text(failed ? Copy.Host.openFailed : Copy.Host.unlockPhone)
-            .font(.body)
-            .foregroundStyle(Palette.ink2)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Palette.paper)
+        VStack(spacing: 22) {
+            LockMark()
+            Text(failed ? Copy.Host.openFailed : Copy.Host.unlockPhone)
+                .brFont(.bodyItalic)
+                .foregroundStyle(Palette.ink2)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 310)
+        }
+        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Palette.paper)
     }
 }
