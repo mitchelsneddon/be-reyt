@@ -416,3 +416,66 @@ enum Copy {
         }
     }
 }
+
+extension Copy {
+    /// Automatic backups to a folder the user picked (settings, backup section).
+    enum AutoBackup {
+        static let title = "automatic backups"
+        static let off = "not set up"
+        static let chooseFolder = "choose a backup folder"
+        static let chooseAnother = "choose a different folder"
+        static let chooseHint = "pick a folder, ideally in icloud drive. be reyt keeps its backups inside it."
+        static let backUpNow = "back up now"
+        static let backingUp = "backing up…"
+        static let noBackupYet = "no backup yet"
+        static let uploaded = "uploaded to icloud"
+        static let waitingToUpload = "waiting to upload"
+        static let pending = "changes waiting to back up"
+        static let notInICloud =
+            "this folder is only on this iphone, so it won't protect you if the phone is lost. pick a folder in icloud drive."
+        static let cleanupPaused =
+            "cleanup paused. some backups in this folder were made elsewhere, so old photo copies are being kept for now."
+        static let needsPassphrase = "set a backup passphrase above to start backing up."
+        static let needsFolder = "choose a folder and be reyt will back up automatically while it's open."
+        static let footer =
+            "backups run while be reyt is open, after a quiet minute. each day keeps one backup, and the latest 30 are kept."
+
+        static func folder(_ name: String) -> String { "folder: \(name)" }
+
+        static func lastBackup(_ when: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+            let time = when.formatted(Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).hour().minute())
+                .lowercased()
+            if calendar.isDate(when, inSameDayAs: now) { return "last backup: today \(time)" }
+            if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+                calendar.isDate(when, inSameDayAs: yesterday)
+            {
+                return "last backup: yesterday \(time)"
+            }
+            let day = when.formatted(
+                Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).weekday(.abbreviated).day().month(
+                    .abbreviated))
+            return "last backup: \(day.lowercased()) \(time)"
+        }
+
+        static func lastConfirmed(_ when: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+            lastBackup(when, now: now, calendar: calendar).replacingOccurrences(
+                of: "last backup:", with: "last confirmed in icloud:")
+        }
+
+        static func error(_ code: BackupErrorCode) -> String {
+            switch code {
+            case .folderMissing: "the backup folder couldn't be found. choose it again and backups will carry on."
+            case .storageFull: "icloud is full, so backups are waiting. free some space and they'll carry on."
+            case .uploadFailed: "the last backup couldn't be saved. be reyt will try again."
+            case .photoUnreadable:
+                "a photo couldn't be read, so the last backup didn't finish. your other days are safe."
+            case .verifyFailed: "the last backup didn't check out, so it was thrown away. be reyt will try again."
+            case .other: "something went wrong with the last backup. be reyt will try again."
+            }
+        }
+
+        static let uploadError = "icloud couldn't upload the latest backup yet. it will keep trying."
+        static let folderRow = "backup folder"
+        static let upload = "upload"
+    }
+}

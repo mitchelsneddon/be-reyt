@@ -17,6 +17,9 @@ final class JournalEvents {
     /// Hook for reminders: called with the days whose `hasUserContent` flipped.
     @ObservationIgnored var onContentChange: (Set<DateKey>) -> Void = { _ in }
 
+    /// Hook for the automatic backup: called on every persisted change.
+    @ObservationIgnored var onDirty: @MainActor () -> Void = {}
+
     @ObservationIgnored private var flushers: [WeakFlusher] = []
 
     private struct WeakFlusher {
@@ -38,6 +41,7 @@ final class JournalEvents {
         if effect.dirty {
             isDirty = true
             contentRevision += 1
+            onDirty()
         }
         if !effect.contentChangedDays.isEmpty { onContentChange(effect.contentChangedDays) }
     }

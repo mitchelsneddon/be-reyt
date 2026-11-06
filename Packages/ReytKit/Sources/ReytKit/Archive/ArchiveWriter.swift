@@ -34,10 +34,13 @@ public struct ArchiveWriter: Sendable {
         public var lineageID: UUID
         public var createdAt: Date
         public var timeZone: TimeZone
+        /// Snapshot kind: the backup data key. Names each attachment's blob and is stored as `dataKey.bin`.
+        public var dataKey: Data?
         public init(
             kind: ArchiveManifest.Kind, appVersion: String, lineageID: UUID, createdAt: Date = Date.now,
-            timeZone: TimeZone = .current
+            timeZone: TimeZone = .current, dataKey: Data? = nil
         ) {
+            self.dataKey = dataKey
             self.kind = kind
             self.appVersion = appVersion
             self.lineageID = lineageID
@@ -74,7 +77,7 @@ public struct ArchiveWriter: Sendable {
                 try fm.createDirectory(at: directory, withIntermediateDirectories: true)
                 let snapshot = try await store.archiveSnapshot()
                 await afterSnapshotRead?()
-                let payload = try writePayload(snapshot.data, to: directory, kind: options.kind)
+                let payload = try writePayload(snapshot.data, to: directory, options: options)
                 guard await store.generationCounter() == snapshot.counter else { continue }
                 let manifest = ArchiveManifest(
                     format: ArchiveManifest.formatName, kind: options.kind,
@@ -102,9 +105,8 @@ public struct ArchiveWriter: Sendable {
         var warnings: [String]
     }
 
-    private func writePayload(_ snapshotData: ArchiveData, to directory: URL, kind: ArchiveManifest.Kind) throws
-        -> Payload
-    {
+    private func writePayload(_ snapshotData: ArchiveData, to directory: URL, options: Options) throws -> Payload {
+        let kind = options.kind
         var data = snapshotData
         var items: [ArchiveManifest.Attachment] = []
         var warnings: [String] = []
@@ -126,15 +128,23 @@ public struct ArchiveWriter: Sendable {
                 items.append(.init(id: a.id, ext: ext, sha256: copied.sha256, bytes: copied.bytes, blob: nil))
                 kept.append(a)
             case .snapshot:
-                // Blobs are produced by the backup run; the manifest records the checksum the record holds.
-                let size = (try? source.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-                items.append(.init(id: a.id, ext: ext, sha256: a.sha256, bytes: size, blob: nil))
+                // Blobs are produced by the backup run; the manifest records the checksum the record holds and,
+                // given the data key, the blob that will hold the file. A lost file is left out and warned about.
+                guard let size = try? source.resourceValues(forKeys: [.fileSizeKey]).fileSize else {
+                    warnings.append(ArchiveWarning.missingAttachment)
+                    continue
+                }
+                let blob = options.dataKey.flatMap { BlobNaming.name(dataKey: $0, plaintextSHA256: a.sha256) }
+                items.append(.init(id: a.id, ext: ext, sha256: a.sha256, bytes: size, blob: blob))
                 kept.append(a)
             }
         }
         data.attachments = kept
         try ArchiveCoding.encoder().encode(data).write(
             to: directory.appending(path: ArchiveNames.data, directoryHint: .notDirectory))
+        if kind == .snapshot, let key = options.dataKey {
+            try key.write(to: directory.appending(path: ArchiveNames.dataKey, directoryHint: .notDirectory))
+        }
         return Payload(
             data: data, items: items.sorted { $0.id.uuidString < $1.id.uuidString }, warnings: warnings)
     }

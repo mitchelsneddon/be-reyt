@@ -11,6 +11,7 @@ struct BeReytApp: App {
     @State private var restore: RestoreCoordinator
     @State private var health: HealthCoordinator
     @State private var reminders: ReminderScheduler
+    @State private var autoBackup: BackupManager
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -18,13 +19,18 @@ struct BeReytApp: App {
         let events = JournalEvents()
         _host = State(initialValue: host)
         _events = State(initialValue: events)
-        _backup = State(initialValue: BackupSettingsModel(host: host))
+        let backupModel = BackupSettingsModel(host: host)
+        _backup = State(initialValue: backupModel)
         let restore = RestoreCoordinator(host: host, events: events)
         let health = HealthCoordinator(host: host, events: events)
         let reminders = ReminderScheduler(host: host, events: events)
         restore.registerPostRestoreHook { await health.resyncAfterRestore() }
         restore.registerPostRestoreHook { await reminders.refresh() }
         events.onContentChange = { days in Task { await reminders.contentChanged(days: days) } }
+        let autoBackup = BackupManager(host: host)
+        events.onDirty = { autoBackup.markDirty() }
+        backupModel.onPassphraseChanged = { autoBackup.passphraseChanged() }
+        _autoBackup = State(initialValue: autoBackup)
         _reminders = State(initialValue: reminders)
         _restore = State(initialValue: restore)
         _health = State(initialValue: health)
@@ -35,9 +41,12 @@ struct BeReytApp: App {
             content
                 #if DEBUG
                     .task { await DebugBackup.runIfRequested(host: host, restore: restore) }
+                    .task { await DebugAutoBackup.runIfRequested(manager: autoBackup, host: host, backup: backup) }
                 #endif
+                .task { autoBackup.setActive(scenePhase == .active) }
                 .overlay { if scenePhase != .active { PrivacyCover() } }
                 .onChange(of: scenePhase) { _, phase in
+                    autoBackup.setActive(phase == .active)
                     switch phase {
                     case .active:
                         host.openIfPossible()
@@ -80,6 +89,7 @@ extension BeReytApp {
             .modelContainer(container)
             .environment(health)
             .environment(reminders)
+            .environment(autoBackup)
             .task { await health.syncIfDue() }
             .task {
                 #if DEBUG

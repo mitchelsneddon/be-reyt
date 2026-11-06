@@ -32,9 +32,14 @@ final class BackupSettingsModel {
 
     func refresh() { hasPassphrase = passphrases.hasPassphrase }
 
+    /// Called after the passphrase is set or changed: a change replaces the backup data key, and either way the
+    /// automatic backup has something to do.
+    @ObservationIgnored var onPassphraseChanged: @MainActor () -> Void = {}
+
     func savePassphrase(_ value: String) throws {
         try passphrases.set(value)
         hasPassphrase = true
+        onPassphraseChanged()
     }
 
     func isCurrentPassphrase(_ value: String) -> Bool { passphrases.stored() == value }
