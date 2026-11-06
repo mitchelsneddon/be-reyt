@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     let backup: BackupSettingsModel
     let restore: RestoreCoordinator
+    let tags: TagsModel
     @Environment(AppleJournalImporter.self) private var journalImporter
 
     private enum PassphraseSheet: String, Identifiable {
@@ -40,6 +41,12 @@ struct SettingsView: View {
     private var list: some View {
         List {
             ReminderSection()
+            Section {
+                NavigationLink(Copy.Tags.settingsRow) { TagsView(model: tags) }
+                    .frame(minHeight: 44, alignment: .leading)
+            } header: {
+                Text(Copy.Tags.journalSection)
+            }
             AppLockSection()
             HealthSection()
             OnDeviceAISection()

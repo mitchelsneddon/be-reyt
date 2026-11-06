@@ -235,6 +235,9 @@ final class DayPageModel: DraftFlushing {
         write(.tags)
     }
 
+    /// The tags screen's model, sharing this day's store and event sink.
+    func makeTagsModel() -> TagsModel { TagsModel(store: store, events: events) }
+
     func addTag(named name: String) async -> AddTagResult {
         guard isLoaded else { return .failed }
         do {

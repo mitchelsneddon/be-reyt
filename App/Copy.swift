@@ -200,6 +200,29 @@ enum Copy {
         static let addPlaceholder = "add a tag"
         static let addLabel = "add tag"
         static let addFailed = "couldn't add that tag. try again in a moment."
+        static let manageLink = "manage tags"
+        static let manageTitle = "tags"
+        static let manageEmpty = "no tags yet. add one from any day."
+        static func usedOn(_ days: Int) -> String { days == 1 ? "used on 1 day" : "used on \(days) days" }
+        static func rowLabel(_ name: String, days: Int) -> String { "\(name), \(usedOn(days))" }
+        static let rowHint = "opens rename"
+        static let renameTitle = "rename tag"
+        static let renameField = "tag name"
+        static let renameBlank = "a tag needs a name."
+        static func renameTaken(_ name: String) -> String { "you already have a tag called \(name)." }
+        static let renameFailed = "couldn't rename that tag. try again in a moment."
+        static func deleteConfirm(_ name: String) -> String {
+            "remove “\(name)” from every day? the days themselves stay."
+        }
+        static let deleteAction = "remove"
+        static let keep = "keep it"
+        static let deleteFailed = "couldn't remove that tag. try again in a moment."
+        static let ok = "ok"
+        static let cancel = "cancel"
+        static let save = "save"
+        static let done = "done"
+        static let settingsRow = "tags"
+        static let journalSection = "journal"
         static func chipLabel(_ name: String, selected: Bool) -> String {
             selected ? "\(name), on this day" : "\(name), not on this day"
         }
@@ -420,7 +443,7 @@ enum Copy {
         static let switchMessage =
             "the one you just typed is different from the one this phone uses for backups. switching will start a fresh backup protected by the new one."
         static let keep = "keep current"
-        static let switchTo = "switch to the one I typed"
+        static let switchTo = "switch to the passphrase you just typed"
         static let saveFailed = "couldn't save the passphrase on this phone. you can set one in settings."
     }
 

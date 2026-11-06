@@ -35,7 +35,7 @@ struct RootView: View {
                 ReviewsListView(store: store, events: events, attachments: attachments)
             }
             Tab(Copy.Tab.settings, systemImage: "gearshape", value: Destination.settings) {
-                SettingsView(backup: backup, restore: restore)
+                SettingsView(backup: backup, restore: restore, tags: TagsModel(store: store, events: events))
             }
         }
         .tint(Color("accent"))

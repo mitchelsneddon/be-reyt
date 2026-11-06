@@ -14,6 +14,7 @@ struct TagEditor: View {
     @Query private var entries: [DailyEntry]
     @State private var newName = ""
     @State private var addFailed = false
+    @State private var showManage = false
 
     private var dayTags: [Tag] { tags.filter { model.tagIDs.contains($0.id) } }
 
@@ -71,6 +72,19 @@ struct TagEditor: View {
             if addFailed {
                 Text(Copy.Tags.addFailed).font(.footnote).foregroundStyle(Color("inkSecondary"))
             }
+            Button(Copy.Tags.manageLink) { showManage = true }
+                .font(.footnote)
+                .foregroundStyle(Color("accent"))
+                .frame(minHeight: 44)
+        }
+        .sheet(isPresented: $showManage) {
+            NavigationStack {
+                TagsView(model: model.makeTagsModel())
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) { Button(Copy.Tags.done) { showManage = false } }
+                    }
+            }
+            .tint(Color("accent"))
         }
     }
 
