@@ -280,6 +280,14 @@ enum Copy {
         static let beingAdded = "photo being added"
         static let addHint = "choose photos from your library"
         static func thumbnailLabel(_ index: Int, of count: Int) -> String { "photo \(index) of \(count)" }
+        static func counter(_ index: Int, of count: Int) -> String { "\(index) of \(count)" }
+        /// "thursday 5 november", lowercase, under the photo.
+        static func viewerDate(_ key: DateKey, calendar: Calendar = .current) -> String {
+            let weekday = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).weekday(.wide)
+            let month = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).month(.wide)
+            let date = key.date(in: calendar)
+            return "\(date.formatted(weekday)) \(key.day) \(date.formatted(month))".lowercased()
+        }
         static let thumbnailHint = "opens the photo full screen"
         static let viewerLabel = "photo"
         static let close = "close"

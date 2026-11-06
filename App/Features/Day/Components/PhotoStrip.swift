@@ -88,8 +88,19 @@ struct PhotoStrip: View {
             }
         }
         .fullScreenCover(item: $viewing) { photo in
-            PhotoViewer(model: model, photo: photo)
+            PhotoViewer(model: model, photos: refs, start: photo)
         }
+        #if DEBUG
+            .task(id: refs.first?.id) {
+                // Simulator-only: `-openPhotoViewer` opens the first photo for screenshots.
+                if CommandLine.arguments.contains(where: { $0.hasPrefix("-openPhotoViewer") }), viewing == nil,
+                    let first = refs.first
+                {
+                    try? await Task.sleep(for: .milliseconds(900))
+                    viewing = first
+                }
+            }
+        #endif
     }
 
     private var addButton: some View {
@@ -170,58 +181,175 @@ private struct PhotoImage: View {
     }
 }
 
-/// Full-screen photo with close and remove. Remove asks first.
+/// Full-screen, always-dark viewer: swipe between the day's photos, remove the one showing, or jump with the strip.
 private struct PhotoViewer: View {
     let model: PhotosModel
-    let photo: PhotoRef
     @Environment(\.dismiss) private var dismiss
+    @State private var photos: [PhotoRef]
+    @State private var selection: PhotoRef.ID
+    @State private var confirming = false
+
+    init(model: PhotosModel, photos: [PhotoRef], start: PhotoRef) {
+        self.model = model
+        _photos = State(initialValue: photos)
+        _selection = State(initialValue: start.id)
+        #if DEBUG
+            _confirming = State(initialValue: CommandLine.arguments.contains("-openPhotoViewerRemove"))
+        #endif
+    }
+
+    private var index: Int { photos.firstIndex { $0.id == selection } ?? 0 }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            topBar
+            TabView(selection: $selection) {
+                ForEach(Array(photos.enumerated()), id: \.element.id) { position, photo in
+                    ViewerPage(model: model, photo: photo)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(Copy.Photos.thumbnailLabel(position + 1, of: photos.count))
+                        .tag(photo.id)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .padding(.top, 14)
+            Text(Copy.Photos.viewerDate(model.dateKey))
+                .brFont(.eyebrow).foregroundStyle(Palette.PhotoViewer.secondary)
+                .padding(.top, 22)
+            thumbnails
+                .padding(.top, 22).padding(.bottom, 16)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Palette.PhotoViewer.background.ignoresSafeArea())
+        .preferredColorScheme(.dark)
+        .confirmationDialog(Copy.Photos.removeConfirm, isPresented: $confirming, titleVisibility: .visible) {
+            Button(Copy.Photos.removeAction, role: .destructive) { removeCurrent() }
+            Button(Copy.Photos.keep, role: .cancel) {}
+        }
+    }
+
+    private var topBar: some View {
+        HStack {
+            circleButton("xmark", label: Copy.Photos.close) { dismiss() }
+            Spacer()
+            Text(Copy.Photos.counter(index + 1, of: photos.count))
+                .brFont(.chip).foregroundStyle(Palette.PhotoViewer.text)
+            Spacer()
+            circleButton("trash", label: Copy.Photos.remove) { confirming = true }
+        }
+        .padding(.horizontal, 12)
+    }
+
+    private func circleButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(Palette.PhotoViewer.text)
+                .frame(width: 44, height: 44)
+                .background(Palette.PhotoViewer.circleButton, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    private var thumbnails: some View {
+        ViewThatFits(in: .horizontal) {
+            thumbnailRow
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal) { thumbnailRow.padding(.horizontal, 12) }
+                    .scrollIndicators(.hidden)
+                    .onChange(of: selection) { _, id in
+                        withAnimation { proxy.scrollTo(id, anchor: .center) }
+                    }
+            }
+        }
+    }
+
+    private var thumbnailRow: some View {
+        HStack(spacing: 12) {
+            ForEach(Array(photos.enumerated()), id: \.element.id) { position, photo in
+                let selected = photo.id == selection
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { selection = photo.id }
+                } label: {
+                    ViewerThumbnail(model: model, photo: photo)
+                        .frame(width: 56, height: 56)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .opacity(selected ? 1 : 0.7)
+                        .padding(2)
+                        .overlay {
+                            if selected {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(Palette.PhotoViewer.text, lineWidth: 2)
+                            }
+                        }
+                        .padding(2)
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .id(photo.id)
+                .accessibilityLabel(Copy.Photos.thumbnailLabel(position + 1, of: photos.count))
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+    }
+
+    private func removeCurrent() {
+        guard photos.indices.contains(index) else { return }
+        let photo = photos[index]
+        Task {
+            guard await model.delete(photo) else { return }
+            if photos.count <= 1 {
+                dismiss()
+            } else {
+                let next = min(index, photos.count - 2)
+                let remaining = photos.filter { $0.id != photo.id }
+                photos = remaining
+                selection = remaining[next].id
+            }
+        }
+    }
+}
+
+private struct ViewerPage: View {
+    let model: PhotosModel
+    let photo: PhotoRef
     @State private var image: UIImage?
     @State private var failed = false
-    @State private var confirming = false
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
             if let image {
-                Image(uiImage: image).resizable().scaledToFit().ignoresSafeArea(edges: .bottom)
-                    .accessibilityLabel(Copy.Photos.viewerLabel)
+                Image(uiImage: image).resizable().scaledToFit()
             } else if failed {
-                Text(Copy.Photos.loadFailed).brFont(.label).foregroundStyle(.white)
+                Text(Copy.Photos.loadFailed).brFont(.label).foregroundStyle(Palette.PhotoViewer.text)
             } else {
-                ProgressView().tint(.white)
+                ProgressView().tint(Palette.PhotoViewer.text)
             }
         }
-        .overlay(alignment: .top) {
-            HStack {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark").frame(minWidth: 44, minHeight: 44)
-                }
-                .accessibilityLabel(Copy.Photos.close)
-                Spacer()
-                Button {
-                    confirming = true
-                } label: {
-                    Image(systemName: "trash").frame(minWidth: 44, minHeight: 44)
-                }
-                .accessibilityLabel(Copy.Photos.remove)
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 8)
-        }
-        .confirmationDialog(Copy.Photos.removeConfirm, isPresented: $confirming, titleVisibility: .visible) {
-            Button(Copy.Photos.removeAction, role: .destructive) {
-                Task { if await model.delete(photo) { dismiss() } }
-            }
-            Button(Copy.Photos.keep, role: .cancel) {}
-        }
-        .task {
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task(id: photo.id) {
             if let data = await model.viewerData(for: photo), let loaded = UIImage(data: data) {
                 image = loaded
             } else {
                 failed = true
             }
+        }
+    }
+}
+
+private struct ViewerThumbnail: View {
+    let model: PhotosModel
+    let photo: PhotoRef
+    @State private var image: UIImage?
+
+    var body: some View {
+        ZStack {
+            Palette.PhotoViewer.circleButton
+            if let image { Image(uiImage: image).resizable().scaledToFill() }
+        }
+        .task(id: photo.id) {
+            if let data = await model.thumbnailData(for: photo) { image = UIImage(data: data) }
         }
     }
 }
