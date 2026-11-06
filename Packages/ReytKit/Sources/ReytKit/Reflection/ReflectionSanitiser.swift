@@ -88,7 +88,7 @@ public enum ReflectionSanitiser {
                 var parts = [d.text] + [d.smileAnswer, d.rotatingAnswer].compactMap { $0 } + d.tagNames
                 parts += input.followUps.filter { $0.writtenOn == d.dateKey }.map(\.note)
                 parts += d.moodIDs.compactMap(MoodCatalog.label(for:))
-                if let s = d.score.flatMap { DayScore(rawValue: $0) } { parts.append(s.label) }
+                if let s = d.score.flatMap(DayScore.init(rawValue:)) { parts.append(s.label) }
                 let words = Set(ReflectionSanitiser.words(parts.joined(separator: "\n")))
                 perDay[d.dateKey] = words
                 all.formUnion(words)
