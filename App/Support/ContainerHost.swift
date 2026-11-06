@@ -30,6 +30,7 @@ final class ContainerHost {
             if CommandLine.arguments.contains("-wipeData") {
                 try? FileManager.default.removeItem(at: paths.dataRoot)
                 try? FileManager.default.removeItem(at: paths.deviceRoot)
+                OnboardingGate.reset()
             }
         #endif
         ScratchSpace.clearAll()

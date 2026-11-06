@@ -37,9 +37,9 @@ targets:
           - PlayfairDisplay-Medium.ttf
           - PlayfairDisplay-Italic.ttf
           - PlayfairDisplay-MediumItalic.ttf
-          - Lora-Regular.ttf
-          - Lora-Medium.ttf
-          - Lora-Italic.ttf
+          - Literata-Regular.ttf
+          - Literata-Medium.ttf
+          - Literata-Italic.ttf
           - DMSans-Regular.ttf
           - DMSans-Medium.ttf
           - DMSans-SemiBold.ttf

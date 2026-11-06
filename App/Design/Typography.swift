@@ -6,7 +6,7 @@ enum BRFont: CaseIterable, Sendable {
     // Playfair Display
     case largeTitle, screenTitle, onboardingTitle, leadCard, sectionTitle, stat, bigStat
     case promptItalic, captionItalic, viewerCaption, weekRow, dayNum, wordmark
-    // Lora
+    // Literata
     case body, bodyItalic, bodyItalicTight, point, pointItalic, rowTitle, rowSnippet
     // DM Sans
     case navTitle, navAction, navActionBold, row, rowWrapping, cardTitle, sectionHeader
@@ -17,16 +17,16 @@ enum BRFont: CaseIterable, Sendable {
         static let playfairMedium = "PlayfairDisplay-Medium"
         static let playfairItalic = "PlayfairDisplay-Italic"
         static let playfairMediumItalic = "PlayfairDisplay-MediumItalic"
-        static let loraRegular = "Lora-Regular"
-        static let loraMedium = "Lora-Medium"
-        static let loraItalic = "Lora-Italic"
+        static let literataRegular = "Literata-Regular"
+        static let literataMedium = "Literata-Medium"
+        static let literataItalic = "Literata-Italic"
         static let dmRegular = "DMSans-Regular"
         static let dmMedium = "DMSans-Medium"
         static let dmSemiBold = "DMSans-SemiBold"
 
         static let all = [
-            playfairMedium, playfairItalic, playfairMediumItalic, loraRegular, loraMedium,
-            loraItalic, dmRegular, dmMedium, dmSemiBold,
+            playfairMedium, playfairItalic, playfairMediumItalic, literataRegular, literataMedium,
+            literataItalic, dmRegular, dmMedium, dmSemiBold,
         ]
     }
 
@@ -53,13 +53,13 @@ enum BRFont: CaseIterable, Sendable {
         case .weekRow: Spec(name: Face.playfairMedium, size: 19, line: 24, tracking: 0, style: .headline)
         case .dayNum: Spec(name: Face.playfairMedium, size: 26, line: 28, tracking: 0, style: .title2)
         case .wordmark: Spec(name: Face.playfairMediumItalic, size: 22, line: nil, tracking: 0, style: .title3)
-        case .body: Spec(name: Face.loraRegular, size: 17, line: 30, tracking: 0, style: .body)
-        case .bodyItalic: Spec(name: Face.loraItalic, size: 17, line: 30, tracking: 0, style: .body)
-        case .bodyItalicTight: Spec(name: Face.loraItalic, size: 17, line: 27, tracking: 0, style: .body)
-        case .point: Spec(name: Face.loraRegular, size: 16, line: 24, tracking: 0, style: .callout)
-        case .pointItalic: Spec(name: Face.loraItalic, size: 16, line: 24, tracking: 0, style: .callout)
-        case .rowTitle: Spec(name: Face.loraMedium, size: 16, line: 22, tracking: 0, style: .callout)
-        case .rowSnippet: Spec(name: Face.loraRegular, size: 14, line: 20, tracking: 0, style: .subheadline)
+        case .body: Spec(name: Face.literataRegular, size: 17, line: 30, tracking: 0, style: .body)
+        case .bodyItalic: Spec(name: Face.literataItalic, size: 17, line: 30, tracking: 0, style: .body)
+        case .bodyItalicTight: Spec(name: Face.literataItalic, size: 17, line: 27, tracking: 0, style: .body)
+        case .point: Spec(name: Face.literataRegular, size: 16, line: 24, tracking: 0, style: .callout)
+        case .pointItalic: Spec(name: Face.literataItalic, size: 16, line: 24, tracking: 0, style: .callout)
+        case .rowTitle: Spec(name: Face.literataMedium, size: 16, line: 22, tracking: 0, style: .callout)
+        case .rowSnippet: Spec(name: Face.literataRegular, size: 14, line: 20, tracking: 0, style: .subheadline)
         case .navTitle: Spec(name: Face.dmSemiBold, size: 17, line: nil, tracking: 0, style: .headline)
         case .navAction: Spec(name: Face.dmRegular, size: 17, line: nil, tracking: 0, style: .body)
         case .navActionBold: Spec(name: Face.dmSemiBold, size: 17, line: nil, tracking: 0, style: .body)

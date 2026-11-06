@@ -11,7 +11,7 @@ struct ReviewView: View {
     @State private var model: ReviewModel
     @State private var reflection: ReflectionModel
     @State private var didAutoGenerate = false
-    /// The weekday column beside each smile answer: wide enough for "wed" in Lora italic, scaling with the type.
+    /// The weekday column beside each smile answer: wide enough for "wed" in Literata italic, scaling with the type.
     @ScaledMetric(relativeTo: .body) private var dayColumn: CGFloat = 38
 
     init(weekStart: DateKey, store: JournalStore, events: JournalEvents) {

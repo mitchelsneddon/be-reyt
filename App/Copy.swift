@@ -723,6 +723,13 @@ enum Copy {
         static let noAccess = "be reyt couldn't open that folder, so nothing was changed. try choosing it again."
     }
 
+    enum Onboarding {
+        static let continueButton = "continue"
+        static let stepReminder = "reminder"
+        static let stepWorkouts = "workouts"
+        static let stepBackups = "backups"
+    }
+
     enum DeleteAll {
         static let row = "delete all data"
         static let rowHint = "removes everything be reyt keeps on this phone"
@@ -757,6 +764,7 @@ enum Copy {
         // Names of what device-local owners wipe, used only to say what couldn't be removed.
         static let wiperPassphrase = "the backup passphrase"
         static let wiperHealthAnchor = "health sync position"
+        static let wiperOnboarding = "onboarding progress"
         static let wiperReminders = "scheduled reminders"
         static let wiperDeviceFiles = "saved restore copies"
         static let wiperAutoBackup = "the automatic backup settings on this phone"

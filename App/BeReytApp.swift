@@ -14,6 +14,7 @@ struct BeReytApp: App {
     @State private var journalImporter: AppleJournalImporter
     @State private var deleteAll: DeleteAllCoordinator
     @State private var autoBackup: BackupManager
+    @State private var onboarding = OnboardingModel()
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -136,6 +137,7 @@ extension BeReytApp {
     fileprivate static func registerDeviceWipers(_ registry: DeviceDataRegistry, deviceRoot: URL) {
         registry.register(Copy.DeleteAll.wiperPassphrase) { PassphraseStore().clear() }
         registry.register(Copy.DeleteAll.wiperHealthAnchor) { HealthAnchorStore(deviceRoot: deviceRoot).reset() }
+        registry.register(Copy.DeleteAll.wiperOnboarding) { OnboardingGate.reset() }
         registry.register(Copy.DeleteAll.wiperReminders) { await ReminderScheduler.removeAllReminders() }
         registry.register(Copy.DeleteAll.wiperDeviceFiles) {
             let fm = FileManager.default
@@ -173,6 +175,10 @@ extension BeReytApp {
                 }
             }
             .id(generation)
+            .task { await onboarding.evaluate(store: store) }
+            .fullScreenCover(isPresented: $onboarding.isPresented) {
+                OnboardingView().environment(onboarding)
+            }
     }
 }
 
