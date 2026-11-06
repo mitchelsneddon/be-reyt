@@ -138,6 +138,38 @@ enum Copy {
         static let feelingsTitle = "feelings this week"
         static let nextWeekTitle = "next week"
         static func youPlanned(_ text: String) -> String { "you planned: “\(text)”" }
+        static let timeLabel = "time"
+        static let distanceLabel = "distance"
+        static let thisWeek = "this week"
+        static let yourWeek = "your week"
+        static let noScore = "no score"
+        static let dayScoresLabel = "day scores, sunday to saturday"
+        static let weekdayLong = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+        static let weekdayInitials = ["s", "m", "t", "w", "t", "f", "s"]
+
+        /// "sunday · week 45": the Sunday the review opens, and its ISO week.
+        static func eyebrow(weekStart: DateKey, calendar: Calendar = .current) -> String {
+            Day.eyebrow(for: WeekCalendar.unlockKey(forWeekStart: weekStart), calendar: calendar)
+        }
+
+        /// "1 to 7 november", or "26 october to 1 november" across a month.
+        static func range(from start: DateKey, to end: DateKey, calendar: Calendar = .current) -> String {
+            func month(_ key: DateKey) -> String {
+                key.date(in: calendar).formatted(
+                    Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).month(.wide)
+                ).lowercased()
+            }
+            if start.month == end.month { return "\(start.day) to \(end.day) \(month(end))" }
+            return "\(start.day) \(month(start)) to \(end.day) \(month(end))"
+        }
+
+        /// "monday, good" or "monday, no score".
+        static func dayFaceLabel(weekday: Int, score: DayScore?) -> String {
+            "\(weekdayLong[weekday]), \(score?.label ?? noScore)"
+        }
+
+        /// "happy, 4".
+        static func feelingLabel(_ label: String, count: Int) -> String { "\(label), \(count)" }
 
         /// "mostly good days. happy came up four times. a little brighter than last week."
         static func weekFeel(_ feel: WeekFeel, moodLabel: (String) -> String) -> String {
@@ -171,50 +203,7 @@ enum Copy {
             return parts.joined(separator: " ")
         }
 
-        static let scoresTitle = "day scores"
-        static func average(_ display: String, scoredDays: Int) -> String {
-            "\(display) average across \(scoredDays) scored \(scoredDays == 1 ? "day" : "days")"
-        }
-        static let noScores = "no day scores this week."
-        static let chartLabel = "day scores, sunday to saturday"
-        static func pointLabel(date: String, score: DayScore) -> String { "\(date), \(score.label)" }
-        static func chartSummary(scoredDays: Int) -> String {
-            "day scores for \(scoredDays) of 7 days. days without a score are left blank."
-        }
-
-        static let moodsTitle = "moods"
-        static let noMoods = "no moods recorded this week."
-        static func moodRow(label: String, count: Int, of days: Int) -> String {
-            "\(label) · \(count) of \(days) \(days == 1 ? "day" : "days") with a mood"
-        }
-
-        static let comparisonTitle = "compared with last week"
-        static func comparisonScore(average: String, days: Int, lastAverage: String, lastDays: Int) -> String {
-            "average \(average) across \(days) days, last week \(lastAverage) across \(lastDays)"
-        }
-        static func comparisonMood(label: String, count: Int, of days: Int, lastCount: Int, lastOf: Int) -> String {
-            "\(label) on \(count) of \(days) days, last week \(lastCount) of \(lastOf)"
-        }
-
-        static func highestTitle(count: Int) -> String { count == 1 ? "highest-scored day" : "highest-scored days" }
-        static func lowestTitle(count: Int) -> String { count == 1 ? "lowest-scored day" : "lowest-scored days" }
         static let openDayHint = "opens that day"
-
-        static func workoutSummary(count: Int, duration: String) -> String {
-            "\(count) \(count == 1 ? "workout" : "workouts"), \(duration) in all"
-        }
-        static func distanceLine(distance: String, kind: WorkoutActivity.DistanceKind) -> String {
-            switch kind {
-            case .walkingRunning: "\(distance) walking and running"
-            case .cycling: "\(distance) cycling"
-            case .swimming: "\(distance) swimming"
-            }
-        }
-
-        static let moreOfThisQuestion = "what would you like a little more of next week?"
-        static let moreOfThisHelper = "time outdoors, seeing friends, rest, anything you choose."
-        static let moreOfThisLabel = "answer to what would you like a little more of next week"
-        static func moreOfThisTarget(_ range: String) -> String { "for \(range)" }
     }
 
     enum Reflection {
@@ -419,35 +408,33 @@ enum Copy {
         static let title = "reflection"
         static let write = "write my reflection"
         static let writeHint = "writes a short reflection on this phone with apple's on-device model"
-        static let generating = "writing your reflection on this phone…"
+        static let generating = "writing your reflection…"
         static let regenerate = "regenerate"
         static let regenerateHint = "writes the reflection again with the newer wording"
         static let tryAgain = "try again"
-        static let footnote = "written on this phone by apple's on-device model. it can get things wrong."
+        static let footnote = "written on this phone. it can get things wrong."
         static let purged = "this week changed, so the reflection was cleared."
         static let highlights = "highlights"
         static let difficult = "what felt difficult"
         static let themes = "recurring themes"
         static let questions = "to sit with"
-        static let intro = "a short reflection, written only on this phone. nothing is sent anywhere."
-        static func datesLabel(_ dates: [String]) -> String { "days: " + dates.joined(separator: ", ") }
 
         static func failure(_ failure: ReflectionFailure) -> String {
             switch failure {
             case .deviceNotEligible:
-                "this iphone can't run apple's on-device model, so there's no written reflection. your numbers are below."
+                "this iphone can't run apple's on-device model, so there's no written reflection."
             case .appleIntelligenceNotEnabled:
-                "turn on apple intelligence in settings to write a reflection. your numbers are below."
+                "turn on apple intelligence in settings to write a reflection."
             case .modelNotReady:
-                "the on-device model is still downloading. try again in a little while. your numbers are below."
+                "the on-device model is still downloading. try again in a little while."
             case .unsupportedLanguage:
-                "the on-device model doesn't support this language yet, so there's no written reflection. your numbers are below."
+                "the on-device model doesn't support this language yet, so there's no written reflection."
             case .guardrail:
-                "the on-device model couldn't write a reflection for this week. your numbers are below."
+                "the on-device model couldn't write a reflection for this week."
             case .refused:
-                "the on-device model chose not to write about this week. your numbers are below."
+                "the on-device model chose not to write about this week."
             case .tooLong:
-                "this week has more writing than the on-device model can read at once, so there's no reflection. your numbers are below."
+                "this week has more writing than the on-device model can read at once, so there's no reflection."
             case .timedOut:
                 "that took too long, so it was stopped. try again."
             case .rateLimited, .busy:

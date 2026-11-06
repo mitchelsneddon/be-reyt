@@ -65,13 +65,6 @@
                     _ = await attachments.importData(data, for: AppClock.today())
                 }
             }
-            if args.contains("-seedMoreOfThis") {
-                // Written on Sunday 2026-11-08 for the review of 2026-10-25: targets 2026-11-08 to 2026-11-14.
-                if let sunday = DateKey("2026-10-25"), let saved = DateKey("2026-11-08") {
-                    _ = try? await store.saveMoreOfThis(
-                        weekStart: sunday, text: "time outdoors, and a long walk with mum.", savedOn: saved)
-                }
-            }
             if args.contains("-seedWorkouts") { await seedWorkouts(store) }
             if args.contains("-deleteFirstPhoto"), let first = try? await store.attachmentRefs().first {
                 _ = try? await attachments.deletePhoto(first)
@@ -175,13 +168,17 @@
                 ),
                 Seed(day: "2026-11-01", text: "sunday. planned the week over breakfast.", score: .okay),
                 Seed(day: "2026-11-02", smile: "found the old cafe still does the good scones.", tags: [friends]),
-                Seed(day: "2026-11-03", text: "busy. barely looked up until four.", score: .okay, moods: ["tired"]),
+                Seed(
+                    day: "2026-11-03", text: "busy. barely looked up until four.",
+                    smile: "the meeting i'd dreaded went fine.", score: .okay, moods: ["tired"]),
                 Seed(
                     day: "2026-11-04",
                     text: "a slow morning, coffee on the step.\nlong walk after lunch, the light was lovely.",
                     smile: "the dog fell asleep on my feet.", score: .good, moods: ["happy", "tired"], tags: [walk]),
                 // 2026-11-02 and 11-05 have no score: gaps in the chart for the week of 2026-11-01.
-                Seed(day: "2026-11-06", text: "friday. long lunch with friends.", score: .excellent, moods: ["happy"]),
+                Seed(
+                    day: "2026-11-06", text: "friday. long lunch with friends.", smile: "chips on the pier.",
+                    score: .excellent, moods: ["happy"]),
             ]
             for seed in seeds {
                 let day = key(seed.day)
@@ -199,6 +196,12 @@
             _ = try? await store.saveFollowUp(
                 sourceSunday: key("2026-10-25"), writtenOn: key("2026-11-01"),
                 note: "called mum, dentist is booked for the 12th.", skipped: false)
+            // The review of 2026-11-01 reads this plan (sourced that Sunday) and its follow-up, written the next Sunday.
+            _ = try? await store.saveIntention(
+                sunday: key("2026-11-01"), text: "book the lake district weekend", category: "goal")
+            _ = try? await store.saveFollowUp(
+                sourceSunday: key("2026-11-01"), writtenOn: key("2026-11-08"),
+                note: "booked. cottage near grasmere for the 21st, dog allowed.", skipped: false)
             // A prompt assigned but never answered: must not get a dot or a row.
             _ = try? await store.assignPromptIfNeeded(key("2026-10-14")) { _, _ in
                 PromptChoice(id: "debug-seed", text: "what felt easy today?")

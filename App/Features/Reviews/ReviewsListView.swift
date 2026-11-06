@@ -55,6 +55,7 @@ struct ReviewsListView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(Palette.paper)
             .completionNotes()
+            .navigationTitle(Copy.Reviews.title)
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: ReviewRoute.self) { route in
                 switch route {

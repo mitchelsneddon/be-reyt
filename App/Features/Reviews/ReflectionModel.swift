@@ -38,6 +38,12 @@ final class ReflectionModel {
 
     /// Reads the persisted state. Never interrupts a running generation.
     func load() async {
+        #if DEBUG
+            if let forced = Self.forcedState {
+                state = forced
+                return
+            }
+        #endif
         if state == .generating { return }
         do {
             let valid = try await store.validateNarrative(weekStart: weekStart)
@@ -105,6 +111,47 @@ final class ReflectionModel {
             case .saved: "saved"
             case .failed(let f): "failed(\(f))"
             }
+        }
+    }
+#endif
+
+#if DEBUG
+    extension ReflectionModel {
+        /// Simulator-only: `-reflectionState notGenerated|generating|ready|unavailable|failed|purged` forces the state
+        /// for screenshots. App layer only; nothing is stored.
+        fileprivate static var forcedState: ReflectionState? {
+            let args = CommandLine.arguments
+            guard let i = args.firstIndex(of: "-reflectionState"), args.indices.contains(i + 1) else { return nil }
+            switch args[i + 1] {
+            case "notGenerated": return .notGenerated
+            case "generating": return .generating
+            case "ready": return .ready(cannedReflection, newerPromptAvailable: false)
+            case "unavailable": return .unavailable(.appleIntelligenceNotEnabled)
+            case "failed": return .failed(.modelError)
+            case "purged": return .purged
+            default: return nil
+            }
+        }
+
+        private static var cannedReflection: WeeklyReflectionContent {
+            func day(_ s: String) -> DateKey { DateKey(s) ?? AppClock.today() }
+            return WeeklyReflectionContent(
+                overview:
+                    "a steadier week than the last. you kept finding time to get outside, and the small things did a lot of the lifting. tuesday's meeting took up more room beforehand than it did on the day.",
+                highlights: [
+                    .init(
+                        text: "walks at lunch and round the reservoir",
+                        dateKeys: [day("2026-11-02"), day("2026-11-05")]),
+                    .init(text: "booking the lake district weekend", dateKeys: [day("2026-11-03")]),
+                ],
+                difficult: [.init(text: "dreading tuesday's meeting the night before", dateKeys: [day("2026-11-02")])],
+                themes: [
+                    .init(
+                        title: "getting outside",
+                        summary: "the reservoir, the pier and the lunch walk all came back to being outdoors.",
+                        dateKeys: [day("2026-11-02"), day("2026-11-05"), day("2026-11-06")])
+                ],
+                questions: ["what made it easier to get out this week?"])
         }
     }
 #endif

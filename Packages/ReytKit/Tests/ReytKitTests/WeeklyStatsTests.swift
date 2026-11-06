@@ -47,7 +47,6 @@ struct WeeklyStatsTests {
         #expect(s.chart.count == 7)
         #expect(s.chart.allSatisfy { $0.score == nil })
         #expect(s.scoreComparison == nil)
-        #expect(s.highestDays.isEmpty && s.lowestDays.isEmpty)
     }
 
     @Test("one rating gives that average over one scored day, with no extremes")
@@ -56,7 +55,6 @@ struct WeeklyStatsTests {
         #expect(s.scoredDays == 1)
         #expect(s.averageScore == 4.0)
         #expect(s.averageScoreDisplay == "4.0")
-        #expect(s.highestDays.isEmpty && s.lowestDays.isEmpty)
     }
 
     @Test("seven ratings 1,2,3,4,5,5,4 average 3.4 and the chart runs Sunday to Saturday")
@@ -138,20 +136,6 @@ struct WeeklyStatsTests {
         #expect(s.recordedDays == 3)
     }
 
-    @Test("ties are included in highest and lowest")
-    func ties() {
-        let s = stats(input(week, scores: [5, 2, 3, 5, 2, 4]))
-        #expect(s.highestDays == [day("2026-11-01"), day("2026-11-04")])
-        #expect(s.lowestDays == [day("2026-11-02"), day("2026-11-05")])
-    }
-
-    @Test("all scores equal gives no highest or lowest")
-    func allEqual() {
-        let s = stats(input(week, scores: [3, 3, 3, 3]))
-        #expect(s.highestDays.isEmpty)
-        #expect(s.lowestDays.isEmpty)
-    }
-
     @Test("score comparison is suppressed under three scored days in either week")
     func comparisonThreshold() {
         let this = input(week, scores: [4, 4, 4])
@@ -174,32 +158,6 @@ struct WeeklyStatsTests {
         #expect(c?.thisScoredDays == 7)
         #expect(c?.previousScoredDays == 3)
         #expect(c?.deltaTenths == 0)
-    }
-
-    @Test("mood comparison carries each week's denominator and needs three mood-logged days in both")
-    func moodComparison() {
-        let this = input(week, moods: [["happy"], ["happy", "tired"], ["tired"], ["happy"]])
-        let prev = input(prevWeek, moods: [["happy"], ["stressed"], ["happy"]])
-        let c = stats(this, prev: prev).moodComparison
-        #expect(c?.map(\.moodID) == ["happy", "stressed", "tired"])
-        let happy = c?.first { $0.moodID == "happy" }
-        #expect(happy?.thisCount == 3 && happy?.thisOf == 4)
-        #expect(happy?.previousCount == 2 && happy?.previousOf == 3)
-        let stressed = c?.first { $0.moodID == "stressed" }
-        #expect(stressed?.thisCount == 0 && stressed?.previousCount == 1)
-
-        let thin = input(prevWeek, moods: [["happy"], ["happy"]])
-        #expect(stats(this, prev: thin).moodComparison == nil)
-        #expect(stats(input(week, moods: [["happy"], ["happy"]]), prev: prev).moodComparison == nil)
-    }
-
-    @Test("score and mood comparisons gate independently")
-    func independentGates() {
-        let this = input(week, scores: [4, 4, 4], moods: [["happy"]])
-        let prev = input(prevWeek, scores: [3, 3, 3], moods: [["happy"]])
-        let s = stats(this, prev: prev)
-        #expect(s.scoreComparison != nil)
-        #expect(s.moodComparison == nil)
     }
 
     @Test("removing a day's score recomputes the average and counts")

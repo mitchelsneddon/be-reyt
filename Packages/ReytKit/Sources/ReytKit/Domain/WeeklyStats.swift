@@ -66,14 +66,6 @@ public struct WeeklyStats: Sendable, Equatable {
         public let previousScoredDays: Int
     }
 
-    public struct MoodComparison: Sendable, Equatable {
-        public let moodID: String
-        public let thisCount: Int
-        public let thisOf: Int
-        public let previousCount: Int
-        public let previousOf: Int
-    }
-
     public struct DistanceTotal: Sendable, Equatable {
         public let kind: WorkoutActivity.DistanceKind
         public let meters: Double
@@ -103,13 +95,7 @@ public struct WeeklyStats: Sendable, Equatable {
     public let moodFrequency: [MoodCount]
     /// True when no day that week has a mood ("no moods recorded this week").
     public let noMoods: Bool
-    /// Days with the top score; empty when fewer than two days are scored or every score is equal.
-    public let highestDays: [DateKey]
-    /// Days with the bottom score; same omission rule as `highestDays`.
-    public let lowestDays: [DateKey]
     public let scoreComparison: ScoreComparison?
-    /// Nil unless both weeks have at least three mood-logged days.
-    public let moodComparison: [MoodComparison]?
     public let workouts: WorkoutTotals
 
     /// "3.4", or nil with no scored days.
@@ -139,13 +125,6 @@ public struct WeeklyStats: Sendable, Equatable {
         let tenths = scores.isEmpty ? nil : roundedTenths(sum: sum, count: scores.count)
         let average = scores.isEmpty ? nil : Double(sum) / Double(scores.count)
 
-        var highest: [DateKey] = []
-        var lowest: [DateKey] = []
-        if scores.count >= 2, let hi = scores.values.max(), let lo = scores.values.min(), hi != lo {
-            highest = scores.filter { $0.value == hi }.keys.sorted()
-            lowest = scores.filter { $0.value == lo }.keys.sorted()
-        }
-
         let min = minimumObservationsForComparison
         var scoreComparison: ScoreComparison?
         if let prev, scores.count >= min, prev.scores.count >= min, let average, let tenths {
@@ -159,16 +138,6 @@ public struct WeeklyStats: Sendable, Equatable {
                 previousScoredDays: prev.scores.count)
         }
 
-        var moodComparison: [MoodComparison]?
-        if let prev, this.moodDays.count >= min, prev.moodDays.count >= min {
-            let ids = MoodCatalog.normalize(this.moodCounts.keys.sorted() + prev.moodCounts.keys.sorted())
-            moodComparison = ids.map {
-                MoodComparison(
-                    moodID: $0, thisCount: this.moodCounts[$0] ?? 0, thisOf: this.moodDays.count,
-                    previousCount: prev.moodCounts[$0] ?? 0, previousOf: prev.moodDays.count)
-            }
-        }
-
         return WeeklyStats(
             weekStart: weekStart, recordedDays: this.recorded, scoredDays: scores.count, averageScore: average,
             averageScoreTenths: tenths,
@@ -180,8 +149,7 @@ public struct WeeklyStats: Sendable, Equatable {
             moodFrequency: MoodCatalog.normalize(this.moodOrder).map {
                 MoodCount(moodID: $0, dayCount: this.moodCounts[$0] ?? 0, of: this.moodDays.count)
             },
-            noMoods: this.moodDays.isEmpty, highestDays: highest, lowestDays: lowest,
-            scoreComparison: scoreComparison, moodComparison: moodComparison, workouts: totals(workouts))
+            noMoods: this.moodDays.isEmpty, scoreComparison: scoreComparison, workouts: totals(workouts))
     }
 
     private static func totals(_ workouts: [WorkoutSnapshotValue]) -> WorkoutTotals {
