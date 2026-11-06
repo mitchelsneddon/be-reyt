@@ -10,6 +10,10 @@ struct BlobStore: Sendable {
         let source: URL
     }
 
+    /// The photo's bytes no longer match the checksum its record holds. The run leaves that photo out (with a
+    /// warning) rather than failing every backup.
+    struct ChecksumMismatch: Error { let blob: String }
+
     let destination: any BackupDestination
 
     /// Returns the size of the encrypted blob as written.
@@ -20,8 +24,10 @@ struct BlobStore: Sendable {
         do {
             try ArchiveCrypto.encryptBlob(source: job.source, to: temp, dataKey: dataKey)
             let check = try ArchiveCrypto.decryptBlob(temp, dataKey: dataKey)
-            guard check.sha256 == job.sha256 else { throw BackupRunError.coded(.photoUnreadable) }
+            guard check.sha256 == job.sha256 else { throw ChecksumMismatch(blob: job.name) }
         } catch let error as BackupRunError {
+            throw error
+        } catch let error as ChecksumMismatch {
             throw error
         } catch {
             // The photo could not be read, or the encrypted copy did not decrypt back to it.

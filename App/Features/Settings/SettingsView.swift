@@ -94,16 +94,23 @@ struct SettingsView: View {
             PassphraseView(backup: backup, isChange: sheet == .change)
         }
         .sheet(isPresented: restoreSheetBinding) { RestoreFlowView(restore: restore) }
-        .fileImporter(isPresented: $showImporter, allowedContentTypes: UTType.restoreSources) { result in
-            if case .success(let url) = result { restore.beginRestore(from: url) }
-        }
-        .fileImporter(isPresented: $showJournalPicker, allowedContentTypes: [.folder]) { result in
-            if case .success(let url) = result { journalImporter.begin(folder: url) }
-        }
-        .fileExporter(
-            isPresented: Bindable(backup).showExporter, item: backup.file, contentTypes: [.beReytArchive],
-            defaultFilename: backup.suggestedName,
-            onCompletion: { backup.exporterFinished($0) }, onCancellation: { backup.exporterCancelled() }
+        // One file importer/exporter per host view: several on the same view are unreliable (only one presents).
+        .background(
+            Color.clear.fileImporter(isPresented: $showImporter, allowedContentTypes: UTType.restoreSources) { result in
+                if case .success(let url) = result { restore.beginRestore(from: url) }
+            }
+        )
+        .background(
+            Color.clear.fileImporter(isPresented: $showJournalPicker, allowedContentTypes: [.folder]) { result in
+                if case .success(let url) = result { journalImporter.begin(folder: url) }
+            }
+        )
+        .background(
+            Color.clear.fileExporter(
+                isPresented: Bindable(backup).showExporter, item: backup.file, contentTypes: [.beReytArchive],
+                defaultFilename: backup.suggestedName,
+                onCompletion: { backup.exporterFinished($0) }, onCancellation: { backup.exporterCancelled() }
+            )
         )
         .confirmationDialog(Copy.Restore.undoConfirmTitle, isPresented: $showUndoConfirm, titleVisibility: .visible) {
             Button(Copy.Restore.undoAction, role: .destructive) { undo() }

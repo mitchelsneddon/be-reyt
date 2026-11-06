@@ -78,8 +78,9 @@ struct DayPageView: View {
         .environment(model)
         .task { await model.load() }
         .task { await health.syncIfDue() }
-        .onChange(of: editorFocused) { _, focused in model.isEditorFocused = focused }
+        .onChange(of: editorFocused) { _, focused in model.setFocus(.editor, focused) }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.flush() } }
+        .onChange(of: model.contentRevision) { _, _ in Task { await model.reloadClean() } }
         .onDisappear { model.flush() }
         .toolbar {
             ToolbarItemGroup(placement: .topBarLeading) {
@@ -131,7 +132,7 @@ struct DayPageView: View {
             question: Copy.Reflection.smileQuestion, helper: Copy.Reflection.smileHelper,
             answerLabel: Copy.Reflection.smileAnswerLabel,
             answer: Binding(get: { model.smileAnswer }, set: { model.setSmileAnswer($0) }),
-            isEnabled: model.isLoaded
+            isEnabled: model.isLoaded, onFocusChange: { model.setFocus(.smile, $0) }
         )
         .id(DayPageView.reflectionsAnchor)
         if let prompt = model.prompt {
@@ -139,16 +140,16 @@ struct DayPageView: View {
                 question: prompt.text, helper: Copy.Reflection.promptHelper,
                 answerLabel: Copy.Reflection.promptAnswerLabel(prompt.text),
                 answer: Binding(get: { model.rotatingAnswer }, set: { model.setRotatingAnswer($0) }),
-                isEnabled: model.isLoaded
-            ) {
-                if model.canRerollPrompt {
-                    Button(Copy.Reflection.anotherPrompt) { Task { await model.rerollPrompt() } }
-                        .font(.footnote)
-                        .foregroundStyle(Color("accent"))
-                        .frame(minHeight: 44)
-                        .accessibilityHint(Copy.Reflection.anotherPromptHint)
-                }
-            }
+                isEnabled: model.isLoaded, onFocusChange: { model.setFocus(.rotating, $0) },
+                action: {
+                    if model.canRerollPrompt {
+                        Button(Copy.Reflection.anotherPrompt) { Task { await model.rerollPrompt() } }
+                            .font(.footnote)
+                            .foregroundStyle(Color("accent"))
+                            .frame(minHeight: 44)
+                            .accessibilityHint(Copy.Reflection.anotherPromptHint)
+                    }
+                })
         }
     }
 

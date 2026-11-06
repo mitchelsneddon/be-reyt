@@ -96,9 +96,11 @@ final class ReviewModel: DraftFlushing {
     private func write() {
         inFlight += 1
         let previous = chain
-        chain = Task { [weak self] in
+        // Captures self strongly on purpose: the chain is bounded (each task ends when its write does), and a weak
+        // capture would silently drop queued writes if the model is replaced right after `flush()`.
+        chain = Task {
             await previous?.value
-            await self?.perform()
+            await self.perform()
         }
     }
 

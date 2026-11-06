@@ -36,6 +36,9 @@ public struct ArchiveWriter: Sendable {
         public var timeZone: TimeZone
         /// Snapshot kind: the backup data key. Names each attachment's blob and is stored as `dataKey.bin`.
         public var dataKey: Data?
+        /// Attachments left out of the payload (record and file) with a `missingAttachment` warning, e.g. a photo
+        /// whose bytes no longer match its recorded checksum, so one bad photo never blocks the rest.
+        public var excludedAttachmentIDs: Set<UUID> = []
         public init(
             kind: ArchiveManifest.Kind, appVersion: String, lineageID: UUID, createdAt: Date = Date.now,
             timeZone: TimeZone = .current, dataKey: Data? = nil
@@ -115,6 +118,10 @@ public struct ArchiveWriter: Sendable {
             let ext = (a.relativePath as NSString).pathExtension
             guard ArchiveNames.isSafeExtension(ext) else { throw ArchiveError.unsafePath(a.relativePath) }
             let source = try paths.resolveAttachment(relativePath: a.relativePath, in: generation)
+            if options.excludedAttachmentIDs.contains(a.id) {
+                warnings.append(ArchiveWarning.missingAttachment)
+                continue
+            }
             switch kind {
             case .portable:
                 let name = ArchiveNames.attachmentFileName(id: a.id, ext: ext)

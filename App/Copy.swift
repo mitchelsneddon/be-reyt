@@ -119,7 +119,7 @@ enum Copy {
         static let moodsTitle = "moods"
         static let noMoods = "no moods recorded this week."
         static func moodRow(label: String, count: Int, of days: Int) -> String {
-            "\(label) · \(count) of \(days) mood-logged \(days == 1 ? "day" : "days")"
+            "\(label) · \(count) of \(days) \(days == 1 ? "day" : "days") with a mood"
         }
 
         static let comparisonTitle = "compared with last week"
@@ -163,9 +163,9 @@ enum Copy {
     }
 
     enum Plan {
-        static let question = "what’s one thing you want or need to do next week?"
+        static let question = "what's one thing you want or need to do next week?"
         static let helper =
-            "something you’re looking forward to, a goal, a task, or something you’d like to achieve."
+            "something you're looking forward to, a goal, a task, or something you'd like to achieve."
         static let answerLabel = "answer to what's one thing you want or need to do next week"
         /// Stable stored IDs (persisted in WeeklyIntention.category) paired with display labels.
         static let categories: [(id: String, label: String)] = [
@@ -290,7 +290,7 @@ enum Copy {
         static let notAsked = "be reyt hasn't asked to read your workouts yet."
         static let asked = "be reyt has asked to read your workouts."
         static let allow = "allow access to workouts"
-        static let allowHint = "shows the iOS health permission sheet"
+        static let allowHint = "shows the ios health permission sheet"
         static let guidance =
             "ios doesn't tell apps if read access was denied, so be reyt can't see it either. if workouts don't appear, check settings › privacy & security › health › be reyt."
         static let nothingFound = "no workouts found, or health access is off."
@@ -305,7 +305,7 @@ enum Copy {
             return "\(h12) \(hour < 12 ? "am" : "pm")"
         }
         static let allow = "allow notifications"
-        static let allowHint = "shows the iOS notification permission sheet"
+        static let allowHint = "shows the ios notification permission sheet"
         static let denied = "notifications are off for be reyt, so the reminder can't show."
         static let openSettings = "open ios settings"
         static let openSettingsHint = "opens the notification settings for be reyt"
@@ -451,7 +451,7 @@ enum Copy {
         static let setTitle = "backup passphrase"
         static let changeTitle = "change passphrase"
         static let warning =
-            "write this down somewhere safe. without it, your backups can't be opened, not even by us."
+            "write this down somewhere safe. without it, your backups can't be opened."
         static let current = "current passphrase"
         static let new = "new passphrase"
         static let confirm = "type it again"

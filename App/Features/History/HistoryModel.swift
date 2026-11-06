@@ -21,6 +21,12 @@ final class HistoryModel {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !tagIDs.isEmpty
     }
 
+    /// Drops filter tags that no longer exist (a tag was deleted), so the list can never be stuck on a hidden filter.
+    func pruneTags(existing: Set<UUID>) {
+        let kept = tagIDs.intersection(existing)
+        if kept != tagIDs { tagIDs = kept }
+    }
+
     /// Days with content, for the calendar's dots.
     var dotDays: Set<DateKey> { Set(days.map(\.dateKey)) }
 

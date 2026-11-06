@@ -356,6 +356,23 @@ struct ArchiveValidatorTests {
         #expect(try f.rawData().attachments.count == 2)
     }
 
+    @Test("a snapshot leaves out an excluded attachment (record and blob) and warns")
+    func snapshotExcludesAttachment() async throws {
+        let f = try await ArchiveFixture()
+        let dir = f.base.appending(path: "payload-excluded")
+        var options = ArchiveWriter.Options(
+            kind: .snapshot, appVersion: "1.0 (1)", lineageID: UUID(), createdAt: f.t(20),
+            timeZone: TimeZone(identifier: "Europe/London")!, dataKey: Data(repeating: 7, count: 32))
+        options.excludedAttachmentIDs = [f.photoB]
+        let manifest = try await ArchiveWriter(paths: f.paths, generation: f.generation)
+            .write(from: f.store, to: dir, options: options)
+        #expect(manifest.warnings == [ArchiveWarning.missingAttachment])
+        #expect(manifest.attachments.map(\.id) == [f.photoA])
+        #expect(manifest.attachments.allSatisfy { $0.blob != nil })
+        let validated = try ArchiveValidator.validate(directory: dir)
+        #expect(validated.data.attachments.map(\.id) == [f.photoA])
+    }
+
     @Test("an export with every file present has no warnings field")
     func noWarningsWhenComplete() async throws {
         let f = try await ArchiveFixture()

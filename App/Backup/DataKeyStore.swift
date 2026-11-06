@@ -34,7 +34,9 @@ struct DataKeyStore: Sendable {
         }
     #endif
 
-    func current() -> Data? {
+    /// nil only when there is no key (`errSecItemNotFound`); any other Keychain status throws, so a locked or
+    /// failing Keychain can never be mistaken for "no key" and cause a new one to be generated.
+    func current() throws -> Data? {
         #if DEBUG
             if let file = debugFile { return try? Data(contentsOf: file) }
         #endif
@@ -42,15 +44,16 @@ struct DataKeyStore: Sendable {
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess, let data = result as? Data,
-            data.count == BlobNaming.keyBytes
-        else { return nil }
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess else { throw Failure.keychain(status) }
+        guard let data = result as? Data, data.count == BlobNaming.keyBytes else { return nil }
         return data
     }
 
     /// The key, made on first use.
     func ensure() throws -> Data {
-        if let key = current() { return key }
+        if let key = try current() { return key }
         let key = try Self.generate()
         try store(key)
         return key
@@ -58,14 +61,14 @@ struct DataKeyStore: Sendable {
 
     /// Keeps a key from a restored snapshot when this device has none.
     func adoptIfMissing(_ key: Data) throws {
-        guard current() == nil, key.count == BlobNaming.keyBytes else { return }
+        guard try current() == nil, key.count == BlobNaming.keyBytes else { return }
         try store(key)
     }
 
     /// A new key replaces the old one (passphrase change). Existing blobs stay readable by the old snapshots, which
     /// carry the old key; the next run writes every blob again under the new one.
     func rotate() throws {
-        guard current() != nil else { return }
+        guard try current() != nil else { return }
         try store(try Self.generate())
     }
 

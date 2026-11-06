@@ -24,8 +24,9 @@ struct BeReytApp: App {
         let backupModel = BackupSettingsModel(host: host)
         _backup = State(initialValue: backupModel)
         let autoBackup = BackupManager(host: host)
-        let restore = RestoreCoordinator(host: host, events: events, backup: autoBackup)
         let health = HealthCoordinator(host: host, events: events)
+        let quiescer = Quiescer(events: events, backup: autoBackup, health: health)
+        let restore = RestoreCoordinator(host: host, quiescer: quiescer, backup: autoBackup)
         let reminders = ReminderScheduler(host: host, events: events)
         restore.registerPostRestoreHook { await health.resyncAfterRestore() }
         restore.registerPostRestoreHook { await reminders.refresh() }
@@ -40,7 +41,7 @@ struct BeReytApp: App {
         Self.registerDeviceWipers(registry, deviceRoot: host.paths.deviceRoot)
         registry.register(Copy.DeleteAll.wiperAutoBackup) { try await autoBackup.forgetEverything() }
         _deleteAll = State(
-            initialValue: DeleteAllCoordinator(host: host, events: events, backup: autoBackup, registry: registry))
+            initialValue: DeleteAllCoordinator(host: host, quiescer: quiescer, registry: registry))
         _restore = State(initialValue: restore)
         _health = State(initialValue: health)
     }
@@ -55,7 +56,9 @@ struct BeReytApp: App {
                     .task { await DebugAutoBackup.runIfRequested(manager: autoBackup, host: host, backup: backup) }
                 #endif
                 .task { autoBackup.setActive(scenePhase == .active) }
-                .overlay { if scenePhase != .active { PrivacyCover() } }
+                .onChange(of: scenePhase, initial: true) { _, phase in
+                    PrivacyCoverWindow.shared.setVisible(phase != .active)
+                }
                 .onChange(of: scenePhase) { _, phase in
                     autoBackup.setActive(phase == .active)
                     switch phase {

@@ -48,6 +48,31 @@ public struct Paths: Sendable {
         return Paths.isValidGenerationID(id) ? id : nil
     }
 
+    /// What launch should do given what is on disk. Never starts a fresh generation over existing data.
+    public enum LaunchResolution: Equatable, Sendable {
+        /// Nothing is on disk (or only an empty leftover): a first run, start `g1`.
+        case firstRun
+        case open(String)
+        /// The pointer is unreadable, missing while real generations exist, or names a generation that has no store
+        /// while others do. The app stops rather than guess.
+        case badPointer
+    }
+
+    public func resolveLaunchGeneration() -> LaunchResolution {
+        let fm = FileManager.default
+        let existing = (try? fm.contentsOfDirectory(atPath: dataRoot.path)) ?? []
+        let withStore = Set(
+            existing.filter { Paths.isValidGenerationID($0) && fm.fileExists(atPath: store(in: generation($0)).path) })
+        guard fm.fileExists(atPath: currentPointer.path) else {
+            return withStore.isEmpty ? .firstRun : .badPointer
+        }
+        guard let id = currentGenerationID() else { return .badPointer }
+        if withStore.contains(id) { return .open(id) }
+        // A crash between writing the pointer and creating the store leaves an empty generation: that alone is a
+        // first run. Any other generation holding data means the pointer is wrong.
+        return withStore.isEmpty ? .open(id) : .badPointer
+    }
+
     /// Lexical check: refuses empty, absolute, `~`, `.`/`..`/empty components, backslashes and NUL.
     public static func isSafeRelativePath(_ relativePath: String) -> Bool {
         guard !relativePath.isEmpty, !relativePath.hasPrefix("/"), !relativePath.contains("\\"),

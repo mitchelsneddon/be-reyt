@@ -155,18 +155,18 @@ final class RestoreCoordinator {
 
     @ObservationIgnored private var isSwapping = false
     @ObservationIgnored private let host: ContainerHost
-    @ObservationIgnored private let events: JournalEvents
+    @ObservationIgnored private let quiescer: Quiescer
     @ObservationIgnored private let passphrases: PassphraseStore
     @ObservationIgnored private let backup: BackupManager
     @ObservationIgnored private var hooks: [@Sendable () async -> Void] = []
     @ObservationIgnored private let logger = Logger(subsystem: "local.mitchel.bereyt", category: "restore")
 
     init(
-        host: ContainerHost, events: JournalEvents, backup: BackupManager,
+        host: ContainerHost, quiescer: Quiescer, backup: BackupManager,
         passphrases: PassphraseStore = PassphraseStore()
     ) {
         self.host = host
-        self.events = events
+        self.quiescer = quiescer
         self.backup = backup
         self.passphrases = passphrases
         refreshUndoAvailability()
@@ -354,11 +354,8 @@ final class RestoreCoordinator {
         let switcher = GenerationSwitcher(paths: paths)
         let priorRecord = RecoveryRecord.load(from: paths)
 
-        // (i) quiesce: pending edits are written, then the store refuses every write.
-        await events.flushAllDrafts()
-        await attachments.waitForIdle()
-        await store.setReadOnly(true)
-        await backup.quiesce()
+        // (i) quiesce: pending edits are written, health and backups stop, then the store refuses every write.
+        await quiescer.quiesce(store: store, attachments: attachments)
 
         var built: BuiltGeneration?
         var flipped = false
@@ -393,10 +390,9 @@ final class RestoreCoordinator {
             // (v) the root view is keyed on the generation id: reopening rebuilds everything.
             try host.reopenCurrent()
         } catch {
-            backup.resumeAfterQuiesce()
             await rollback(
-                store: store, switcher: switcher, previousID: currentID, built: built, flipped: flipped,
-                priorRecord: priorRecord)
+                switcher: switcher, previousID: currentID, built: built, flipped: flipped, priorRecord: priorRecord)
+            await quiescer.resume(store: store, reopenStore: paths.currentGenerationID() == currentID)
             refreshUndoAvailability()
             if error is RestoreFailure { throw error }
             logger.error("switch failed: \(String(describing: type(of: error)), privacy: .public)")
@@ -421,13 +417,12 @@ final class RestoreCoordinator {
     }
 
     private func rollback(
-        store: JournalStore, switcher: GenerationSwitcher, previousID: String, built: BuiltGeneration?, flipped: Bool,
+        switcher: GenerationSwitcher, previousID: String, built: BuiltGeneration?, flipped: Bool,
         priorRecord: RecoveryRecord?
     ) async {
         if flipped { try? switcher.flip(to: previousID) }
         if let built { try? switcher.abandon(built.id) }
         if let priorRecord { try? priorRecord.save(to: paths) } else { RecoveryRecord.clear(from: paths) }
-        if paths.currentGenerationID() == previousID { await store.setReadOnly(false) }
     }
 
     // MARK: Safety copy

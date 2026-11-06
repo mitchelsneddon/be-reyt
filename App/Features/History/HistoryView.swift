@@ -83,6 +83,7 @@ struct HistoryView: View {
                 open(key)
             }
         #endif
+        .onChange(of: tags.map(\.id)) { _, ids in model.pruneTags(existing: Set(ids)) }
         .task(id: RefreshKey(revision: events.contentRevision, text: model.searchText, tags: model.tagIDs)) {
             // Light debounce so typing does not fetch on every keystroke; a newer key cancels this one.
             if model.isFiltering { try? await Task.sleep(for: .milliseconds(200)) }

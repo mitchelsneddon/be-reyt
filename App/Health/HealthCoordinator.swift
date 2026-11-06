@@ -20,6 +20,9 @@ final class HealthCoordinator {
     @ObservationIgnored private let sync: WorkoutSync
     @ObservationIgnored private var lastRun: ContinuousClock.Instant?
     @ObservationIgnored private var isSyncing = false
+    /// Set by `Quiescer` while restore or delete-all swaps the data: no sync starts, so none can write the store
+    /// or the anchor mid-swap.
+    @ObservationIgnored private var isSuspended = false
 
     init(host: ContainerHost, events: JournalEvents) {
         self.host = host
@@ -44,7 +47,7 @@ final class HealthCoordinator {
 
     /// Launch, foreground and day-page appearance all call this; more than once a minute does nothing.
     func syncIfDue(force: Bool = false) async {
-        guard !isSyncing, let store = host.store else { return }
+        guard !isSyncing, !isSuspended, let store = host.store else { return }
         let now = ContinuousClock.now
         if !force, let lastRun, now - lastRun < Self.throttle { return }
         isSyncing = true
@@ -59,8 +62,18 @@ final class HealthCoordinator {
         await refreshAccess()
     }
 
+    /// Stops new syncs and waits (bounded) for the one in flight to finish.
+    func suspendAndSettle() async {
+        isSuspended = true
+        let deadline = ContinuousClock.now + .seconds(30)
+        while isSyncing, ContinuousClock.now < deadline { try? await Task.sleep(for: .milliseconds(50)) }
+    }
+
+    func resume() { isSuspended = false }
+
     /// Post-restore hook: anchor reset, full re-sync, drop what Health no longer has.
     func resyncAfterRestore() async {
+        isSuspended = false
         while isSyncing { try? await Task.sleep(for: .milliseconds(100)) }
         guard let store = host.store else { return }
         isSyncing = true

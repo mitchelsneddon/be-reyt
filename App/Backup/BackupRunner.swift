@@ -52,42 +52,26 @@ struct BackupRunner: Sendable {
             var items = try input.destination.list()
             index.reconcile(with: items)
 
-            // (1) the snapshot payload: records and manifest, no photos, blob names and the data key inside.
+            // (1) + (2) the snapshot payload and every photo it needs that the folder doesn't hold yet. A photo whose
+            // bytes don't match its checksum is left out with a warning, then the payload is written again without it.
             let payload = scratch.appending(path: "payload", directoryHint: .isDirectory)
-            let options = ArchiveWriter.Options(
-                kind: .snapshot, appVersion: input.appVersion, lineageID: index.lineageID, createdAt: input.now,
-                dataKey: input.dataKey)
-            let manifest = try await ArchiveWriter(paths: input.paths, generation: input.generation)
-                .write(from: input.store, to: payload, options: options)
-            try check()
-            let referenced = Set(manifest.attachments.compactMap(\.blob))
-            guard referenced.count <= manifest.attachments.count,
-                manifest.attachments.allSatisfy({ $0.blob != nil })
-            else { throw BackupRunError.coded(.other) }
-
-            // (2) every photo the snapshot needs that the folder doesn't hold yet.
-            let present = Set(
-                items.filter { $0.area == .blobs && ($0.bytes ?? 1) > 0 }.compactMap {
-                    BlobNaming.name(fromFileName: $0.name)
-                })
-            let data = try ArchiveReader.readData(in: payload, maxBytes: ArchiveValidator.Limits.default.perFileBytes)
-            let pathByID = Dictionary(uniqueKeysWithValues: data.attachments.map { ($0.id, $0.relativePath) })
-            var jobs: [String: BlobStore.Job] = [:]
-            for item in manifest.attachments {
-                guard let blob = item.blob, !present.contains(blob), jobs[blob] == nil else { continue }
-                guard let relative = pathByID[item.id],
-                    let source = try? input.paths.resolveAttachment(relativePath: relative, in: input.generation),
-                    FileManager.default.fileExists(atPath: source.path)
-                else { throw BackupRunError.sourceChanged }
-                jobs[blob] = BlobStore.Job(name: blob, sha256: item.sha256, source: source)
+            var excluded = Set<UUID>()
+            var staged: Staged?
+            var uploadedEarlier: [String] = []
+            for _ in 0..<Self.maxStagingPasses where staged == nil {
+                do {
+                    staged = try await stage(
+                        input: input, index: &index, items: items, payload: payload, scratch: scratch,
+                        excluded: excluded, alreadyUploaded: uploadedEarlier)
+                } catch let bad as MismatchedPhotos {
+                    Self.logger.warning("skipping \(bad.ids.count, privacy: .public) photo(s) that fail their checksum")
+                    excluded.formUnion(bad.ids)
+                    uploadedEarlier += bad.uploaded
+                }
             }
-            let blobStore = BlobStore(destination: input.destination)
-            var uploaded: [String] = []
-            for job in jobs.values.sorted(by: { $0.name < $1.name }) {
-                try check()
-                index.knownBlobs[job.name] = try blobStore.upload(job, dataKey: input.dataKey, scratch: scratch)
-                uploaded.append(job.name)
-            }
+            guard let staged else { throw BackupRunError.coded(.photoUnreadable) }
+            let referenced = staged.referenced
+            let uploaded = uploadedEarlier + staged.uploaded
 
             // (3) the snapshot, sealed with the passphrase, proven readable before and after it is moved in.
             try check()
@@ -143,6 +127,73 @@ struct BackupRunner: Sendable {
             }
             return Output(index: index, error: Self.map(error))
         }
+    }
+
+    private static let maxStagingPasses = 3
+
+    private struct Staged {
+        let referenced: Set<String>
+        let uploaded: [String]
+    }
+
+    private struct MismatchedPhotos: Error {
+        let ids: Set<UUID>
+        let uploaded: [String]
+    }
+
+    /// One pass of steps (1) and (2). Throws `MismatchedPhotos` after uploading everything else, so the caller can
+    /// write the payload again without those photos.
+    private func stage(
+        input: Input, index: inout BackupIndex, items: [DestinationItem], payload: URL, scratch: URL,
+        excluded: Set<UUID>,
+        alreadyUploaded: [String]
+    ) async throws -> Staged {
+        try? FileManager.default.removeItem(at: payload)
+        var options = ArchiveWriter.Options(
+            kind: .snapshot, appVersion: input.appVersion, lineageID: index.lineageID, createdAt: input.now,
+            dataKey: input.dataKey)
+        options.excludedAttachmentIDs = excluded
+        let manifest = try await ArchiveWriter(paths: input.paths, generation: input.generation)
+            .write(from: input.store, to: payload, options: options)
+        try check()
+        let referenced = Set(manifest.attachments.compactMap(\.blob))
+        guard referenced.count <= manifest.attachments.count,
+            manifest.attachments.allSatisfy({ $0.blob != nil })
+        else { throw BackupRunError.coded(.other) }
+
+        let present = Set(alreadyUploaded).union(
+            items.filter { $0.area == .blobs && ($0.bytes ?? 1) > 0 }.compactMap {
+                BlobNaming.name(fromFileName: $0.name)
+            }
+        )
+        let data = try ArchiveReader.readData(in: payload, maxBytes: ArchiveValidator.Limits.default.perFileBytes)
+        let pathByID = Dictionary(uniqueKeysWithValues: data.attachments.map { ($0.id, $0.relativePath) })
+        var jobs: [String: BlobStore.Job] = [:]
+        for item in manifest.attachments {
+            guard let blob = item.blob, !present.contains(blob), jobs[blob] == nil else { continue }
+            guard let relative = pathByID[item.id],
+                let source = try? input.paths.resolveAttachment(relativePath: relative, in: input.generation),
+                FileManager.default.fileExists(atPath: source.path)
+            else { throw BackupRunError.sourceChanged }
+            jobs[blob] = BlobStore.Job(name: blob, sha256: item.sha256, source: source)
+        }
+        let blobStore = BlobStore(destination: input.destination)
+        var uploaded: [String] = []
+        var mismatched = Set<String>()
+        for job in jobs.values.sorted(by: { $0.name < $1.name }) {
+            try check()
+            do {
+                index.knownBlobs[job.name] = try blobStore.upload(job, dataKey: input.dataKey, scratch: scratch)
+                uploaded.append(job.name)
+            } catch let bad as BlobStore.ChecksumMismatch {
+                mismatched.insert(bad.blob)
+            }
+        }
+        if !mismatched.isEmpty {
+            let ids = manifest.attachments.filter { $0.blob.map(mismatched.contains) ?? false }.map(\.id)
+            throw MismatchedPhotos(ids: Set(ids), uploaded: uploaded)
+        }
+        return Staged(referenced: referenced, uploaded: uploaded)
     }
 
     private func check() throws {

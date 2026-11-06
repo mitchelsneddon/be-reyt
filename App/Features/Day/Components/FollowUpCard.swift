@@ -6,6 +6,7 @@ import SwiftUI
 struct FollowUpCard: View {
     @Environment(DayPageModel.self) private var model
     let plan: IntentionPlan
+    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -35,6 +36,8 @@ struct FollowUpCard: View {
             )
             .font(.body).foregroundStyle(Color("ink"))
             .lineLimit(1...4)
+            .focused($focused)
+            .onChange(of: focused) { _, isFocused in model.setFocus(.followUp, isFocused) }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .background(RoundedRectangle(cornerRadius: 14).fill(Color("card")))

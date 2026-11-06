@@ -77,11 +77,11 @@ final class ContainerHost {
         let fm = FileManager.default
         try fm.createDirectory(at: paths.dataRoot, withIntermediateDirectories: true)
         let id: String
-        if fm.fileExists(atPath: paths.currentPointer.path) {
-            // An unreadable pointer is a stop, not a reset: never start a fresh generation over existing data.
-            guard let existing = paths.currentGenerationID() else { throw ContainerHostError.badPointer }
-            id = existing
-        } else {
+        // A bad or missing pointer beside real data is a stop, not a reset: never start a fresh generation over it.
+        switch paths.resolveLaunchGeneration() {
+        case .badPointer: throw ContainerHostError.badPointer
+        case .open(let existing): id = existing
+        case .firstRun:
             id = "g1"
             try Data((id + "\n").utf8).write(to: paths.currentPointer, options: .atomic)
         }

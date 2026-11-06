@@ -9,7 +9,11 @@ struct ReflectionCard<Action: View>: View {
     @Binding var answer: String
     var isEnabled = true
     var lineLimits: ClosedRange<Int> = 2...6
+    /// Reports whether the answer field has focus (the day page treats any focused field as "busy").
+    var onFocusChange: (Bool) -> Void = { _ in }
     @ViewBuilder var action: () -> Action
+
+    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -24,6 +28,8 @@ struct ReflectionCard<Action: View>: View {
                 .font(.body)
                 .foregroundStyle(Color("ink"))
                 .lineLimit(lineLimits)
+                .focused($focused)
+                .onChange(of: focused) { _, isFocused in onFocusChange(isFocused) }
                 .disabled(!isEnabled)
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -38,11 +44,11 @@ struct ReflectionCard<Action: View>: View {
 extension ReflectionCard where Action == EmptyView {
     init(
         question: String, helper: String? = nil, answerLabel: String, answer: Binding<String>, isEnabled: Bool = true,
-        lineLimits: ClosedRange<Int> = 2...6
+        lineLimits: ClosedRange<Int> = 2...6, onFocusChange: @escaping (Bool) -> Void = { _ in }
     ) {
         self.init(
             question: question, helper: helper, answerLabel: answerLabel, answer: answer, isEnabled: isEnabled,
-            lineLimits: lineLimits
+            lineLimits: lineLimits, onFocusChange: onFocusChange
         ) { EmptyView() }
     }
 }

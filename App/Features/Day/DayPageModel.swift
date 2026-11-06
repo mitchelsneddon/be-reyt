@@ -22,7 +22,9 @@ final class DayPageModel: DraftFlushing {
     private(set) var prompt: PromptChoice?
     private(set) var isLoaded = false
     private(set) var loadFailed = false
-    var isEditorFocused = false
+    /// Which text fields currently hold focus; the midnight roll treats any of them as "busy".
+    enum FocusArea: Hashable { case editor, smile, rotating, followUp, intention }
+    private var focusedAreas: Set<FocusArea> = []
 
     // Sunday plan lifecycle.
     private(set) var intentionText = ""
@@ -68,6 +70,9 @@ final class DayPageModel: DraftFlushing {
             || intentionText != savedIntention || followUpNote != savedFollowUpNote
     }
 
+    /// Bumps on every persisted change anywhere; the page reloads its clean fields when it moves.
+    var contentRevision: Int { events.contentRevision }
+
     var isSunday: Bool { dateKey.weekday == 0 }
 
     /// A saved note or skip shows collapsed with an "edit" affordance.
@@ -85,35 +90,15 @@ final class DayPageModel: DraftFlushing {
     }
 
     /// True when Today may roll to a new day: not focused and nothing waiting to be saved.
-    var isIdle: Bool { !isEditorFocused && !hasUnsavedDrafts && inFlight == 0 }
+    var isIdle: Bool { focusedAreas.isEmpty && !hasUnsavedDrafts && inFlight == 0 }
 
     // MARK: Loading
 
     func load() async {
         guard !isLoaded else { return }
         do {
-            let content = try await store.dayContent(dateKey)
-            text = content.text
-            savedText = content.text
-            score = content.dayScore.flatMap { DayScore($0) }
-            moodIDs = content.moodIDs
-            tagIDs = content.tagIDs
-            smileAnswer = content.smileAnswer ?? ""
-            savedSmile = smileAnswer
-            rotatingAnswer = content.rotatingAnswer ?? ""
-            savedRotating = rotatingAnswer
-            let plans = try await store.intentionPlans()
-            let own = IntentionQueries.plan(sourcedOn: dateKey, in: plans)
-            intentionText = own?.text ?? ""
-            savedIntention = intentionText
-            intentionCategory = own?.category
-            let followUp = IntentionQueries.followUpDue(on: dateKey, in: plans)
-            followUpPlan = followUp
-            followUpNote = followUp?.followUpNote ?? ""
-            savedFollowUpNote = followUpNote
-            followUpSkipped = followUp?.followUpSkipped ?? false
-            // On the follow-up Sunday itself the follow-up card quotes the plan, so the banner card is not repeated.
-            coveringPlan = followUp == nil ? IntentionQueries.planCovering(day: dateKey, in: plans) : nil
+            let snapshot = try await fetchSnapshot()
+            apply(snapshot, onlyClean: false)
             loadFailed = false
             isLoaded = true
         } catch {
@@ -121,6 +106,64 @@ final class DayPageModel: DraftFlushing {
             return
         }
         await assignPrompt()
+    }
+
+    /// The store changed (an import, a restore, another screen): refresh every field that has no unsaved local edit
+    /// and keep the dirty ones, so the next keystroke can never overwrite what arrived from outside.
+    func reloadClean() async {
+        guard isLoaded, let snapshot = try? await fetchSnapshot() else { return }
+        apply(snapshot, onlyClean: true)
+    }
+
+    private struct Snapshot {
+        let content: DayContent
+        let plans: [IntentionPlan]
+    }
+
+    private func fetchSnapshot() async throws -> Snapshot {
+        let content = try await store.dayContent(dateKey)
+        let plans = try await store.intentionPlans()
+        return Snapshot(content: content, plans: plans)
+    }
+
+    /// Applies a snapshot. With `onlyClean`, text fields equal to their saved baseline are refreshed, and the
+    /// immediately-written fields (score, moods, tags, categories) only while no write is in flight.
+    private func apply(_ snapshot: Snapshot, onlyClean: Bool) {
+        let content = snapshot.content
+        let plans = snapshot.plans
+        let writesIdle = !onlyClean || inFlight == 0
+        if !onlyClean || text == savedText {
+            text = content.text
+            savedText = content.text
+        }
+        if writesIdle {
+            score = content.dayScore.flatMap { DayScore($0) }
+            moodIDs = content.moodIDs
+            tagIDs = content.tagIDs
+        }
+        if !onlyClean || smileAnswer == savedSmile {
+            smileAnswer = content.smileAnswer ?? ""
+            savedSmile = smileAnswer
+        }
+        if !onlyClean || rotatingAnswer == savedRotating {
+            rotatingAnswer = content.rotatingAnswer ?? ""
+            savedRotating = rotatingAnswer
+        }
+        let own = IntentionQueries.plan(sourcedOn: dateKey, in: plans)
+        if !onlyClean || (intentionText == savedIntention && writesIdle) {
+            intentionText = own?.text ?? ""
+            savedIntention = intentionText
+            intentionCategory = own?.category
+        }
+        let followUp = IntentionQueries.followUpDue(on: dateKey, in: plans)
+        followUpPlan = followUp
+        if !onlyClean || (followUpNote == savedFollowUpNote && writesIdle) {
+            followUpNote = followUp?.followUpNote ?? ""
+            savedFollowUpNote = followUpNote
+            followUpSkipped = followUp?.followUpSkipped ?? false
+        }
+        // On the follow-up Sunday itself the follow-up card quotes the plan, so the banner card is not repeated.
+        coveringPlan = followUp == nil ? IntentionQueries.planCovering(day: dateKey, in: plans) : nil
     }
 
     /// First display of a day assigns its prompt; reopening returns the stored one. A failure just hides the card.
@@ -153,6 +196,10 @@ final class DayPageModel: DraftFlushing {
     }
 
     // MARK: Edits
+
+    func setFocus(_ area: FocusArea, _ focused: Bool) {
+        if focused { focusedAreas.insert(area) } else { focusedAreas.remove(area) }
+    }
 
     func setText(_ newValue: String) {
         guard isLoaded, newValue != text else { return }
@@ -283,9 +330,11 @@ final class DayPageModel: DraftFlushing {
     private func write(_ field: Field) {
         inFlight += 1
         let previous = chain
-        chain = Task { [weak self] in
+        // Captures self strongly on purpose: the chain is bounded (each task ends when its write does), and a weak
+        // capture would silently drop queued writes if the model is replaced right after `flush()`.
+        chain = Task {
             await previous?.value
-            await self?.perform(field)
+            await self.perform(field)
         }
     }
 

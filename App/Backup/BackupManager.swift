@@ -37,6 +37,9 @@ final class BackupManager {
     /// iCloud's view of the latest snapshot (and the photos written with it). nil when there is no snapshot.
     private(set) var latestUpload: UploadStatus?
     private(set) var isActive = false
+    /// True while restore or delete-all swaps the data: no run starts and no check is scheduled. Set by `suspend()`;
+    /// cleared by `resumeAfterQuiesce()`, `didRestore` and `forgetEverything`.
+    private(set) var isSuspended = false
     /// How the last run ended, for diagnostics (an error code or outcome, never journal content).
     private(set) var lastOutcome: String?
 
@@ -176,16 +179,24 @@ final class BackupManager {
         }
     }
 
-    /// Stops any run and waits for it to finish, so a restore can swap the data without a backup reading it.
-    func quiesce() async {
+    /// Suspends backups and waits for any run to finish, so a swap of the data never has a backup reading it.
+    func suspend() async {
+        isSuspended = true
+        await stopRuns()
+    }
+
+    private func stopRuns() async {
         timer?.cancel()
         timer = nil
         runTask?.cancel()
         _ = await runTask?.value
     }
 
-    /// A restore that did not go through: backups carry on where they were.
-    func resumeAfterQuiesce() { scheduleCheck(after: Self.openingDelaySeconds) }
+    /// The swap ended (or never happened): backups carry on where they were.
+    func resumeAfterQuiesce() {
+        isSuspended = false
+        scheduleCheck(after: Self.openingDelaySeconds)
+    }
 
     // MARK: Restore
 
@@ -259,13 +270,14 @@ final class BackupManager {
         index.lastError = nil
         changeCounter += 1
         persist()
+        isSuspended = false
         scheduleCheck(after: Self.openingDelaySeconds)
     }
 
     /// Delete-all: forget the backup folder, the data key and the index on this phone, in memory as well as on
     /// disk, so a later run cannot write the old index back. Files already in the backup folder are not touched.
     func forgetEverything() async throws {
-        await quiesce()
+        await stopRuns()
         dataKeys.clear()
         let fm = FileManager.default
         for url in [BackupIndex.url(in: host.paths), bookmarkURL].compactMap({ $0 })
@@ -279,10 +291,11 @@ final class BackupManager {
         isUbiquitous = nil
         latestUpload = nil
         lastOutcome = nil
+        isSuspended = false
     }
 
     private func scheduleCheck(after delay: TimeInterval) {
-        guard isActive else { return }
+        guard isActive, !isSuspended else { return }
         timer?.cancel()
         timer = Task { [weak self] in
             try? await Task.sleep(for: .seconds(max(delay, 0.1)))
@@ -292,7 +305,7 @@ final class BackupManager {
     }
 
     private func runIfDue() async {
-        guard isActive, !isRunning, hasDestination else { return }
+        guard isActive, !isSuspended, !isRunning, hasDestination else { return }
         let now = Date.now
         if let lastEditAt, now.timeIntervalSince(lastEditAt) < Self.idleSeconds {
             return scheduleCheck(after: Self.idleSeconds - now.timeIntervalSince(lastEditAt))
@@ -310,7 +323,7 @@ final class BackupManager {
 
     /// "back up now": runs when the app is active, without waiting for a quiet minute.
     func backUpNow() async {
-        guard isActive else { return }
+        guard isActive, !isSuspended else { return }
         timer?.cancel()
         await run()
     }
@@ -318,7 +331,7 @@ final class BackupManager {
     // MARK: Run
 
     private func run() async {
-        guard isActive, !isRunning, hasDestination else { return }
+        guard isActive, !isSuspended, !isRunning, hasDestination else { return }
         guard let passphrase = passphrases.stored() else { return }
         guard let store = host.store, let generation = host.generationURL else {
             return scheduleCheck(after: Self.openingDelaySeconds)  // the journal isn't open yet (phone locked)

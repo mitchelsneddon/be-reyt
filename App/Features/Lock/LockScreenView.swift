@@ -42,6 +42,7 @@ struct LockScreenView: View {
 }
 
 /// Opaque cover for any non-active scene phase, so the app-switcher snapshot never shows content.
+/// Shown in its own window (`PrivacyCoverWindow`), because a SwiftUI overlay sits below sheets and full-screen covers.
 struct PrivacyCover: View {
     var body: some View {
         Text(Copy.Lock.appName)

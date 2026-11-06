@@ -22,7 +22,7 @@ struct DayScoreControl: View {
                                 Circle().strokeBorder(
                                     value == score ? Color("accent") : Color("inkSecondary"), lineWidth: 1.5)
                             )
-                            .frame(width: dot, height: dot)
+                            .frame(width: min(dot, 44), height: min(dot, 44))  // five must fit a 375 pt width at AX5
                             .frame(minWidth: 44, minHeight: 44)
                             .contentShape(Rectangle())
                     }

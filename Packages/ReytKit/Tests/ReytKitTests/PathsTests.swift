@@ -37,6 +37,37 @@ struct PathsTests {
         #expect(p.currentGenerationID() == nil)
     }
 
+    @Test("launch resolution never starts a fresh generation over real data")
+    func launchResolution() throws {
+        let base = try makeBase()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let p = Paths(base: base)
+        let fm = FileManager.default
+        #expect(p.resolveLaunchGeneration() == .firstRun)
+
+        // Pointer to an empty generation and nothing else: a crashed first run, reuse it.
+        try fm.createDirectory(at: p.generation("g1"), withIntermediateDirectories: true)
+        try "g1\n".write(to: p.currentPointer, atomically: true, encoding: .utf8)
+        #expect(p.resolveLaunchGeneration() == .open("g1"))
+
+        // A real generation exists.
+        try Data().write(to: p.store(in: p.generation("g1")))
+        #expect(p.resolveLaunchGeneration() == .open("g1"))
+
+        // Pointer missing while a real generation exists: stop.
+        try fm.removeItem(at: p.currentPointer)
+        #expect(p.resolveLaunchGeneration() == .badPointer)
+
+        // Pointer names a generation without a store while another holds data: stop.
+        try fm.createDirectory(at: p.generation("g2"), withIntermediateDirectories: true)
+        try "g2\n".write(to: p.currentPointer, atomically: true, encoding: .utf8)
+        #expect(p.resolveLaunchGeneration() == .badPointer)
+
+        // Unreadable pointer: stop.
+        try "../evil".write(to: p.currentPointer, atomically: true, encoding: .utf8)
+        #expect(p.resolveLaunchGeneration() == .badPointer)
+    }
+
     @Test("good relative paths resolve inside attachments")
     func good() throws {
         let base = try makeBase()

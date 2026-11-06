@@ -71,11 +71,12 @@ final class AppleJournalImporter {
         guard phase == .preview, let plan, let store = host.store, let attachments = host.attachments else { return }
         phase = .importing
         let chosen = resolutions
-        task = Task { [weak self] in
+        // Strong capture: once importing has started it runs to the end, and every effect must reach the events sink.
+        task = Task {
             do {
                 let effect = try await store.commitAppleJournalImport(
                     plan: plan, resolutions: chosen, importedAt: Date.now)
-                self?.events.receive(effect)
+                self.events.receive(effect)
                 let applied = plan.days.filter { !(plan.conflicts.contains($0.dateKey) && chosen[$0.dateKey] == .skip) }
                 var imported = 0
                 var failed = 0
@@ -88,20 +89,20 @@ final class AppleJournalImporter {
                             }
                             switch await attachments.importData(data, for: day.dateKey) {
                             case .success(let photoEffect):
-                                self?.events.receive(photoEffect)
+                                self.events.receive(photoEffect)
                                 imported += 1
                             case .failure: failed += 1
                             }
                         }
                     }
                 }
-                self?.finish(
+                self.finish(
                     Result(
                         entries: applied.reduce(0) { $0 + $1.entries.count }, days: applied.count,
                         photosImported: imported, photosFailed: failed))
             } catch {
-                self?.logger.error("commit failed: \(String(describing: type(of: error)), privacy: .public)")
-                self?.fail(Copy.Import.genericError)
+                self.logger.error("commit failed: \(String(describing: type(of: error)), privacy: .public)")
+                self.fail(Copy.Import.genericError)
             }
         }
     }
