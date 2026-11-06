@@ -120,7 +120,8 @@ struct DayPageView: View {
             question: Copy.Reflection.smileQuestion,
             answerLabel: Copy.Reflection.smileAnswerLabel,
             answer: Binding(get: { model.smileAnswer }, set: { model.setSmileAnswer($0) }),
-            isEnabled: model.isLoaded, onFocusChange: { model.setFocus(.smile, $0) }
+            isEnabled: model.isLoaded, onFocusChange: { model.setFocus(.smile, $0) },
+            placeholder: Copy.Reflection.smilePlaceholder, plainHeading: true
         )
         .id(DayPageView.reflectionsAnchor)
         if model.showsRotatingPrompt, let prompt = model.prompt {
@@ -133,15 +134,18 @@ struct DayPageView: View {
     }
 
     private var editor: some View {
-        TextField("", text: Binding(get: { model.text }, set: { model.setText($0) }), axis: .vertical)
-            .brFont(.body)
-            .foregroundStyle(Palette.ink)
-            .lineLimit(3...)
-            .focused($editorFocused)
-            .disabled(!model.isLoaded)
-            .frame(maxWidth: .infinity, minHeight: 90, alignment: .topLeading)
-            .brPlaceholder(Copy.Day.editorPlaceholder, show: model.text.isEmpty)
-            .accessibilityLabel(Copy.Day.editorLabel)
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(Copy.Day.entryTitle)
+            TextField("", text: Binding(get: { model.text }, set: { model.setText($0) }), axis: .vertical)
+                .brFont(.body)
+                .foregroundStyle(Palette.ink)
+                .lineLimit(3...)
+                .focused($editorFocused)
+                .disabled(!model.isLoaded)
+                .frame(maxWidth: .infinity, minHeight: 90, alignment: .topLeading)
+                .brPlaceholder(Copy.Day.editorPlaceholder, show: model.text.isEmpty)
+                .accessibilityLabel(Copy.Day.editorLabel)
+        }
     }
 }
 

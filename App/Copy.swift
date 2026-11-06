@@ -92,7 +92,8 @@ enum Copy {
     }
 
     enum Day {
-        static let editorPlaceholder = "a little space for your day."
+        static let entryTitle = "how was your day?"
+        static let editorPlaceholder = "tell me about it."
         static let editorLabel = "journal entry"
         static let scoreTitle = "how was your day?"
         static let feelTitle = "how did you feel today?"
@@ -226,6 +227,7 @@ enum Copy {
         static let smileQuestion = "what made me smile today?"
         static let smileAnswerLabel = "answer to what made me smile today"
         static let answerPlaceholder = "write here, or leave it blank."
+        static let smilePlaceholder = "even a small thing."
         static let anotherPrompt = "another prompt"
         static let anotherPromptHint = "swaps today's reflection question for a different one"
         static func promptAnswerLabel(_ question: String) -> String { "answer to \(question)" }

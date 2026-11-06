@@ -13,6 +13,10 @@ struct ReflectionCard<Action: View>: View {
     /// Reports whether the answer field has focus (the day page treats any focused field as "busy").
     var onFocusChange: (Bool) -> Void = { _ in }
     var refresh: (() -> Void)?
+    /// Shown while the answer is empty.
+    var placeholder = Copy.Reflection.answerPlaceholder
+    /// True sets the question as a plain section heading instead of the accent italic prompt.
+    var plainHeading = false
     @ViewBuilder var action: () -> Action
 
     @FocusState private var focused: Bool
@@ -21,8 +25,8 @@ struct ReflectionCard<Action: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: 8) {
                 Text(question)
-                    .brFont(.promptItalic)
-                    .foregroundStyle(Palette.accent)
+                    .brFont(plainHeading ? BRFont.sectionTitle : .promptItalic)
+                    .foregroundStyle(plainHeading ? Palette.ink : Palette.accent)
                     .accessibilityAddTraits(.isHeader)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if let refresh {
@@ -38,6 +42,7 @@ struct ReflectionCard<Action: View>: View {
                     .accessibilityHint(Copy.Reflection.anotherPromptHint)
                 }
             }
+            .padding(.bottom, plainHeading ? 12 : 0)
             if let helper {
                 Text(helper).brFont(.label).foregroundStyle(Palette.ink2).padding(.top, 4)
             }
@@ -49,7 +54,7 @@ struct ReflectionCard<Action: View>: View {
                 .onChange(of: focused) { _, isFocused in onFocusChange(isFocused) }
                 .disabled(!isEnabled)
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .topLeading)
-                .brPlaceholder(Copy.Reflection.answerPlaceholder, show: answer.isEmpty)
+                .brPlaceholder(placeholder, show: answer.isEmpty)
                 .accessibilityLabel(answerLabel)
             action()
         }
@@ -60,11 +65,13 @@ extension ReflectionCard where Action == EmptyView {
     init(
         question: String, helper: String? = nil, answerLabel: String, answer: Binding<String>, isEnabled: Bool = true,
         lineLimits: ClosedRange<Int> = 1...6, onFocusChange: @escaping (Bool) -> Void = { _ in },
-        refresh: (() -> Void)? = nil
+        refresh: (() -> Void)? = nil, placeholder: String = Copy.Reflection.answerPlaceholder,
+        plainHeading: Bool = false
     ) {
         self.init(
             question: question, helper: helper, answerLabel: answerLabel, answer: answer, isEnabled: isEnabled,
-            lineLimits: lineLimits, onFocusChange: onFocusChange, refresh: refresh
+            lineLimits: lineLimits, onFocusChange: onFocusChange, refresh: refresh, placeholder: placeholder,
+            plainHeading: plainHeading
         ) { EmptyView() }
     }
 }
