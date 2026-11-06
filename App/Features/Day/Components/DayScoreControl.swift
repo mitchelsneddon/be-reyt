@@ -61,7 +61,7 @@ struct DayScoreControl: View {
                     }
                     Circle().fill(isOn ? color : Palette.chip)
                     ScoreGlyph(score: value, size: size * 34 / 56, strokeUnits: 2.6, filled: isOn)
-                        .foregroundStyle(isOn ? Palette.faceInk : Palette.ink3)
+                        .foregroundStyle(isOn ? Palette.faceInk : Palette.ink2)
                 }
                 .frame(width: size, height: size)
                 .padding(5)

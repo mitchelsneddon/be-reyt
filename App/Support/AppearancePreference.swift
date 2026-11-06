@@ -41,8 +41,9 @@ enum AppearanceWindows {
 
     static func apply(to window: UIWindow, _ preference: AppearancePreference = .stored) {
         window.overrideUserInterfaceStyle = preference.interfaceStyle
-        // Only app-owned windows get the paper background; system windows (keyboard, text effects) stay clear
-        // so they never paint over the app. Paper behind the views replaces the black seen at the keyboard's corners.
-        if type(of: window) == UIWindow.self { window.backgroundColor = Palette.UI.paper }
+        // Only normal-level windows (the app's own scene window, which SwiftUI may subclass) get the paper
+        // background; keyboard, text-effects and cover windows sit higher and stay as they are, so they never paint
+        // over the app. Paper behind the views replaces the black seen at the keyboard's corners.
+        if window.windowLevel == .normal { window.backgroundColor = Palette.UI.paper }
     }
 }

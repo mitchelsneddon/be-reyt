@@ -817,6 +817,7 @@ extension Copy {
     enum AutoBackup {
         static let title = "automatic backups"
         static let off = "not set up"
+        static let needsPassphrase = "backups are paused until you set a passphrase below."
         static let chooseFolder = "choose a backup folder"
         static let chooseHint = "pick a folder, ideally in icloud drive. be reyt keeps its backups inside it."
         static let backUpNow = "back up now"

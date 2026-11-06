@@ -90,9 +90,13 @@
                 SectionTitle("moods")
                 let ids = MoodCatalog.all.map(\.id)
                 Text("selected").brFont(.label).foregroundStyle(Palette.ink2)
-                ScrollView(.horizontal) { HStack(spacing: 6) { ForEach(ids, id: \.self) { moodTile($0, selected: true) } } }
+                ScrollView(.horizontal) {
+                    HStack(spacing: 6) { ForEach(ids, id: \.self) { moodTile($0, selected: true) } }
+                }
                 Text("unselected").brFont(.label).foregroundStyle(Palette.ink2)
-                ScrollView(.horizontal) { HStack(spacing: 6) { ForEach(ids, id: \.self) { moodTile($0, selected: false) } } }
+                ScrollView(.horizontal) {
+                    HStack(spacing: 6) { ForEach(ids, id: \.self) { moodTile($0, selected: false) } }
+                }
                 Text("large").brFont(.label).foregroundStyle(Palette.ink2)
                 HStack(spacing: 8) {
                     ForEach(ids, id: \.self) {

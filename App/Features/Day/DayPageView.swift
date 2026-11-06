@@ -89,7 +89,8 @@ struct DayPageView: View {
         .scrollDismissesKeyboard(.interactively)
         .background(Palette.paper)
         .environment(model)
-        .task { await model.load() }
+        // Keyed by model: a pager page that is handed a fresh model (after the cache pruned its day) loads it.
+        .task(id: ObjectIdentifier(model)) { await model.load() }
         .task { await health.syncIfDue() }
         .onChange(of: editorFocused) { _, focused in model.setFocus(.editor, focused) }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.flush() } }

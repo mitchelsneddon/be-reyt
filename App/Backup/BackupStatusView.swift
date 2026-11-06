@@ -13,7 +13,11 @@ struct BackupStatusView: View {
         Section {
             folderRow
             if manager.hasDestination {
-                if backup.hasPassphrase { statusRows }
+                if backup.hasPassphrase {
+                    statusRows
+                } else {
+                    SettingsNote(text: Copy.AutoBackup.needsPassphrase, color: Palette.ink, problem: true)
+                }
                 if manager.isUbiquitous == false {
                     SettingsNote(text: Copy.AutoBackup.notInICloud, color: Palette.ink)
                 }
