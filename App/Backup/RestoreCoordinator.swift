@@ -142,6 +142,8 @@ final class RestoreCoordinator {
     private(set) var preview: RestorePreview?
     /// Shown once after a restore or undo rebuilt the app, until dismissed.
     private(set) var completionNote: String?
+    /// True when the note says an undo happened (the banner shows an undo arrow instead of a check).
+    private(set) var completionIsUndo = false
     private(set) var undoAvailable = false
 
     /// Asked once after a successful restore; nil when there is nothing to ask.
@@ -177,6 +179,13 @@ final class RestoreCoordinator {
     func registerPostRestoreHook(_ hook: @escaping @Sendable () async -> Void) { hooks.append(hook) }
 
     func dismissCompletionNote() { completionNote = nil }
+
+    #if DEBUG
+        func debugShowNote(undone: Bool) {
+            completionNote = undone ? Copy.Restore.undoneNote : Copy.Restore.doneNote(entries: 3)
+            completionIsUndo = undone
+        }
+    #endif
 
     // MARK: Flow state
 
@@ -279,6 +288,7 @@ final class RestoreCoordinator {
         ScratchSpace.remove(preview.scratch)
         self.preview = nil
         completionNote = Copy.Restore.doneNote(entries: preview.counts.entries)
+        completionIsUndo = false
         askPassphraseQuestion(typed: preview.passphrase)
     }
 
@@ -334,6 +344,7 @@ final class RestoreCoordinator {
             throw error
         }
         completionNote = Copy.Restore.undoneNote
+        completionIsUndo = true
     }
 
     // MARK: The swap

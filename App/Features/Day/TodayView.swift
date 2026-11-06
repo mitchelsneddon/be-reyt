@@ -36,6 +36,7 @@ struct TodayView: View {
         NavigationStack {
             DayPageView(model: model, photos: photos, today: today, onNavigate: show)
                 .id(model.dateKey)
+                .completionNotes()
                 .safeAreaInset(edge: .top, spacing: 0) {
                     if let days = provisioning.daysLeftIfExpiring(now: now()) {
                         ExpiryBanner(daysLeft: days)

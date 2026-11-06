@@ -63,6 +63,7 @@ struct HistoryView: View {
                 content
             }
             .background(Palette.paper)
+            .completionNotes()
             .navigationTitle(Copy.Tab.history)
             .navigationBarTitleDisplayMode(.inline)
             .searchable(

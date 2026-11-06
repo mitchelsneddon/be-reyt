@@ -33,6 +33,7 @@ struct SettingsView: View {
                         }
                     #endif
             }
+            .completionNotes()
             .navigationTitle(Copy.Settings.title)
             .navigationBarTitleDisplayMode(.large)
         }

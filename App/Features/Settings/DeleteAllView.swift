@@ -90,20 +90,3 @@ struct DeleteAllView: View {
         }
     }
 }
-
-/// One calm line after delete-all rebuilt the app.
-struct DeleteAllNoteBanner: View {
-    let text: String
-    let dismiss: () -> Void
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(text).font(.footnote).foregroundStyle(Palette.ink)
-            Spacer()
-            Button(Copy.DeleteAll.dismiss, action: dismiss).font(.footnote).frame(minWidth: 44, minHeight: 44)
-        }
-        .padding(.horizontal, 20)
-        .background(Palette.paper)
-        .accessibilityElement(children: .contain)
-    }
-}

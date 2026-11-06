@@ -57,12 +57,6 @@ struct PrivacyCover: View {
 /// Persistent, calm warning when there is no device passcode to lock with.
 struct NoPasscodeBanner: View {
     var body: some View {
-        Text(Copy.Lock.noPasscode)
-            .font(.footnote)
-            .foregroundStyle(Palette.ink)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .background(Palette.card)
+        NoteBanner(icon: "lock.trianglebadge.exclamationmark", text: Copy.Lock.noPasscode)
     }
 }

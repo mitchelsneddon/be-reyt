@@ -46,6 +46,7 @@ struct ReviewsListView: View {
         NavigationStack(path: $path) {
             content
                 .background(Palette.paper)
+                .completionNotes()
                 .navigationTitle(Copy.Reviews.title)
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationDestination(for: ReviewRoute.self) { route in

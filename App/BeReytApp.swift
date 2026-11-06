@@ -100,7 +100,7 @@ struct BeReytApp: App {
                 root(store: store, attachments: attachments, container: container, generation: generation)
             case .unavailable:
                 root(store: store, attachments: attachments, container: container, generation: generation)
-                    .safeAreaInset(edge: .top, spacing: 0) { NoPasscodeBanner() }
+                    .safeAreaInset(edge: .top, spacing: 0) { NoPasscodeBanner().noteBannerInset() }
             case .locked, .authenticating:
                 LockScreenView(lock: lock)
             }
@@ -136,15 +136,11 @@ extension BeReytApp {
             .environment(journalImporter)
             .appleJournalImportSheet(journalImporter)
             .environment(deleteAll)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if let note = deleteAll.completionNote {
-                    DeleteAllNoteBanner(text: note, dismiss: deleteAll.dismissCompletionNote)
-                }
-            }
             .environment(autoBackup)
             .task { await health.syncIfDue() }
             .task {
                 #if DEBUG
+                    DebugNotes.apply(restore: restore, deleteAll: deleteAll)
                     if CommandLine.arguments.contains("-autoEnableReminders") {
                         await reminders.requestAuthorizationIfNeeded()
                     }

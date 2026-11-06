@@ -17,6 +17,7 @@ final class DeleteAllCoordinator {
     private(set) var phase: Phase = .idle
     /// One calm line shown after the app rebuilt, until dismissed.
     private(set) var completionNote: String?
+    private(set) var completionIsPartial = false
 
     @ObservationIgnored private let host: ContainerHost
     @ObservationIgnored private let quiescer: Quiescer
@@ -30,6 +31,13 @@ final class DeleteAllCoordinator {
     }
 
     func dismissCompletionNote() { completionNote = nil }
+
+    #if DEBUG
+        func debugShowNote(partial: Bool) {
+            completionNote = partial ? Copy.DeleteAll.partial([Copy.DeleteAll.wiperReminders]) : Copy.DeleteAll.done
+            completionIsPartial = partial
+        }
+    #endif
     func resetFailure() { if phase == .failed { phase = .idle } }
 
     /// Removes every item inside `directory`, keeping the directory. False if any item could not be removed.
@@ -98,6 +106,7 @@ final class DeleteAllCoordinator {
         quiescer.resumeAfterWipe()
 
         completionNote = leftovers.isEmpty ? Copy.DeleteAll.done : Copy.DeleteAll.partial(leftovers)
+        completionIsPartial = !leftovers.isEmpty
         phase = .idle
     }
 }

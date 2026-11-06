@@ -25,43 +25,22 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            Tab(Copy.Tab.today, systemImage: "sun.horizon", value: Destination.today) {
+            Tab(Copy.Tab.today, systemImage: "sunrise", value: Destination.today) {
                 TodayView(store: store, events: events, attachments: attachments)
             }
             Tab(Copy.Tab.history, systemImage: "calendar", value: Destination.history) {
                 HistoryView(store: store, events: events, attachments: attachments)
             }
-            Tab(Copy.Tab.reviews, systemImage: "text.book.closed", value: Destination.reviews) {
+            Tab(Copy.Tab.reviews, systemImage: "star", value: Destination.reviews) {
                 ReviewsListView(store: store, events: events, attachments: attachments)
             }
-            Tab(Copy.Tab.settings, systemImage: "gearshape", value: Destination.settings) {
+            Tab(Copy.Tab.settings, systemImage: "slider.horizontal.3", value: Destination.settings) {
                 SettingsView(backup: backup, restore: restore, tags: TagsModel(store: store, events: events))
             }
         }
         .tint(Palette.accent)
         .modifier(PassphraseQuestionAlerts(restore: restore))
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if let note = restore.completionNote {
-                RestoreNoteBanner(text: note, dismiss: restore.dismissCompletionNote)
-            }
-        }
-    }
-}
-
-/// One calm line after a restore (or undo) rebuilt the app.
-private struct RestoreNoteBanner: View {
-    let text: String
-    let dismiss: () -> Void
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(text).font(.footnote).foregroundStyle(Palette.ink)
-            Spacer()
-            Button(Copy.Restore.dismiss, action: dismiss).font(.footnote).frame(minWidth: 44, minHeight: 44)
-        }
-        .padding(.horizontal, 20)
-        .background(Palette.paper)
-        .accessibilityElement(children: .contain)
+        .environment(restore)
     }
 }
 
