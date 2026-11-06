@@ -2,8 +2,8 @@ import ReytKit
 import SwiftData
 import SwiftUI
 
-/// Whether be reyt has asked to read workouts, a button for the first ask, and calm guidance for when none show.
-/// iOS never tells an app that read access was denied, so the guidance points at the system settings instead.
+/// Whether be reyt has asked to read workouts, and a button for the first ask. iOS never tells an app that read
+/// access was denied, so there is nothing more to say than "asked".
 struct HealthSection: View {
     @Environment(HealthCoordinator.self) private var health
     @Query(HealthSection.anyWorkout) private var sample: [WorkoutSnapshot]
@@ -20,23 +20,24 @@ struct HealthSection: View {
             case .unknown:
                 EmptyView()
             case .unavailable:
-                Text(Copy.Health.unavailable).frame(minHeight: 44, alignment: .leading)
+                SettingsRowLabel(title: Copy.Health.unavailable, icon: "waveform.path.ecg", wrapping: true)
             case .notAsked:
-                Text(Copy.Health.notAsked)
-                Button(Copy.Health.allow) { Task { await health.requestAccess() } }
-                    .accessibilityHint(Copy.Health.allowHint)
-                    .frame(minHeight: 44, alignment: .leading)
+                Button {
+                    Task { await health.requestAccess() }
+                } label: {
+                    SettingsAction(title: Copy.Health.allow)
+                }
+                .accessibilityHint(Copy.Health.allowHint)
             case .asked:
-                Text(Copy.Health.asked)
+                SettingsRowLabel(title: Copy.Health.asked, icon: "waveform.path.ecg", wrapping: true)
                 if health.hasSynced, sample.isEmpty {
-                    Text(Copy.Health.nothingFound).foregroundStyle(Palette.ink2)
+                    SettingsNote(text: Copy.Health.nothingFound)
                 }
             }
         } header: {
-            Text(Copy.Health.section)
-        } footer: {
-            if health.access != .unavailable { Text(Copy.Health.guidance) }
+            SettingsHeader(Copy.Health.section)
         }
+        .settingsRows()
         .task { await health.refreshAccess() }
     }
 }

@@ -7,11 +7,11 @@ struct DeleteAllSection: View {
             NavigationLink {
                 DeleteAllView()
             } label: {
-                Text(Copy.DeleteAll.row).foregroundStyle(.red)
+                SettingsRowLabel(title: Copy.DeleteAll.row, icon: "trash", tint: .danger)
             }
             .accessibilityHint(Copy.DeleteAll.rowHint)
-            .frame(minHeight: 44)
         }
+        .settingsRows()
     }
 }
 

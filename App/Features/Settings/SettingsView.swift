@@ -22,20 +22,36 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollViewReader { proxy in
-                list
-                    #if DEBUG
-                        .task {
-                            // Simulator-only: `-scrollSettingsToBottom` shows the end of the list.
-                            guard CommandLine.arguments.contains("-scrollSettingsToBottom") else { return }
-                            try? await Task.sleep(for: .seconds(1))
-                            proxy.scrollTo("bottom", anchor: .bottom)
-                        }
-                    #endif
+            VStack(alignment: .leading, spacing: 0) {
+                Text(Copy.Settings.title)
+                    .brFont(.largeTitle)
+                    .foregroundStyle(Palette.ink)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(EdgeInsets(top: 18, leading: 28, bottom: 22, trailing: 24))
+                ScrollViewReader { proxy in
+                    list
+                        #if DEBUG
+                            .task {
+                                // Simulator-only: `-scrollSettingsToBottom` shows the end of the list;
+                                // `-scrollSettingsTo <id>` (backups, passphrase) shows that section.
+                                let args = CommandLine.arguments
+                                if let i = args.firstIndex(of: "-scrollSettingsTo"), args.indices.contains(i + 1) {
+                                    try? await Task.sleep(for: .seconds(1))
+                                    proxy.scrollTo(args[i + 1], anchor: .top)
+                                    return
+                                }
+                                guard args.contains("-scrollSettingsToBottom") else { return }
+                                try? await Task.sleep(for: .seconds(1))
+                                proxy.scrollTo("bottom", anchor: .bottom)
+                            }
+                        #endif
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(Palette.paper)
             .completionNotes()
             .navigationTitle(Copy.Settings.title)
-            .navigationBarTitleDisplayMode(.large)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -43,47 +59,58 @@ struct SettingsView: View {
         List {
             ReminderSection()
             Section {
-                NavigationLink(Copy.Tags.settingsRow) { TagsView(model: tags) }
-                    .frame(minHeight: 44, alignment: .leading)
+                NavigationLink {
+                    TagsView(model: tags)
+                } label: {
+                    SettingsRowLabel(title: Copy.Tags.settingsRow, icon: "number")
+                }
             } header: {
-                Text(Copy.Tags.journalSection)
+                SettingsHeader(Copy.Tags.journalSection)
             }
+            .settingsRows()
             AppLockSection()
             HealthSection()
             OnDeviceAISection()
-            BackupStatusView(backup: backup, restore: restore)
+            BackupStatusView(backup: backup, restore: restore).id("backups")
             Section {
                 passphraseRow
                 exportRow
-                Button(Copy.Settings.restoreRow) { showImporter = true }
-                    .frame(minHeight: 44, alignment: .leading)
+                Button {
+                    showImporter = true
+                } label: {
+                    SettingsRowLabel(title: Copy.Settings.restoreRow, icon: "square.and.arrow.down", chevron: true)
+                }
                 if restore.undoAvailable {
-                    Button(Copy.Settings.undoRow) { showUndoConfirm = true }
-                        .accessibilityHint(Copy.Settings.undoHint)
-                        .frame(minHeight: 44, alignment: .leading)
+                    Button {
+                        showUndoConfirm = true
+                    } label: {
+                        SettingsAction(title: Copy.Settings.undoRow, icon: "arrow.uturn.backward")
+                    }
+                    .accessibilityHint(Copy.Settings.undoHint)
                 }
+                if let note = statusNote { SettingsNote(text: note, color: Palette.ink) }
             } header: {
-                Text(Copy.Settings.backupSection)
-            } footer: {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(Copy.Settings.backupFooter)
-                    if let note = statusNote { Text(note).foregroundStyle(Palette.ink) }
-                }
+                SettingsHeader(Copy.Settings.backupSection)
             }
+            .settingsRows()
+            .id("passphrase")
             Section {
-                NavigationLink(Copy.ReadableExport.row) { ReadableExportView(host: backup.host) }
-                    .accessibilityHint(Copy.ReadableExport.rowHint)
-                    .frame(minHeight: 44, alignment: .leading)
+                NavigationLink {
+                    ReadableExportView(host: backup.host)
+                } label: {
+                    SettingsRowLabel(title: Copy.ReadableExport.row, icon: "doc.text")
+                }
+                .accessibilityHint(Copy.ReadableExport.rowHint)
             } header: {
-                Text(Copy.Hub.readableSection)
-            } footer: {
-                Text(Copy.ReadableExport.notEncrypted)
+                SettingsHeader(Copy.Hub.readableSection)
             }
+            .settingsRows()
             ImportSection { showJournalPicker = true }
             PrivacySection()
             AboutSection()
             DeleteAllSection().id("bottom")
         }
+        .listSectionSpacing(28)
         .scrollContentBackground(.hidden)
         .background(Palette.paper)
         .tint(Palette.accent)
@@ -139,15 +166,11 @@ struct SettingsView: View {
                 passphraseSheet = .set
             }
         } label: {
-            HStack {
-                Text(Copy.Settings.passphraseRow)
-                Spacer()
-                Text(backup.hasPassphrase ? Copy.Settings.passphraseSet : Copy.Settings.passphraseNotSet)
-                    .foregroundStyle(Palette.ink2)
-            }
+            SettingsRowLabel(
+                title: Copy.Settings.passphraseRow, icon: "key",
+                value: backup.hasPassphrase ? Copy.Settings.passphraseSet : Copy.Settings.passphraseNotSet,
+                chevron: true)
         }
-        .frame(minHeight: 44)
-        .accessibilityElement(children: .combine)
     }
 
     private var exportRow: some View {
@@ -158,18 +181,15 @@ struct SettingsView: View {
                 passphraseSheet = .set
             }
         } label: {
-            HStack {
-                Text(Copy.Settings.exportRow)
-                Spacer()
-                if backup.exportState == .working {
-                    ProgressView()
-                } else if !backup.hasPassphrase {
-                    Text(Copy.Settings.exportRowNeedsPassphrase).font(.footnote).foregroundStyle(Palette.ink2)
-                }
+            if backup.exportState == .working {
+                SettingsAction(title: Copy.Settings.exportRow, icon: "square.and.arrow.up", busy: true)
+            } else {
+                SettingsRowLabel(
+                    title: Copy.Settings.exportRow, icon: "square.and.arrow.up",
+                    value: backup.hasPassphrase ? nil : Copy.Settings.exportRowNeedsPassphrase, chevron: true)
             }
         }
         .disabled(backup.exportState == .working)
-        .frame(minHeight: 44)
     }
 
     private var statusNote: String? {
@@ -196,19 +216,13 @@ struct AppLockSection: View {
 
     var body: some View {
         Section {
-            LabeledContent(Copy.Hub.lockRow) {
-                Text(hasPasscode ? Copy.Hub.lockOn : Copy.Hub.lockOff)
-            }
-            .frame(minHeight: 44)
-            .accessibilityElement(children: .combine)
+            SettingsRowLabel(
+                title: Copy.Hub.lockRow, icon: "lock", value: hasPasscode ? Copy.Hub.lockOn : Copy.Hub.lockOff)
+            if !hasPasscode { SettingsNote(text: Copy.Hub.lockNoPasscode, color: Palette.ink) }
         } header: {
-            Text(Copy.Hub.lockSection)
-        } footer: {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(Copy.Hub.lockFooter)
-                if !hasPasscode { Text(Copy.Hub.lockNoPasscode).foregroundStyle(Palette.ink) }
-            }
+            SettingsHeader(Copy.Hub.lockSection)
         }
+        .settingsRows()
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { hasPasscode = LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: nil) }
         }
@@ -217,14 +231,17 @@ struct AppLockSection: View {
 
 /// Static statements of what the app does and doesn't do with the journal.
 struct PrivacySection: View {
+    private static let icons = ["iphone", "eye.slash", "sparkles", "clock"]
+
     var body: some View {
         Section {
-            ForEach(Copy.Hub.privacyLines, id: \.self) { line in
-                Text(line).frame(minHeight: 44, alignment: .leading)
+            ForEach(Array(zip(Self.icons, Copy.Hub.privacyLines)), id: \.1) { icon, line in
+                SettingsRowLabel(title: line, icon: icon, wrapping: true)
             }
         } header: {
-            Text(Copy.Hub.privacySection)
+            SettingsHeader(Copy.Hub.privacySection)
         }
+        .settingsRows()
     }
 }
 
@@ -241,20 +258,86 @@ struct AboutSection: View {
 
     var body: some View {
         Section {
-            LabeledContent(Copy.Hub.version) { Text(version) }
-                .frame(minHeight: 44)
-                .accessibilityElement(children: .combine)
+            SettingsRowLabel(title: Copy.Hub.version, icon: "info.circle", value: version)
             if let expiry = provisioning.expirationDate {
-                LabeledContent(Copy.Hub.signedUntil) {
-                    Text(expiry, format: .dateTime.day().month(.wide).year().locale(Locale(identifier: "en_GB")))
-                }
-                .frame(minHeight: 44)
-                .accessibilityElement(children: .combine)
+                SettingsRowLabel(
+                    title: Copy.Hub.signedUntil, icon: "calendar",
+                    value: expiry.formatted(
+                        .dateTime.day().month(.abbreviated).year().locale(Locale(identifier: "en_GB"))
+                    ).lowercased())
             }
         } header: {
-            Text(Copy.Hub.aboutSection)
-        } footer: {
-            if provisioning.expirationDate != nil { Text(Copy.Hub.reinstallNote) }
+            SettingsHeader(Copy.Hub.aboutSection)
         }
+        .settingsRows()
+    }
+}
+
+// MARK: - Shared settings pieces
+
+/// A section header: DM Sans 13, tracking 0.4, ink2, lowercase as written.
+struct SettingsHeader: View {
+    let text: String
+
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text).brFont(.sectionHeader).foregroundStyle(Palette.ink2).textCase(nil)
+    }
+}
+
+extension View {
+    /// Card row background and border-coloured separators for every row of a settings section.
+    func settingsRows() -> some View {
+        listRowBackground(Palette.card).listRowSeparatorTint(Palette.border)
+            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+    }
+}
+
+/// An accent action row: tile-less (aligned with the titles) or with a tile; `busy` swaps the tile for a spinner.
+struct SettingsAction: View {
+    let title: String
+    var icon: String?
+    var busy = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if busy {
+                IconTile { ProgressRing(size: 18, lineWidth: 2.5) }
+            } else if let icon {
+                IconTile(systemName: icon)
+            } else {
+                IconTile(systemName: "circle").hidden()
+            }
+            Text(title).brFont(.row).foregroundStyle(busy ? Palette.ink2 : Palette.accent)
+            Spacer(minLength: 8)
+        }
+        .frame(minHeight: 52)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// A short line inside a section: guidance in ink2, a consequence in ink, or a problem in danger with an icon.
+struct SettingsNote: View {
+    let text: String
+    var color: Color = Palette.ink2
+    var problem = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            IconTile(systemName: "circle").hidden()
+                .overlay {
+                    if problem {
+                        Image(systemName: "exclamationmark.circle")
+                            .foregroundStyle(Palette.danger)
+                            .accessibilityLabel(Copy.Settings.problem)
+                    }
+                }
+            Text(text).brFont(.banner).foregroundStyle(color)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
     }
 }

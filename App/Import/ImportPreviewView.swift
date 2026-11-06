@@ -196,13 +196,13 @@ struct ImportSection: View {
 
     var body: some View {
         Section {
-            Button(Copy.Import.row, action: choose)
-                .accessibilityHint(Copy.Import.rowHint)
-                .frame(minHeight: 44, alignment: .leading)
+            Button(action: choose) {
+                SettingsAction(title: Copy.Import.row, icon: "book.closed")
+            }
+            .accessibilityHint(Copy.Import.rowHint)
         } header: {
-            Text(Copy.Import.settingsSection)
-        } footer: {
-            Text(Copy.Import.sectionFooter)
+            SettingsHeader(Copy.Import.settingsSection)
         }
+        .settingsRows()
     }
 }

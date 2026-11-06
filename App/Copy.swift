@@ -354,12 +354,9 @@ enum Copy {
     enum Health {
         static let section = "apple health"
         static let unavailable = "health isn't available on this device."
-        static let notAsked = "be reyt hasn't asked to read your workouts yet."
         static let asked = "be reyt has asked to read your workouts."
         static let allow = "allow access to workouts"
         static let allowHint = "shows the ios health permission sheet"
-        static let guidance =
-            "ios doesn't tell apps if read access was denied, so be reyt can't see it either. if workouts don't appear, check settings › privacy & security › health › be reyt."
         static let nothingFound = "no workouts found, or health access is off."
     }
 
@@ -376,8 +373,6 @@ enum Copy {
         static let denied = "notifications are off for be reyt, so the reminder can't show."
         static let openSettings = "open ios settings"
         static let openSettingsHint = "opens the notification settings for be reyt"
-        static let footer =
-            "reminders are scheduled ahead for 4 weeks and refresh whenever you open be reyt. if you don't open it for 4 weeks, they stop. a reminder is skipped on days you've already written something. focus modes and notification summaries can delay or hide it. nothing from your journal appears in the notification."
         static let notificationTitle = "be reyt"
         static let notificationBody = "a little space for your day, if you'd like it."
     }
@@ -462,8 +457,7 @@ enum Copy {
         static let aiDownloading = "the model is still downloading"
         static let aiNotSupported = "not supported on this iphone"
         static let aiLanguage = "not available in this language"
-        static let aiFooter =
-            "reflections are written by apple's on-device model, on this phone. your journal is never sent anywhere."
+        static let problem = "problem"
         static let backupSection = "backup passphrase & files"
         static let passphraseRow = "backup passphrase"
         static let passphraseSet = "set"
@@ -473,8 +467,6 @@ enum Copy {
         static let restoreRow = "restore from a file"
         static let undoRow = "undo last restore"
         static let undoHint = "goes back to what was on this phone before the last restore"
-        static let backupFooter =
-            "backups are encrypted with your passphrase and stay in the place you choose. nothing leaves your phone on its own."
     }
 
     enum Hub {
@@ -482,23 +474,20 @@ enum Copy {
         static let lockRow = "locks when you leave"
         static let lockOn = "on"
         static let lockOff = "can't lock"
-        static let lockFooter = "be reyt locks every time you leave it, with face id or your passcode."
         static let lockNoPasscode =
             "this phone has no passcode, so be reyt can't lock. set one in ios settings to turn the lock on."
         static let readableSection = "readable exports"
         static let privacySection = "privacy"
         static let privacyLines = [
             "nothing leaves your phone except backups you choose.",
-            "there is no account and no analytics.",
-            "the reflection is written on this phone by apple's on-device model.",
-            "if you delete something, it can still be inside your backups for up to 30 days, until those backups are cleaned up.",
+            "no account, no analytics.",
+            "reflections are written on this phone.",
+            "deleted things can stay in your backups for up to 30 days.",
         ]
         static let aboutSection = "about"
         static let version = "version"
         static let signedUntil = "signed until"
         static let signedUntilNone = "not limited"
-        static let reinstallNote =
-            "this build is signed for a limited time. when it runs out, reinstall be reyt from your mac. your journal stays on the phone."
         static func versionValue(version: String, build: String) -> String { "\(version) (\(build))" }
     }
 
@@ -672,8 +661,6 @@ enum Copy {
         static let settingsSection = "apple journal"
         static let row = "import from apple journal"
         static let rowHint = "choose the unzipped AppleJournalEntries folder"
-        static let sectionFooter =
-            "unzip the export in files first, then choose the folder. everything is read on this phone, nothing is sent anywhere."
         static let title = "import from apple journal"
         static let close = "close"
         static let cancel = "cancel"
@@ -800,38 +787,32 @@ extension Copy {
         static let backUpNow = "back up now"
         static let backingUp = "backing up…"
         static let noBackupYet = "no backup yet"
-        static let uploaded = "uploaded to icloud"
+        static let uploaded = "uploaded"
+        static let icloudRow = "icloud"
+        static let lastBackupRow = "last backup"
+        static let lastConfirmedRow = "last confirmed in icloud"
         static let waitingToUpload = "waiting to upload"
         static let pending = "changes waiting to back up"
         static let notInICloud =
             "this folder is only on this iphone, so it won't protect you if the phone is lost. pick a folder in icloud drive."
         static let cleanupPaused =
             "cleanup paused. some backups in this folder were made elsewhere, so old photo copies are being kept for now."
-        static let needsPassphrase = "set a backup passphrase above to start backing up."
-        static let needsFolder = "choose a folder and be reyt will back up automatically while it's open."
-        static let footer =
-            "backups run while be reyt is open, after a quiet minute. each day keeps one backup, and the latest 30 are kept."
 
         static func folder(_ name: String) -> String { "folder: \(name)" }
 
         static func lastBackup(_ when: Date, now: Date = .now, calendar: Calendar = .current) -> String {
             let time = when.formatted(Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).hour().minute())
                 .lowercased()
-            if calendar.isDate(when, inSameDayAs: now) { return "last backup: today \(time)" }
+            if calendar.isDate(when, inSameDayAs: now) { return "today \(time)" }
             if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
                 calendar.isDate(when, inSameDayAs: yesterday)
             {
-                return "last backup: yesterday \(time)"
+                return "yesterday \(time)"
             }
             let day = when.formatted(
                 Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).weekday(.abbreviated).day().month(
                     .abbreviated))
-            return "last backup: \(day.lowercased()) \(time)"
-        }
-
-        static func lastConfirmed(_ when: Date, now: Date = .now, calendar: Calendar = .current) -> String {
-            lastBackup(when, now: now, calendar: calendar).replacingOccurrences(
-                of: "last backup:", with: "last confirmed in icloud:")
+            return "\(day.lowercased()) \(time)"
         }
 
         static func error(_ code: BackupErrorCode) -> String {

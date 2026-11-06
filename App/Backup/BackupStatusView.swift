@@ -12,38 +12,32 @@ struct BackupStatusView: View {
     var body: some View {
         Section {
             folderRow
-            if manager.hasDestination, backup.hasPassphrase {
-                ForEach(lines, id: \.self) { line in
-                    Text(line)
-                        .font(.subheadline)
-                        .foregroundStyle(Palette.ink)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .accessibilityLabel(line)
+            if manager.hasDestination {
+                if backup.hasPassphrase { statusRows }
+                if manager.isUbiquitous == false {
+                    SettingsNote(text: Copy.AutoBackup.notInICloud, color: Palette.ink)
                 }
-                Button(manager.isRunning ? Copy.AutoBackup.backingUp : Copy.AutoBackup.backUpNow) {
-                    Task { await manager.backUpNow() }
-                }
-                .disabled(manager.isRunning || !manager.isActive)
-                .frame(minHeight: 44, alignment: .leading)
-                NavigationLink(Copy.RestoreBrowser.row) { RestoreBrowserView(restore: restore) }
+                if backup.hasPassphrase {
+                    Button {
+                        Task { await manager.backUpNow() }
+                    } label: {
+                        SettingsAction(
+                            title: manager.isRunning ? Copy.AutoBackup.backingUp : Copy.AutoBackup.backUpNow,
+                            icon: "arrow.clockwise", busy: manager.isRunning)
+                    }
+                    .disabled(manager.isRunning || !manager.isActive)
+                    NavigationLink {
+                        RestoreBrowserView(restore: restore)
+                    } label: {
+                        SettingsRowLabel(title: Copy.RestoreBrowser.row, icon: "clock.arrow.circlepath")
+                    }
                     .accessibilityHint(Copy.RestoreBrowser.rowHint)
-                    .frame(minHeight: 44, alignment: .leading)
+                }
             }
         } header: {
-            Text(Copy.AutoBackup.title)
-        } footer: {
-            VStack(alignment: .leading, spacing: 8) {
-                if !manager.hasDestination {
-                    Text(Copy.AutoBackup.needsFolder)
-                } else if !backup.hasPassphrase {
-                    Text(Copy.AutoBackup.needsPassphrase)
-                }
-                if manager.hasDestination, manager.isUbiquitous == false {
-                    Text(Copy.AutoBackup.notInICloud).foregroundStyle(Palette.ink)
-                }
-                Text(Copy.AutoBackup.footer)
-            }
+            SettingsHeader(Copy.AutoBackup.title)
         }
+        .settingsRows()
         .fileImporter(isPresented: $showPicker, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { Task { await manager.chooseFolder(url) } }
         }
@@ -60,39 +54,42 @@ struct BackupStatusView: View {
         Button {
             showPicker = true
         } label: {
-            HStack {
-                Text(manager.hasDestination ? Copy.AutoBackup.folderRow : Copy.AutoBackup.chooseFolder)
-                Spacer()
-                Text(manager.hasDestination ? (manager.folderName ?? "") : Copy.AutoBackup.off)
-                    .foregroundStyle(Palette.ink2)
-                    .lineLimit(1)
-            }
+            SettingsRowLabel(
+                title: manager.hasDestination ? Copy.AutoBackup.folderRow : Copy.AutoBackup.chooseFolder,
+                icon: "folder",
+                value: manager.hasDestination ? (manager.folderName ?? "") : Copy.AutoBackup.off,
+                chevron: true)
         }
-        .frame(minHeight: 44)
         .accessibilityHint(Copy.AutoBackup.chooseHint)
     }
 
     /// The status, most recent fact first. Only what is true: "uploaded" needs iCloud's word for it.
-    private var lines: [String] {
-        var out: [String] = []
-        if let error = manager.index.lastError { out.append(Copy.AutoBackup.error(error)) }
-        if let written = manager.index.lastSnapshotWrittenAt {
-            out.append(Copy.AutoBackup.lastBackup(written))
-        } else {
-            out.append(Copy.AutoBackup.noBackupYet)
+    @ViewBuilder private var statusRows: some View {
+        if let error = manager.index.lastError {
+            SettingsNote(text: Copy.AutoBackup.error(error), color: Palette.danger, problem: true)
         }
+        SettingsRowLabel(
+            title: Copy.AutoBackup.lastBackupRow, icon: "clock",
+            value: manager.index.lastSnapshotWrittenAt.map { Copy.AutoBackup.lastBackup($0) }
+                ?? Copy.AutoBackup.noBackupYet)
         switch manager.latestUpload {
-        case .uploaded?: out.append(Copy.AutoBackup.uploaded)
+        case .uploaded?:
+            SettingsRowLabel(
+                title: Copy.AutoBackup.icloudRow, icon: "icloud", value: Copy.AutoBackup.uploaded, dot: Palette.ok)
         case .uploading?:
-            out.append(Copy.AutoBackup.waitingToUpload)
+            SettingsRowLabel(
+                title: Copy.AutoBackup.icloudRow, icon: "icloud", value: Copy.AutoBackup.waitingToUpload,
+                dot: Palette.warn)
             if let confirmed = manager.index.lastUploadConfirmedAt, confirmed != manager.index.lastSnapshotWrittenAt {
-                out.append(Copy.AutoBackup.lastConfirmed(confirmed))
+                SettingsRowLabel(
+                    title: Copy.AutoBackup.lastConfirmedRow, icon: "icloud",
+                    value: Copy.AutoBackup.lastBackup(confirmed))
             }
-        case .error?: out.append(Copy.AutoBackup.uploadError)
-        case .notUbiquitous?, .missing?, nil: break
+        case .error?:
+            SettingsNote(text: Copy.AutoBackup.uploadError, color: Palette.danger, problem: true)
+        case .notUbiquitous?, .missing?, nil: EmptyView()
         }
-        if manager.index.pendingChanges { out.append(Copy.AutoBackup.pending) }
-        if manager.index.cleanupPaused { out.append(Copy.AutoBackup.cleanupPaused) }
-        return out
+        if manager.index.pendingChanges { SettingsNote(text: Copy.AutoBackup.pending) }
+        if manager.index.cleanupPaused { SettingsNote(text: Copy.AutoBackup.cleanupPaused) }
     }
 }
