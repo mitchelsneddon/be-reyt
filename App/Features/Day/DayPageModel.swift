@@ -47,6 +47,8 @@ final class DayPageModel: DraftFlushing {
     private var savedIntention = ""
     private var savedFollowUpNote = ""
     private var inFlight = 0
+    /// Bumps when a write is queued and again when it ends, so a reload can tell a write overlapped its fetch.
+    private var writeGeneration = 0
     private var failedFields: Set<Field> = []
     private var didSave = false
 
@@ -117,9 +119,20 @@ final class DayPageModel: DraftFlushing {
 
     /// The store changed (an import, a restore, another screen): refresh every field that has no unsaved local edit
     /// and keep the dirty ones, so the next keystroke can never overwrite what arrived from outside.
+    /// A snapshot is applied only if no write of this page was queued, running or finished while it was being
+    /// fetched, because such a snapshot may predate that write and would revert it. A skipped snapshot is fetched
+    /// once more; if a write still overlaps, that write's own revision bump triggers the next reload.
     func reloadClean() async {
-        guard isLoaded, let snapshot = try? await fetchSnapshot() else { return }
-        apply(snapshot, onlyClean: true)
+        guard isLoaded else { return }
+        for _ in 0..<2 {
+            let generation = writeGeneration
+            let idleAtStart = inFlight == 0
+            guard let snapshot = try? await fetchSnapshot() else { return }
+            if idleAtStart, inFlight == 0, generation == writeGeneration {
+                apply(snapshot, onlyClean: true)
+                return
+            }
+        }
     }
 
     private struct Snapshot {
@@ -337,6 +350,7 @@ final class DayPageModel: DraftFlushing {
     /// or revert a newer edit.
     private func write(_ field: Field) {
         inFlight += 1
+        writeGeneration += 1
         let previous = chain
         // Captures self strongly on purpose: the chain is bounded (each task ends when its write does), and a weak
         // capture would silently drop queued writes if the model is replaced right after `flush()`.
@@ -347,7 +361,10 @@ final class DayPageModel: DraftFlushing {
     }
 
     private func perform(_ field: Field) async {
-        defer { inFlight -= 1 }
+        defer {
+            inFlight -= 1
+            writeGeneration += 1
+        }
         let change: EntryChange
         var sentText: String?
         var sentSmile: String?
